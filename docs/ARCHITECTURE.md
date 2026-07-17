@@ -10,7 +10,7 @@ Telegram OIDC ──→ Vercel session
 Browser ──→ Next.js server routes ──→ Render /api/v1 ──→ existing services ──→ Postgres
 ```
 
-Vercel does not receive the database URL, Telegram bot token, Gmail/Calendar/Microsoft tokens, or Telegram file URLs. The bot remains the canonical mutation layer so reminders, recurrence, audit, undo, and settings rescheduling keep their existing invariants.
+Vercel does not receive the database URL, Telegram bot token, Gmail/Calendar/Microsoft tokens, or reusable Telegram file identifiers. The bot remains the canonical mutation layer so reminders, recurrence, audit, undo, and settings rescheduling keep their existing invariants.
 
 ## Authentication
 
@@ -41,13 +41,20 @@ The intended production variant uses an asymmetric keypair: the private signing 
 - User text renders as plain JSX; no untrusted HTML is injected.
 - Group owners (`chat:<id>`) are excluded until a verified membership model exists.
 
-The API must never expose embeddings, raw source text, OAuth state, access or refresh tokens, Telegram file IDs, receipt hashes, full OCR receipts, or assignee Telegram IDs.
+The API must never expose embeddings, raw provider payloads, OAuth state, access or refresh tokens, Telegram file IDs, receipt hashes, or assignee Telegram IDs. It may return the user-facing task, note, idea, image caption/OCR, expense, and settings fields needed by the product.
 
-## Rollout
+Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF → Render → Telegram. Render performs the authenticated lookup, enforces raster-only media and a bounded download, then streams bytes with defensive browser headers. Neither the bot token nor Telegram file ID crosses into Vercel or the browser.
 
-1. Deploy and review the demo preview.
-2. Add the read-only `/api/v1/dashboard` endpoint and service-token verification to Render.
-3. Configure Telegram OIDC allowed URLs and Vercel secrets.
+Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.
+
+## Production surface
+
+The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, idea conversion, image delivery, search, shared settings, Excel synchronization, integration disconnect, privacy export, and confirmed account deletion.
+
+Deployment gates are:
+
+1. Run lint, production builds, and the core service test suite.
+2. Verify desktop and mobile demo flows in a real browser.
+3. Configure Telegram OIDC origins/callbacks and Vercel secrets.
 4. Verify real-user isolation with at least two Telegram accounts.
-5. Add mutations through existing Threadwise service functions, beginning with task completion and quick capture.
-6. Keep group work out of scope until membership authorization exists.
+5. Keep group work out of scope until a verifiable human-to-group membership model exists.

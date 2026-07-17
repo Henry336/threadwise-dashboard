@@ -35,7 +35,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
               ) : (
                 <Link className="button button-primary" href="/dashboard?demo=1">Explore the demo<ArrowUpRight size={17} /></Link>
               )}
-              <span className="hero-footnote"><LockKeyhole size={14} /> Your data stays private and user-scoped.</span>
+              <Link className="hero-footnote" href="/privacy"><LockKeyhole size={14} /> See exactly what “private” means <ArrowUpRight size={13} /></Link>
             </div>
           </div>
 
@@ -75,11 +75,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
           <div><span>02</span><h3>See clearly</h3><p>A personal view shaped by urgency and context.</p></div>
           <div><span>03</span><h3>Act quickly</h3><p>Finish, snooze, search, and return to your day.</p></div>
         </section>
+        <section className="landing-privacy">
+          <div><LockKeyhole size={20} /><span><b>Telegram signs you in. Threadwise never sees your Telegram password.</b><small>Your data is user-scoped, provider tokens are encrypted, and stored content is not end-to-end encrypted.</small></span></div>
+          <Link href="/privacy">Read the plain-language privacy explanation <ArrowUpRight size={15} /></Link>
+        </section>
       </main>
 
       <footer className="landing-footer">
         <ThreadwiseMark />
-        <p>Quietly keeping track.</p>
+        <p><Link href="/privacy">Privacy explained</Link> · Quietly keeping track.</p>
       </footer>
     </div>
   );

@@ -8,12 +8,17 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 
 - A responsive public landing page and personalized dashboard
 - A command-first capture/search surface with `Ctrl/Cmd + K`
-- My Day, Tasks, Notes, Ideas, Expenses, and Library views
+- Today, Tasks, Notes, Ideas, Images, Expenses, Search, and Settings views
 - A chronological "threadline" for today and overdue work
+- Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
+- A date-grouped image gallery with OCR/caption search, selection, a keyboard-friendly lightbox, and note conversion
+- Expense capture, editing, CSV export, and connected Excel synchronization
+- Data export, integration disconnect, and confirmed account deletion controls
 - Telegram OIDC Authorization Code + PKCE login routes
 - Signed, HTTP-only sessions and a server-only Threadwise API adapter
 - A realistic interactive demo at `/dashboard?demo=1`
-- Light/dark themes, user accent selection, mobile navigation, focus states, and reduced-motion support
+- Staggered load-in motion, route transitions, skeletons, mobile sheets, light/dark themes, user accents, focus states, and reduced-motion support
+- A public, plain-language privacy explanation at `/privacy`
 
 ## Run locally
 
@@ -32,7 +37,7 @@ npm run lint
 npm run build
 ```
 
-The main interaction paths have also been checked in a real Chromium browser at 1440px and 390px widths.
+The main interaction paths are also checked in a real Chromium browser at desktop and mobile widths before production releases.
 
 ## Trust boundary
 
@@ -60,6 +65,6 @@ Vercel is the intended host. Preview deployments can safely run in demo mode. Be
 1. Register the production origin and exact `/api/auth/callback` URI in BotFather → Bot Settings → Web Login.
 2. Add the Telegram OIDC credentials and `AUTH_SECRET` to Vercel.
 3. Add the Ed25519 `DASHBOARD_API_PRIVATE_KEY` described in the architecture document.
-4. Add the matching public verification key to the Render bot service and deploy its `/api/v1` route.
+4. Add the matching public verification key to the Render bot service and deploy its authenticated `/api/v1/dashboard/*` routes.
 
 Never add database credentials to a `NEXT_PUBLIC_*` variable.

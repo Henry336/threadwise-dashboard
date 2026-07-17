@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       headers: { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: clientId, code_verifier: verifier }),
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
     if (!tokenResponse.ok) return fail(request, "token-exchange");
     const tokens = (await tokenResponse.json()) as { id_token?: string };

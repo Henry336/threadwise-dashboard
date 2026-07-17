@@ -131,6 +131,32 @@ export function getDemoSnapshot(): DashboardSnapshot {
         createdAt: at(-7, 14, 30),
       },
     ],
+    images: [
+      {
+        id: "image-1", publicId: "IMG-28", mediaKind: "photo", mimeType: "image/svg+xml",
+        fileName: "garden-light.svg", caption: "Late afternoon light in the garden", ocrText: "", createdAt: at(0, 16, 42),
+      },
+      {
+        id: "image-2", publicId: "IMG-27", mediaKind: "photo", mimeType: "image/svg+xml",
+        fileName: "launch-board.svg", caption: "Launch board after the planning session", ocrText: "Launch · polish · publish", createdAt: at(0, 10, 18),
+      },
+      {
+        id: "image-3", publicId: "IMG-26", mediaKind: "photo", mimeType: "image/svg+xml",
+        fileName: "morning-cafe.svg", caption: "A quiet table before class", ocrText: "Morning Tide", createdAt: at(-1, 8, 22),
+      },
+      {
+        id: "image-4", publicId: "IMG-25", mediaKind: "document", mimeType: "image/svg+xml",
+        fileName: "receipt.svg", caption: "Notebook receipt", ocrText: "Paper & Pine · notebook · pens · $14.90", createdAt: at(-1, 16, 18),
+      },
+      {
+        id: "image-5", publicId: "IMG-24", mediaKind: "photo", mimeType: "image/svg+xml",
+        fileName: "city-rain.svg", caption: "Rain on the walk home", ocrText: "", createdAt: at(-3, 20, 4),
+      },
+      {
+        id: "image-6", publicId: "IMG-23", mediaKind: "photo", mimeType: "image/svg+xml",
+        fileName: "book-stack.svg", caption: "References for the next project", ocrText: "Design systems · Quiet interfaces", createdAt: at(-6, 13, 12),
+      },
+    ],
     expenses: [
       {
         id: "expense-1",
@@ -187,5 +213,17 @@ export function getDemoSnapshot(): DashboardSnapshot {
       { name: "Calendar", state: "connected", detail: "2 events today" },
       { name: "Excel", state: "connected", detail: "Expenses synced" },
     ],
+    settings: {
+      timezone: "Asia/Singapore",
+      reminderIntervalMinutes: 180,
+      quietHoursStart: "22:00",
+      quietHoursEnd: "08:00",
+      maxRemindersPerDay: 24,
+      dueNudgeMinutes: 5,
+      reminderMode: "INDIVIDUAL",
+      expenseCurrency: "SGD",
+      ocrLanguages: "eng",
+      directNudgesEnabled: false,
+    },
   };
 }

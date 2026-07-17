@@ -25,7 +25,9 @@ The My Day layout is intentionally asymmetric. Cards earn size from relevance an
 - `Ctrl/Cmd + K` opens global search; visible actions remain available to touch users
 - `N` focuses capture; `G D`, `G T`, `G N`, and `G I` move between views
 - Essential task completion is always visible; secondary actions can be quieter
-- Hover and press transitions are 150–220ms, with transform-heavy motion disabled when reduced motion is requested
+- The shell resolves from soft blur to sharp focus, followed by a 35–50ms content stagger and a restrained 6–8px rise
+- Buttons compress to 0.98 on press; route, sheet, skeleton, gallery, and lightbox motion preserve spatial continuity
+- Hover and press transitions stay within 150–220ms, with transform-heavy motion disabled when reduced motion is requested
 
 ## Personalization guardrails
 
