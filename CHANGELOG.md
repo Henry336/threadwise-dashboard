@@ -2,6 +2,25 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## Unreleased - Phase 3: Actions, Navigation, and Mobile Polish
+
+### Collection actions
+- Replaced transform-sensitive card menus with a portal-based action system: menus anchor beside their trigger on desktop and become large, reachable bottom sheets on mobile.
+- Fixed note ellipsis controls, added direct recoverable deletion, and added long-press/select mode with select-all, multi-delete, and one confirmation for the batch.
+- Applied the same anchored action behavior to task, idea, and image cards while keeping right-click support on desktop.
+
+### Brand and navigation
+- Standardized the wordmark, in-app mark, browser icon, and mobile header on the bot's dark compass, teal thread/check, and cream needle symbol.
+- Added the compact brand mark to the mobile workspace header and kept collection controls at touch-friendly sizes.
+
+### Search and settings
+- Removed the redundant Search submit step; results now stream as the user types and can be narrowed live by tasks, notes, ideas, images, or expenses.
+- Replaced the long settings wall with focused General, Reminders, Connections, and Privacy panels, including previously hidden reminder caps, due nudges, OCR languages, and expense currency.
+- Made settings navigation horizontally scrollable on mobile while preserving the shared Telegram/dashboard data source.
+
+### Quality
+- Added responsive menu placement, focus behavior, escape/outside-click dismissal, safe-area spacing, and mobile sheet motion with the existing reduced-motion support.
+
 ## Unreleased - Phase 2: Notes, Ideas, Images, and Expenses
 
 ### Notes and Ideas

@@ -3,20 +3,21 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import type { CSSProperties, PointerEvent, ReactNode } from "react";
 import {
   Archive, ArrowRight, BarChart3, BrainCircuit, Check, ChevronLeft, ChevronRight,
-  CircleDollarSign, Cloud, Download, ExternalLink, FileText, Filter, Image as ImageIcon,
+  CheckSquare2, CircleDollarSign, Cloud, Download, ExternalLink, FileText, Filter, Image as ImageIcon,
   Lightbulb, LoaderCircle, MoreHorizontal, Pencil, Pin, Plus, RefreshCw, Search,
   Sparkles, Star, Trash2, TrendingUp, X, Zap,
 } from "lucide-react";
+import { ActionMenu, useActionMenu } from "./action-menu";
+import type { ActionMenuAction } from "./action-menu";
 import type {
   DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, IdeaBrief,
   IdeaStatus, IntegrationStatus,
 } from "@/lib/types";
 
 type Pagination = { page: number; hasMore: boolean; loading: boolean };
-type MenuAction = { label: string; icon: ReactNode; danger?: boolean; onSelect: () => void };
 export type IdeaBriefDialogState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
 const DEMO_IMAGES = ["garden-light.svg", "launch-board.svg", "morning-cafe.svg", "receipt.svg", "city-rain.svg", "book-stack.svg"];
@@ -46,43 +47,6 @@ function newestPinned<T extends { pinned?: boolean; createdAt: string }>(items: 
   return [...items].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-function useCardMenu<T>() {
-  const [menu, setMenu] = useState<{ item: T; x: number; y: number } | null>(null);
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(null);
-    window.addEventListener("click", close);
-    window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
-    return () => {
-      window.removeEventListener("click", close);
-      window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
-    };
-  }, [menu]);
-  const open = (event: MouseEvent, item: T) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const width = 224;
-    const height = 270;
-    setMenu({
-      item,
-      x: Math.min(event.clientX, Math.max(12, window.innerWidth - width - 12)),
-      y: Math.min(event.clientY, Math.max(12, window.innerHeight - height - 12)),
-    });
-  };
-  return { menu, open, close: () => setMenu(null) };
-}
-
-function CollectionMenu({ x, y, label, actions, onClose }: { x: number; y: number; label: string; actions: MenuAction[]; onClose: () => void }) {
-  return <div className="tw-context-menu tw-collection-menu" role="menu" style={{ left: x, top: y }} onClick={(event) => event.stopPropagation()}>
-    <span>{label}</span>
-    {actions.map((action, index) => action.label === "separator"
-      ? <hr key={`separator-${index}`} />
-      : <button key={action.label} role="menuitem" className={action.danger ? "danger" : ""} onClick={() => { action.onSelect(); onClose(); }}>{action.icon}{action.label}</button>)}
-  </div>;
-}
-
 function LoadMore({ state, onLoadMore }: { state: Pagination; onLoadMore: () => void }) {
   if (!state.hasMore) return null;
   return <button className="tw-phase-load-more" disabled={state.loading} onClick={onLoadMore}>
@@ -95,37 +59,67 @@ function CollectionEmpty({ icon, title, copy }: { icon: ReactNode; title: string
   return <div className="tw-phase-empty"><span>{icon}</span><h3>{title}</h3><p>{copy}</p></div>;
 }
 
-export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onArchive, pagination, onLoadMore }: {
+export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, onBatchDelete, pagination, onLoadMore }: {
   notes: DashboardNote[];
   timezone: string;
   onEdit: (note: DashboardNote) => void;
   onPin: (note: DashboardNote) => void;
-  onArchive: (note: DashboardNote) => Promise<boolean>;
+  onDelete: (note: DashboardNote) => Promise<boolean>;
+  onBatchDelete: (notes: DashboardNote[]) => Promise<boolean>;
   pagination: Pagination;
   onLoadMore: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const cardMenu = useCardMenu<DashboardNote>();
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardMenu = useActionMenu<DashboardNote>();
   const visible = useMemo(() => newestPinned(notes).filter((note) => `${note.title} ${note.summary} ${note.body ?? ""} ${note.tags.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase())), [notes, query]);
-  const menuActions = (note: DashboardNote): MenuAction[] => [
+  const toggleSelect = (id: string) => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const leaveSelection = () => { setSelecting(false); setSelected(new Set()); };
+  const beginLongPress = (event: PointerEvent<HTMLElement>, note: DashboardNote) => {
+    const button = (event.target as HTMLElement).closest("button");
+    if (event.pointerType === "mouse" || (button && !button.classList.contains("tw-phase-card-copy"))) return;
+    longPress.current = setTimeout(() => { setSelecting(true); setSelected(new Set([note.id])); }, 460);
+  };
+  const cancelLongPress = () => { if (longPress.current) clearTimeout(longPress.current); longPress.current = null; };
+  const deleteSelection = async () => {
+    const chosen = notes.filter((note) => selected.has(note.id));
+    if (await onBatchDelete(chosen)) leaveSelection();
+  };
+  const menuActions = (note: DashboardNote): ActionMenuAction[] => [
     { label: "Edit note", icon: <Pencil size={16} />, onSelect: () => onEdit(note) },
     { label: note.pinned ? "Unpin note" : "Pin to top", icon: <Pin size={16} />, onSelect: () => onPin(note) },
+    { label: "Select note", icon: <CheckSquare2 size={16} />, onSelect: () => { setSelecting(true); setSelected((current) => new Set(current).add(note.id)); } },
     { label: "separator", icon: null, onSelect: () => undefined },
-    { label: "Archive note", icon: <Archive size={16} />, danger: true, onSelect: () => void onArchive(note) },
+    { label: "Delete note", icon: <Trash2 size={16} />, danger: true, onSelect: () => void onDelete(note) },
   ];
   return <section className="tw-phase-collection tw-phase-notes">
-    <div className="tw-phase-search"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes, text, or tags" /><kbd>{visible.length}</kbd></div>
+    <div className="tw-phase-note-toolbar">
+      <div className="tw-phase-search"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes, text, or tags" /><kbd>{visible.length}</kbd></div>
+      <button className={selecting ? "active" : ""} onClick={() => selecting ? leaveSelection() : setSelecting(true)}>{selecting ? <X size={17} /> : <CheckSquare2 size={17} />}{selecting ? "Cancel" : "Select"}</button>
+    </div>
     <div className="tw-phase-note-grid">
-      {visible.map((note, index) => <article className={`tw-phase-note-card tone-${index % 4}`} key={note.id} onContextMenu={(event) => cardMenu.open(event, note)}>
+      {visible.map((note, index) => <article
+        className={`tw-phase-note-card tone-${index % 4} ${selected.has(note.id) ? "selected" : ""}`}
+        key={note.id}
+        onContextMenu={(event) => cardMenu.open(event, note)}
+        onPointerDown={(event) => beginLongPress(event, note)}
+        onPointerUp={cancelLongPress}
+        onPointerCancel={cancelLongPress}
+        onPointerLeave={cancelLongPress}
+      >
         <header><span><FileText size={15} /> Note</span><div>{note.pinned && <em><Pin size={13} /> Pinned</em>}<button onClick={(event) => cardMenu.open(event, note)} aria-label={`Actions for ${note.title}`}><MoreHorizontal size={19} /></button></div></header>
-        <button className="tw-phase-card-copy" onClick={() => onEdit(note)}><h3>{note.title}</h3><p>{note.body || note.summary}</p></button>
+        {selecting && <button className="tw-phase-note-select" onClick={() => toggleSelect(note.id)} aria-label={`${selected.has(note.id) ? "Deselect" : "Select"} ${note.title}`}>{selected.has(note.id) ? <Check size={16} /> : null}</button>}
+        <button className="tw-phase-card-copy" onClick={() => selecting ? toggleSelect(note.id) : onEdit(note)}><h3>{note.title}</h3><p>{note.body || note.summary}</p></button>
         {note.tags.length > 0 && <div className="tw-phase-tags">{note.tags.slice(0, 5).map((tag) => <span key={tag}>#{tag}</span>)}</div>}
         <footer><time>{formatDate(note.updatedAt ?? note.createdAt, timezone, { year: "numeric" })}</time><div><button onClick={() => onPin(note)} aria-label={note.pinned ? "Unpin note" : "Pin note"}><Pin size={16} /></button><button onClick={() => onEdit(note)}>Edit <ArrowRight size={15} /></button></div></footer>
       </article>)}
     </div>
     {!visible.length && <CollectionEmpty icon={<FileText size={27} />} title="No notes found" copy="Try a different phrase or capture a new note." />}
     <LoadMore state={pagination} onLoadMore={onLoadMore} />
-    {cardMenu.menu && <CollectionMenu x={cardMenu.menu.x} y={cardMenu.menu.y} label={cardMenu.menu.item.publicId} actions={menuActions(cardMenu.menu.item)} onClose={cardMenu.close} />}
+    {selecting && <div className="tw-phase-bulk-bar" role="toolbar" aria-label="Selected notes"><span><b>{selected.size}</b> selected</span><button onClick={() => setSelected(new Set(visible.map((note) => note.id)))}>Select all</button><button className="danger" disabled={!selected.size} onClick={() => void deleteSelection()}><Trash2 size={17} /> Delete</button></div>}
+    {cardMenu.menu && <ActionMenu state={cardMenu.menu} label={cardMenu.menu.item.publicId} actions={menuActions(cardMenu.menu.item)} onClose={cardMenu.close} />}
   </section>;
 }
 
@@ -141,9 +135,9 @@ export function PhaseTwoIdeasView({ ideas, timezone, onEdit, onPin, onArchive, o
   onLoadMore: () => void;
 }) {
   const [status, setStatus] = useState<"ALL" | IdeaStatus>("ALL");
-  const cardMenu = useCardMenu<DashboardIdea>();
+  const cardMenu = useActionMenu<DashboardIdea>();
   const visible = useMemo(() => newestPinned(ideas).filter((idea) => status === "ALL" || idea.status === status), [ideas, status]);
-  const menuActions = (idea: DashboardIdea): MenuAction[] => [
+  const menuActions = (idea: DashboardIdea): ActionMenuAction[] => [
     { label: "Open idea brief", icon: <BrainCircuit size={16} />, onSelect: () => onAnalyze(idea) },
     { label: "Edit idea", icon: <Pencil size={16} />, onSelect: () => onEdit(idea) },
     { label: idea.pinned ? "Unpin idea" : "Pin to top", icon: <Pin size={16} />, onSelect: () => onPin(idea) },
@@ -167,7 +161,7 @@ export function PhaseTwoIdeasView({ ideas, timezone, onEdit, onPin, onArchive, o
     </div>
     {!visible.length && <CollectionEmpty icon={<Lightbulb size={27} />} title="No ideas in this stage" copy="Every useful project starts as a small spark." />}
     <LoadMore state={pagination} onLoadMore={onLoadMore} />
-    {cardMenu.menu && <CollectionMenu x={cardMenu.menu.x} y={cardMenu.menu.y} label={cardMenu.menu.item.publicId} actions={menuActions(cardMenu.menu.item)} onClose={cardMenu.close} />}
+    {cardMenu.menu && <ActionMenu state={cardMenu.menu} label={cardMenu.menu.item.publicId} actions={menuActions(cardMenu.menu.item)} onClose={cardMenu.close} />}
   </section>;
 }
 
@@ -187,14 +181,14 @@ export function PhaseTwoImagesView({ images, timezone, isDemo, onEdit, onPin, on
   const [documents, setDocuments] = useState(false);
   const [active, setActive] = useState<DashboardImage | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const cardMenu = useCardMenu<DashboardImage>();
+  const cardMenu = useActionMenu<DashboardImage>();
   const visible = useMemo(() => newestPinned(images).filter((image) => (!documents || image.mediaKind.toLowerCase() === "document") && `${image.caption ?? ""} ${image.ocrText ?? ""} ${image.fileName ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())), [images, documents, query]);
   const favourites = visible.filter((image) => image.pinned);
   const regular = visible.filter((image) => !image.pinned);
   const grouped = regular.reduce<Record<string, DashboardImage[]>>((result, image) => { const key = calendarKey(image.createdAt, timezone); (result[key] ??= []).push(image); return result; }, {});
   const toggleSelect = (id: string) => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const deleteSelection = async () => { const chosen = images.filter((image) => selected.has(image.id)); if (await onBatchDelete(chosen)) setSelected(new Set()); };
-  const menuActions = (image: DashboardImage): MenuAction[] => [
+  const menuActions = (image: DashboardImage): ActionMenuAction[] => [
     { label: "Open image", icon: <ImageIcon size={16} />, onSelect: () => setActive(image) },
     { label: "Edit caption", icon: <Pencil size={16} />, onSelect: () => onEdit(image) },
     { label: image.pinned ? "Remove favourite" : "Add to favourites", icon: <Star size={16} />, onSelect: () => onPin(image) },
@@ -215,7 +209,7 @@ export function PhaseTwoImagesView({ images, timezone, isDemo, onEdit, onPin, on
     {!visible.length && <CollectionEmpty icon={<ImageIcon size={27} />} title="No images found" copy="Send a photo or document to Threadwise in Telegram; it will appear here." />}
     <LoadMore state={pagination} onLoadMore={onLoadMore} />
     {active && (() => { const current = images.find((image) => image.id === active.id) ?? active; return <PhaseTwoImageLightbox image={current} images={visible} isDemo={isDemo} onClose={() => setActive(null)} onMove={(direction) => { const index = visible.findIndex((image) => image.id === current.id); setActive(visible[(index + direction + visible.length) % visible.length]); }} onEdit={() => { onEdit(current); setActive(null); }} onPin={() => onPin(current)} onDelete={async () => { if (await onDelete(current)) setActive(null); }} onCreateNote={() => { onCreateNote(current); setActive(null); }} />; })()}
-    {cardMenu.menu && <CollectionMenu x={cardMenu.menu.x} y={cardMenu.menu.y} label={cardMenu.menu.item.publicId} actions={menuActions(cardMenu.menu.item)} onClose={cardMenu.close} />}
+    {cardMenu.menu && <ActionMenu state={cardMenu.menu} label={cardMenu.menu.item.publicId} actions={menuActions(cardMenu.menu.item)} onClose={cardMenu.close} />}
   </section>;
 }
 
