@@ -12,7 +12,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const isDemo = params.demo === "1";
   if (!session && !isDemo) redirect("/");
 
-  const snapshot = await getDashboardSnapshot(session, { demo: isDemo }).catch(() => null);
+  let snapshot = null;
+  try {
+    snapshot = await getDashboardSnapshot(session, { demo: isDemo });
+  } catch (error) {
+    console.error("Dashboard snapshot load failed.", {
+      errorType: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : "Unknown dashboard error",
+    });
+  }
   if (!snapshot) {
     return (
       <main className="data-error-shell">

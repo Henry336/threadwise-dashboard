@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Check, Command, Layers3, LockKeyhole, Sparkles } from "lucide-react";
+import { TelegramMiniAppAuth } from "@/components/telegram-mini-app-auth";
 import { ThreadwiseMark } from "@/components/threadwise-mark";
 import { getSessionUser, isTelegramAuthConfigured } from "@/lib/auth";
 
@@ -10,6 +11,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
 
   return (
     <div className="landing-shell">
+      {!session && <TelegramMiniAppAuth />}
       <header className="landing-nav">
         <ThreadwiseMark />
         <div className="landing-nav-actions">

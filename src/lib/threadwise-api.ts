@@ -134,7 +134,17 @@ export async function getDashboardSnapshot(
   if (!user) throw new Error("A signed-in user is required");
 
   const response = await threadwiseFetch(user);
-  if (!response.ok) throw new Error(`Threadwise API returned ${response.status}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    let code = "unknown";
+    try {
+      const parsed = JSON.parse(body) as { error?: unknown };
+      if (typeof parsed.error === "string" && /^[a-z0-9_-]{1,80}$/i.test(parsed.error)) code = parsed.error;
+    } catch {
+      // Keep upstream response bodies out of application logs.
+    }
+    throw new Error(`Threadwise API returned ${response.status} (${code})`);
+  }
   const declaredLength = Number(response.headers.get("content-length") ?? 0);
   if (declaredLength > 2_000_000) throw new Error("Threadwise API response is too large");
   const body = await response.text();
