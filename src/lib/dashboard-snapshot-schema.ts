@@ -32,6 +32,7 @@ const TaskSchema = z.object({
   id: text(100), publicId: text(50), title: text(500), description: optionalText(5_000),
   dueAt: isoDate.nullish().transform((value) => value ?? undefined),
   nextReminderAt: isoDate.nullish().transform((value) => value ?? undefined),
+  snoozedUntil: isoDate.nullish().transform((value) => value ?? undefined),
   reminderIntervalMinutes: z.number().int().min(1).max(525_600).nullish().transform((value) => value ?? undefined),
   status: z.enum(["OPEN", "DONE", "CANCELED"]),
   recurrenceRule: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).nullish().transform((value) => value ?? undefined),
@@ -46,16 +47,31 @@ const NoteSchema = z.object({
   updatedAt: isoDate.optional(), pinned: z.boolean().optional(),
 });
 
+const IdeaBriefSchema = z.object({
+  buildability: z.number().min(0).max(10),
+  usefulness: z.number().min(0).max(10),
+  novelty: z.number().min(0).max(10),
+  portfolioValue: z.number().min(0).max(10),
+  monetization: z.number().min(0).max(10),
+  difficulty: z.number().min(0).max(10),
+  risk: z.number().min(0).max(10),
+  summary: z.string().max(5_000),
+  marketNotes: z.string().max(5_000),
+  dos: z.array(z.string().trim().min(1).max(1_000)).max(20),
+  donts: z.array(z.string().trim().min(1).max(1_000)).max(20),
+});
+
 const IdeaSchema = z.object({
   id: text(100), publicId: text(50), title: text(500), concept: z.string().max(20_000),
   status: z.enum(["RAW", "CLARIFIED", "SELECTED", "PROTOTYPING", "BUILT", "PAUSED", "REJECTED"]),
   tags: z.array(text(100)).max(50), createdAt: isoDate, updatedAt: isoDate.optional(), pinned: z.boolean().optional(),
+  brief: IdeaBriefSchema.optional(),
 });
 
 const ImageSchema = z.object({
   id: text(100), publicId: text(50), mediaKind: text(50), mimeType: optionalText(200), fileName: optionalText(500),
   caption: optionalText(4_000), ocrText: optionalText(50_000), ocrConfidence: z.number().min(0).max(100).nullish().transform((value) => value ?? undefined),
-  createdAt: isoDate, updatedAt: isoDate.optional(),
+  createdAt: isoDate, updatedAt: isoDate.optional(), pinned: z.boolean().optional(),
 });
 
 const ExpenseSchema = z.object({

@@ -17,6 +17,7 @@ export type DashboardTask = {
   description?: string;
   dueAt?: string;
   nextReminderAt?: string;
+  snoozedUntil?: string;
   reminderIntervalMinutes?: number;
   status: "OPEN" | "DONE" | "CANCELED";
   recurrenceRule?: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
@@ -49,6 +50,20 @@ export type IdeaStatus =
   | "PAUSED"
   | "REJECTED";
 
+export type IdeaBrief = {
+  buildability: number;
+  usefulness: number;
+  novelty: number;
+  portfolioValue: number;
+  monetization: number;
+  difficulty: number;
+  risk: number;
+  summary: string;
+  marketNotes: string;
+  dos: string[];
+  donts: string[];
+};
+
 export type DashboardIdea = {
   id: string;
   publicId: string;
@@ -59,6 +74,7 @@ export type DashboardIdea = {
   createdAt: string;
   updatedAt?: string;
   pinned?: boolean;
+  brief?: IdeaBrief;
 };
 
 export type DashboardImage = {
@@ -72,6 +88,7 @@ export type DashboardImage = {
   ocrConfidence?: number;
   createdAt: string;
   updatedAt?: string;
+  pinned?: boolean;
 };
 
 export type DashboardExpense = {
@@ -136,3 +153,12 @@ export type EntityKind = "task" | "note" | "idea" | "expense" | "image";
 export type ThreadwiseEntity = DashboardTask | DashboardNote | DashboardIdea | DashboardExpense | DashboardImage;
 
 export type ApiErrorBody = { error: string; message?: string };
+
+export type CaptureKind = "task" | "note" | "idea" | "expense";
+export type CapturePreview = {
+  kind: CaptureKind;
+  confidence: number;
+  reason: string;
+  sourceText: string;
+  payload: Record<string, unknown>;
+};

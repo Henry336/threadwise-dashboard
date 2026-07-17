@@ -45,4 +45,44 @@ describe("dashboard snapshot contract", () => {
     input.user.telegramId = "chat:-100";
     expect(() => parseDashboardSnapshot(input)).toThrow();
   });
+
+  it("preserves a task snooze revision used by the live task controls", () => {
+    const parsed = parseDashboardSnapshot({
+      ...snapshot("03:00", "06:00"),
+      tasks: [{
+        id: "task-1",
+        publicId: "TASK-1",
+        title: "Review the launch plan",
+        status: "OPEN",
+        snoozedUntil: "2026-07-17T13:00:00.000Z",
+        updatedAt: "2026-07-17T12:00:00.000Z",
+      }],
+    });
+
+    expect(parsed.tasks[0]?.snoozedUntil).toBe("2026-07-17T13:00:00.000Z");
+  });
+
+  it("preserves saved idea briefs and image favourites", () => {
+    const brief = {
+      buildability: 8, usefulness: 9, novelty: 7, portfolioValue: 8,
+      monetization: 6, difficulty: 4, risk: 3,
+      summary: "A focused concept.", marketNotes: "Validate retention first.",
+      dos: ["Interview users."], donts: ["Overbuild the first version."],
+    };
+    const parsed = parseDashboardSnapshot({
+      ...snapshot("03:00", "06:00"),
+      ideas: [{
+        id: "idea-1", publicId: "IDEA-1", title: "A calmer capture tool",
+        concept: "Save useful thoughts without friction.", status: "RAW", tags: [],
+        createdAt: "2026-07-17T12:00:00.000Z", brief,
+      }],
+      images: [{
+        id: "image-1", publicId: "IMG-1", mediaKind: "photo", pinned: true,
+        createdAt: "2026-07-17T12:00:00.000Z",
+      }],
+    });
+
+    expect(parsed.ideas[0]?.brief).toEqual(brief);
+    expect(parsed.images?.[0]?.pinned).toBe(true);
+  });
 });
