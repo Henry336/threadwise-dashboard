@@ -8,14 +8,15 @@ const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 const MAX_BODY_BYTES = 96_000;
 
 function isAllowedPath(path: string) {
-  return /^(?:tasks(?:\/[A-Za-z0-9_-]+)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/convert-to-task)?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:gmail|calendar|excel)\/disconnect|integrations\/excel\/sync|privacy\/(?:export|account))$/.test(path);
+  return /^(?:snapshot|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:gmail|calendar|excel)\/disconnect|integrations\/excel\/sync|privacy\/(?:export|account))$/.test(path);
 }
 
 function methodAllowed(method: string, path: string) {
-  if (path === "search" || path === "privacy/export" || /\/content$/.test(path)) return method === "GET";
+  if (path === "snapshot" || path === "events" || path === "search" || path === "privacy/export" || /\/content$/.test(path)) return method === "GET";
+  if (path === "capture/preview") return method === "POST";
   if (path === "settings") return method === "GET" || method === "PATCH";
   if (/^(tasks|notes|ideas|expenses|images)$/.test(path)) return method === "GET" || method === "POST" && path !== "images";
-  if (/^integrations\/.+\/disconnect$/.test(path) || path === "integrations/excel/sync" || /\/convert-to-task$/.test(path)) return method === "POST";
+  if (/^integrations\/.+\/disconnect$/.test(path) || path === "integrations/excel/sync" || /\/(?:convert-to-task|analyze)$/.test(path)) return method === "POST";
   if (path === "privacy/account") return method === "DELETE";
   if (/^(tasks|notes|ideas|expenses|images)\//.test(path)) return method === "PATCH" || method === "DELETE";
   return false;
@@ -77,7 +78,23 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
       method,
       headers: body ? { "Content-Type": "application/json", Accept: request.headers.get("accept") ?? "application/json" } : { Accept: request.headers.get("accept") ?? "application/json" },
       body,
+      ...(path === "events" ? { signal: request.signal } : {}),
     });
+
+    if (path === "events" && upstream.ok && upstream.body) {
+      const response = new NextResponse(upstream.body, {
+        status: upstream.status,
+        headers: {
+          "Content-Type": upstream.headers.get("content-type") ?? "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "Connection": "keep-alive",
+          "X-Accel-Buffering": "no",
+        },
+      });
+      response.headers.set("Vary", "Cookie");
+      response.headers.set("X-Content-Type-Options", "nosniff");
+      return response;
+    }
 
     const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
     const payload = await upstream.arrayBuffer();

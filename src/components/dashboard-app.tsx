@@ -2,27 +2,36 @@
 /* Authenticated image responses must stay on the browser's same-origin cookie path. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Bell, BookOpen, CalendarDays, Check, CheckCircle2, ChevronDown,
+  Archive, ArrowRight, Bell, BookOpen, CalendarDays, Check, CheckCircle2, ChevronDown,
   ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Cloud, Download, ExternalLink,
   FileText, Filter, Image as ImageIcon, Inbox, Lightbulb,
   ListChecks, LoaderCircle, LogOut, Menu, Moon, MoreHorizontal, Pencil,
   Pin, Plus, RefreshCw, Search, Settings, ShieldCheck, Sparkles, Sun, Trash2, Unplug,
-  X, Zap,
+  Wifi, WifiOff, X, Zap,
 } from "lucide-react";
 import { ThreadwiseMark } from "./threadwise-mark";
+import {
+  PhaseTwoExpensesView,
+  PhaseTwoIdeaBriefDialog,
+  PhaseTwoIdeasView,
+  PhaseTwoImagesView,
+  PhaseTwoNotesView,
+} from "./phase-two-collections";
 import type {
   DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, DashboardSettings,
   DashboardSnapshot, DashboardTask, EntityKind, IdeaStatus, IntegrationStatus, SearchResult,
+  CaptureKind, CapturePreview, IdeaBrief,
 } from "@/lib/types";
 
 export type DashboardView = "today" | "tasks" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
 type EditorState = { kind: EditableKind; item?: DashboardTask | DashboardNote | DashboardIdea | DashboardExpense | DashboardImage; seed?: string };
 type PaginationState = Record<"tasks" | "notes" | "ideas" | "expenses" | "images", { page: number; hasMore: boolean; loading: boolean }>;
+type IdeaBriefState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
-const ACCENTS = { iris: "#6d5bd0", coral: "#dc6a52", mint: "#148b74" } as const;
+const ACCENTS = { iris: "#168b83", coral: "#dc6a52", mint: "#2aa889" } as const;
 const NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "today", label: "Today", icon: Inbox },
   { id: "tasks", label: "Tasks", icon: ListChecks },
@@ -54,6 +63,13 @@ function formatDate(value: string, timezone: string, options: Intl.DateTimeForma
 function formatTime(value: string | undefined, timezone: string) {
   if (!value) return "Any time";
   return new Intl.DateTimeFormat("en-SG", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(value));
+}
+function formatRelativeSync(value: string) {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1_000));
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  return minutes < 60 ? `${minutes}m ago` : `${Math.floor(minutes / 60)}h ago`;
 }
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-SG", { style: "currency", currency }).format(value);
@@ -151,9 +167,16 @@ async function api<T>(path: string, method = "GET", body?: unknown): Promise<T> 
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
   if (!response.ok) {
     const error = payload as { message?: string; error?: string };
-    throw new Error(error.message ?? error.error ?? "That action could not be completed.");
+    throw new ClientApiError(response.status, error.error ?? "request_failed", error.message ?? error.error ?? "That action could not be completed.");
   }
   return payload as T;
+}
+
+class ClientApiError extends Error {
+  constructor(public status: number, public code: string, message: string) {
+    super(message);
+    this.name = "ClientApiError";
+  }
 }
 
 export function DashboardApp({ initialData, isDemo, initialView: requestedView }: { initialData: DashboardSnapshot; isDemo: boolean; initialView?: string }) {
@@ -167,8 +190,10 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
   const [accent, setAccent] = useState<keyof typeof ACCENTS>(initialData.user.accent);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [capture, setCapture] = useState("");
-  const [captureKind, setCaptureKind] = useState<"task" | "note" | "idea">("task");
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [ideaBrief, setIdeaBrief] = useState<IdeaBriefState | null>(null);
+  const [syncState, setSyncState] = useState<"connecting" | "live" | "reconnecting" | "offline">(isDemo ? "live" : "connecting");
+  const [lastSyncedAt, setLastSyncedAt] = useState(initialData.generatedAt);
   const [pagination, setPagination] = useState<PaginationState>({
     tasks: { page: 1, hasMore: initialData.tasks.length >= 50, loading: false },
     notes: { page: 1, hasMore: initialData.notes.length >= 50, loading: false },
@@ -178,6 +203,7 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
   });
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
+  const refreshInFlight = useRef(false);
 
   const announce = (message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -193,6 +219,30 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const refreshSnapshot = useCallback(async (showError = false) => {
+    if (isDemo || refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    try {
+      const snapshot = await api<DashboardSnapshot>("snapshot");
+      setData(snapshot);
+      setLastSyncedAt(snapshot.generatedAt);
+      setSyncState("live");
+      hydratedCollections.current.clear();
+      setPagination({
+        tasks: { page: 1, hasMore: snapshot.tasks.length >= 50, loading: false },
+        notes: { page: 1, hasMore: snapshot.notes.length >= 50, loading: false },
+        ideas: { page: 1, hasMore: snapshot.ideas.length >= 50, loading: false },
+        expenses: { page: 1, hasMore: snapshot.expenses.length >= 50, loading: false },
+        images: { page: 1, hasMore: snapshot.images.length >= 50, loading: false },
+      });
+    } catch {
+      setSyncState("offline");
+      if (showError) announce("Live sync is retrying. Your last loaded data is still here.");
+    } finally {
+      refreshInFlight.current = false;
+    }
+  }, [isDemo]);
+
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
   useEffect(() => {
@@ -200,12 +250,35 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
       const typing = ["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement).tagName);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setPaletteOpen(true); }
       else if (!typing && event.key === "/") { event.preventDefault(); setPaletteOpen(true); }
-      else if (!typing && event.key.toLowerCase() === "n") { event.preventDefault(); document.getElementById("quick-capture")?.focus(); }
-      else if (event.key === "Escape") { setPaletteOpen(false); setEditor(null); setMoreOpen(false); }
+      else if (!typing && event.key.toLowerCase() === "n") { event.preventDefault(); setCaptureOpen(true); }
+      else if (event.key === "Escape") { setPaletteOpen(false); setEditor(null); setMoreOpen(false); setCaptureOpen(false); }
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
   }, []);
+
+  useEffect(() => {
+    if (isDemo) return;
+    const events = new EventSource("/api/threadwise/events");
+    const ready = () => setSyncState("live");
+    const refresh = () => { setSyncState("live"); void refreshSnapshot(); };
+    const retrying = () => setSyncState("reconnecting");
+    events.addEventListener("ready", ready);
+    events.addEventListener("refresh", refresh);
+    events.addEventListener("sync-error", retrying);
+    events.onerror = retrying;
+    const reconcile = window.setInterval(() => void refreshSnapshot(), 60_000);
+    const focus = () => void refreshSnapshot();
+    const visibility = () => { if (document.visibilityState === "visible") void refreshSnapshot(); };
+    window.addEventListener("focus", focus);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      events.close();
+      window.clearInterval(reconcile);
+      window.removeEventListener("focus", focus);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [isDemo, refreshSnapshot]);
 
   useEffect(() => {
     const key = ({ tasks: "tasks", notes: "notes", ideas: "ideas", images: "images", expenses: "expenses" } as Partial<Record<DashboardView, keyof PaginationState>>)[activeView];
@@ -240,16 +313,29 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
         else if (kind === "expense") saved = { description: "Expense", total: 0, currency: data.settings.expenseCurrency, transactionAt: new Date().toISOString(), ...base } as DashboardExpense;
         else saved = base as DashboardImage;
       }
-      else saved = asPayload(await api(item ? `${plural}/${item.id}` : plural, item ? "PATCH" : "POST", values), kind);
+      else {
+        const revision = item && ["task", "note", "idea", "image"].includes(kind) && "updatedAt" in item && item.updatedAt
+          ? { expectedUpdatedAt: item.updatedAt }
+          : {};
+        saved = asPayload(await api(item ? `${plural}/${item.id}` : plural, item ? "PATCH" : "POST", { ...values, ...revision }), kind);
+      }
       setData((current) => {
         const collection = current[plural] as Array<{ id: string }>;
         const next = item ? collection.map((entry) => entry.id === item.id ? saved : entry) : [saved, ...collection];
         return { ...current, [plural]: next } as DashboardSnapshot;
       });
       setEditor(null);
+      setLastSyncedAt(new Date().toISOString());
+      setSyncState("live");
       announce(`${kind[0].toUpperCase()}${kind.slice(1)} ${item ? "updated" : "saved"}.`);
       return true;
-    } catch (error) { announce(error instanceof Error ? error.message : "Could not save that."); return false; }
+    } catch (error) {
+      if (error instanceof ClientApiError && error.code === "revision_conflict") {
+        void refreshSnapshot();
+        announce("This item changed in Telegram or another tab. I refreshed it instead of overwriting it.");
+      } else announce(error instanceof Error ? error.message : "Could not save that.");
+      return false;
+    }
     finally { setBusy(false); }
   };
   const removeEntity = async (kind: EditableKind, item: NonNullable<EditorState["item"]>) => {
@@ -262,6 +348,7 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
       if (!isDemo) await api(`${plural}/${item.id}`, "DELETE");
       setData((current) => ({ ...current, [plural]: (current[plural] as Array<{ id: string }>).filter((entry) => entry.id !== item.id) } as DashboardSnapshot));
       setEditor(null);
+      setLastSyncedAt(new Date().toISOString());
       announce(`${kind[0].toUpperCase()}${kind.slice(1)} ${archives ? "archived" : "deleted"}.`);
       return true;
     } catch (error) { announce(error instanceof Error ? error.message : `Could not ${action.toLowerCase()} that.`); return false; }
@@ -279,16 +366,93 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
     } catch (error) { announce(error instanceof Error ? error.message : "Could not delete the selected images."); return false; }
     finally { setBusy(false); }
   };
-  const toggleTask = async (task: DashboardTask) => {
-    const status = task.status === "DONE" ? "OPEN" : "DONE";
-    setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? { ...entry, status } : entry) }));
-    if (isDemo) { announce(status === "DONE" ? "Task completed." : "Task restored."); return; }
+  const patchTask = async (task: DashboardTask, patch: Partial<DashboardTask>, message?: string) => {
+    setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? { ...entry, ...patch } : entry) }));
+    if (isDemo) { if (message) announce(message); return; }
     try {
-      const saved = asPayload<DashboardTask>(await api(`tasks/${task.id}`, "PATCH", { status }), "task");
+      const saved = asPayload<DashboardTask>(await api(`tasks/${task.id}`, "PATCH", { ...patch, ...(task.updatedAt ? { expectedUpdatedAt: task.updatedAt } : {}) }), "task");
       setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? saved : entry) }));
+      setLastSyncedAt(new Date().toISOString());
+      if (message) announce(message);
     } catch (error) {
       setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? task : entry) }));
-      announce(error instanceof Error ? error.message : "Could not update that task.");
+      if (error instanceof ClientApiError && error.code === "revision_conflict") {
+        void refreshSnapshot();
+        announce("That task changed elsewhere. I refreshed it instead of overwriting it.");
+      } else announce(error instanceof Error ? error.message : "Could not update that task.");
+    }
+  };
+  const toggleTask = (task: DashboardTask) => patchTask(task, { status: task.status === "DONE" ? "OPEN" : "DONE" }, task.status === "DONE" ? "Task restored." : "Task completed.");
+  const pinTask = (task: DashboardTask) => patchTask(task, { pinned: !task.pinned }, task.pinned ? "Task unpinned." : "Task pinned.");
+  const snoozeTask = (task: DashboardTask) => {
+    const snoozedUntil = new Date(Date.now() + 60 * 60_000).toISOString();
+    return patchTask(task, { snoozedUntil }, "Task snoozed for one hour.");
+  };
+  const toggleCollectionPin = async (kind: "note" | "idea" | "image", item: DashboardNote | DashboardIdea | DashboardImage) => {
+    const plural = `${kind}s` as "notes" | "ideas" | "images";
+    const pinned = !item.pinned;
+    const optimistic = { ...item, pinned };
+    setData((current) => ({
+      ...current,
+      [plural]: (current[plural] as Array<DashboardNote | DashboardIdea | DashboardImage>).map((entry) => entry.id === item.id ? optimistic : entry),
+    } as DashboardSnapshot));
+    if (isDemo) {
+      announce(`${kind === "image" ? "Image" : kind[0].toUpperCase() + kind.slice(1)} ${pinned ? "pinned" : "unpinned"}.`);
+      return;
+    }
+    try {
+      const saved = asPayload<DashboardNote | DashboardIdea | DashboardImage>(await api(`${plural}/${item.id}`, "PATCH", {
+        pinned,
+        ...(item.updatedAt ? { expectedUpdatedAt: item.updatedAt } : {}),
+      }), kind);
+      setData((current) => ({
+        ...current,
+        [plural]: (current[plural] as Array<DashboardNote | DashboardIdea | DashboardImage>).map((entry) => entry.id === item.id ? saved : entry),
+      } as DashboardSnapshot));
+      setLastSyncedAt(new Date().toISOString());
+      announce(`${kind === "image" ? "Image" : kind[0].toUpperCase() + kind.slice(1)} ${pinned ? "pinned" : "unpinned"}.`);
+    } catch (error) {
+      setData((current) => ({
+        ...current,
+        [plural]: (current[plural] as Array<DashboardNote | DashboardIdea | DashboardImage>).map((entry) => entry.id === item.id ? item : entry),
+      } as DashboardSnapshot));
+      if (error instanceof ClientApiError && error.code === "revision_conflict") {
+        void refreshSnapshot();
+        announce("That item changed elsewhere. I refreshed it instead of overwriting it.");
+      } else announce(error instanceof Error ? error.message : "Could not update that item.");
+    }
+  };
+  const analyzeIdea = async (idea: DashboardIdea, refresh = false) => {
+    if (idea.brief && !refresh) {
+      setIdeaBrief({ idea, brief: idea.brief, loading: false });
+      return;
+    }
+    setIdeaBrief({ idea, brief: idea.brief, loading: true });
+    if (isDemo) {
+      const brief: IdeaBrief = {
+        buildability: 8, usefulness: 9, novelty: 7, portfolioValue: 8,
+        monetization: 6, difficulty: 4, risk: 3,
+        summary: "A focused concept with a clear user benefit and a practical first version.",
+        marketNotes: "Validate the narrowest recurring pain first, then widen the audience only after retention is visible.",
+        dos: ["Interview five target users.", "Prototype the smallest repeatable workflow.", "Choose one success metric before building."],
+        donts: ["Build every integration at once.", "Treat early enthusiasm as proven retention."],
+      };
+      const updated = { ...idea, brief, updatedAt: new Date().toISOString() };
+      window.setTimeout(() => {
+        setData((current) => ({ ...current, ideas: current.ideas.map((entry) => entry.id === idea.id ? updated : entry) }));
+        setIdeaBrief({ idea: updated, brief, loading: false });
+      }, 450);
+      return;
+    }
+    try {
+      const result = await api<{ idea: DashboardIdea; brief: IdeaBrief }>(`ideas/${idea.id}/analyze`, "POST", {});
+      setData((current) => ({ ...current, ideas: current.ideas.map((entry) => entry.id === idea.id ? result.idea : entry) }));
+      setIdeaBrief({ idea: result.idea, brief: result.brief, loading: false });
+      setLastSyncedAt(new Date().toISOString());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Threadwise could not analyze this idea.";
+      setIdeaBrief({ idea, brief: idea.brief, loading: false, error: message });
+      announce(message);
     }
   };
   const convertIdea = async (idea: DashboardIdea) => {
@@ -301,16 +465,6 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
       setEditor(null); navigate("tasks"); announce("Idea moved into action.");
     } catch (error) { announce(error instanceof Error ? error.message : "Could not convert that idea."); }
     finally { setBusy(false); }
-  };
-  const quickCapture = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const value = capture.trim(); if (!value) return;
-    const saved = captureKind === "task"
-      ? await saveEntity("task", { title: value })
-      : captureKind === "note"
-        ? await saveEntity("note", { title: value.slice(0, 80), body: value, tags: [] })
-        : await saveEntity("idea", { title: value.slice(0, 80), concept: value, tags: [], status: "RAW" });
-    if (saved) setCapture("");
   };
   const loadMore = async (kind: keyof PaginationState) => {
     if (isDemo || pagination[kind].loading || !pagination[kind].hasMore) return;
@@ -353,8 +507,8 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
   return (
     <div className="tw-shell" style={{ "--accent": ACCENTS[accent] } as React.CSSProperties}>
       <aside className="tw-sidebar">
-        <div className="tw-brand-row"><ThreadwiseMark /><span className="live-dot"><i /> live</span></div>
-        <button className="tw-quick-button" onClick={() => document.getElementById("quick-capture")?.focus()}><Plus size={17} /> Quick capture <kbd>N</kbd></button>
+        <div className="tw-brand-row"><ThreadwiseMark /></div>
+        <button className="tw-quick-button" onClick={() => setCaptureOpen(true)}><Plus size={17} /> Quick capture <kbd>N</kbd></button>
         <nav aria-label="Dashboard">
           <p>Workspace</p>
           {NAV.slice(0, 6).map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span>{id === "tasks" && <em>{openTasks.length}</em>}</button>)}
@@ -362,7 +516,10 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
           {NAV.slice(6).map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span></button>)}
         </nav>
         <div className="tw-sidebar-foot">
-          <div className="tw-telegram-state"><Zap size={14} /><span><b>Live with Telegram</b><small>Everything stays in step</small></span></div>
+          <button className="tw-telegram-state" data-state={syncState} onClick={() => void refreshSnapshot(true)} disabled={isDemo}>
+            {syncState === "live" ? <Wifi size={16} /> : syncState === "offline" ? <WifiOff size={16} /> : <RefreshCw className="spin" size={16} />}
+            <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Live with Telegram" : syncState === "offline" ? "Sync offline" : "Reconnecting"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Updated ${formatRelativeSync(lastSyncedAt)}` : "Your saved view remains available"}</small></span>
+          </button>
           <button onClick={() => navigate("settings")} className="tw-profile"><span>{data.user.firstName[0]}</span><div><b>{data.user.fullName}</b><small>@{data.user.username ?? "threadwise"}</small></div><ChevronRight size={16} /></button>
         </div>
       </aside>
@@ -381,19 +538,14 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
 
         <div className="tw-content" key={activeView}>
           <PageHeading view={activeView} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />
-          {activeView !== "settings" && activeView !== "search" && activeView !== "images" && (
-            <form className="tw-capture" onSubmit={quickCapture}>
-              <div className="tw-capture-kinds">{(["task", "note", "idea"] as const).map((kind) => <button key={kind} type="button" className={captureKind === kind ? "active" : ""} onClick={() => setCaptureKind(kind)}>{kind}</button>)}</div>
-              <div><Sparkles size={19} /><input id="quick-capture" value={capture} onChange={(event) => setCapture(event.target.value)} placeholder={captureKind === "task" ? "What needs doing?" : captureKind === "note" ? "Keep a useful thought…" : "Capture a spark…"} /><button type="submit" disabled={busy || !capture.trim()}><ArrowRight size={18} /></button></div>
-            </form>
-          )}
+          <button className="tw-capture-launch" onClick={() => setCaptureOpen(true)}><span><Sparkles size={20} /></span><div><b>Capture in plain language</b><small>“Remind me at 1.30pm”, a note, an idea, or an expense</small></div><kbd>N</kbd><ArrowRight size={18} /></button>
 
           {activeView === "today" && <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />}
-          {activeView === "tasks" && <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />}
-          {activeView === "notes" && <NotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
-          {activeView === "ideas" && <IdeasView ideas={data.ideas} timezone={data.user.timezone} onEdit={(idea) => setEditor({ kind: "idea", item: idea })} onConvert={convertIdea} pagination={pagination.ideas} onLoadMore={() => loadMore("ideas")} />}
-          {activeView === "images" && <ImagesView images={data.images} timezone={data.user.timezone} isDemo={isDemo} onEdit={(image) => setEditor({ kind: "image", item: image })} onDelete={(image) => removeEntity("image", image)} onBatchDelete={removeImages} onCreateNote={(image) => setEditor({ kind: "note", seed: image.ocrText || image.caption || "" })} pagination={pagination.images} onLoadMore={() => loadMore("images")} />}
-          {activeView === "expenses" && <ExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
+          {activeView === "tasks" && <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />}
+          {activeView === "notes" && <PhaseTwoNotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} onPin={(note) => void toggleCollectionPin("note", note)} onArchive={(note) => removeEntity("note", note)} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
+          {activeView === "ideas" && <PhaseTwoIdeasView ideas={data.ideas} timezone={data.user.timezone} onEdit={(idea) => setEditor({ kind: "idea", item: idea })} onPin={(idea) => void toggleCollectionPin("idea", idea)} onArchive={(idea) => removeEntity("idea", idea)} onAnalyze={(idea) => void analyzeIdea(idea)} onConvert={convertIdea} pagination={pagination.ideas} onLoadMore={() => loadMore("ideas")} />}
+          {activeView === "images" && <PhaseTwoImagesView images={data.images} timezone={data.user.timezone} isDemo={isDemo} onEdit={(image) => setEditor({ kind: "image", item: image })} onPin={(image) => void toggleCollectionPin("image", image)} onDelete={(image) => removeEntity("image", image)} onBatchDelete={removeImages} onCreateNote={(image) => setEditor({ kind: "note", seed: image.ocrText || image.caption || "" })} pagination={pagination.images} onLoadMore={() => loadMore("images")} />}
+          {activeView === "expenses" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
           {activeView === "library" && <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />}
           {activeView === "search" && <SearchView data={data} isDemo={isDemo} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "expenses" : `${kind}s` as DashboardView)} announce={announce} />}
           {activeView === "settings" && <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onDisconnect={(provider) => setData((current) => ({ ...current, integrations: current.integrations.map((item) => (item.provider ?? item.name.toLowerCase()) === provider ? { ...item, state: "available", detail: "Disconnected" } : item) }))} announce={announce} />}
@@ -403,14 +555,16 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
       <nav className="tw-mobile-nav" aria-label="Mobile dashboard">
         <button className={activeView === "today" ? "active" : ""} onClick={() => navigate("today")}><Inbox size={20} /><span>Today</span></button>
         <button className={activeView === "tasks" ? "active" : ""} onClick={() => navigate("tasks")}><ListChecks size={20} /><span>Tasks</span></button>
-        <button className="capture" onClick={() => setEditor({ kind: "task" })} aria-label="Capture something"><Plus size={25} /></button>
+        <button className="capture" onClick={() => setCaptureOpen(true)} aria-label="Capture something"><Plus size={25} /></button>
         <button className={["library", "notes", "ideas", "images"].includes(activeView) ? "active" : ""} onClick={() => navigate("library")}><BookOpen size={20} /><span>Library</span></button>
         <button className={moreOpen ? "active" : ""} onClick={() => setMoreOpen(true)}><Menu size={20} /><span>More</span></button>
       </nav>
 
       {editor && <EntityEditor state={editor} busy={busy} currency={data.settings.expenseCurrency} timezone={data.user.timezone} onClose={() => setEditor(null)} onSave={saveEntity} onDelete={removeEntity} onConvert={convertIdea} />}
+      {captureOpen && <CaptureComposer isDemo={isDemo} timezone={data.user.timezone} currency={data.settings.expenseCurrency} onClose={() => setCaptureOpen(false)} onSave={saveEntity} announce={announce} />}
       {paletteOpen && <CommandPalette data={data} onClose={() => setPaletteOpen(false)} onNavigate={(view) => { navigate(view); setPaletteOpen(false); }} />}
       {moreOpen && <MobileMore activeView={activeView} onClose={() => setMoreOpen(false)} onNavigate={navigate} />}
+      {ideaBrief && <PhaseTwoIdeaBriefDialog state={ideaBrief} onClose={() => setIdeaBrief(null)} onRefresh={() => void analyzeIdea(ideaBrief.idea, true)} />}
       {toast && <div className="tw-toast" role="status"><CheckCircle2 size={16} />{toast}</div>}
     </div>
   );
@@ -431,44 +585,114 @@ function PageHeading({ view, name, timezone, onAdd }: { view: DashboardView; nam
 }
 
 function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEdit, isDemo }: { data: DashboardSnapshot; focusTask?: DashboardTask; overdue: number; today: number; onToggle: (task: DashboardTask) => void; onNavigate: (view: DashboardView) => void; onEdit: (task: DashboardTask) => void; isDemo: boolean }) {
-  const upcoming = data.tasks.filter((task) => task.status === "OPEN" && task.dueAt).sort((a, b) => +new Date(a.dueAt!) - +new Date(b.dueAt!)).slice(0, 5);
-  const recent = [...data.notes.map((item) => ({ ...item, kind: "note" as const })), ...data.ideas.map((item) => ({ ...item, kind: "idea" as const }))].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 3);
+  const open = data.tasks.filter((task) => task.status === "OPEN");
+  const groups = threadlineBuckets(open, data.user.timezone);
+  const recent = [...data.notes.map((item) => ({ ...item, kind: "note" as const })), ...data.ideas.map((item) => ({ ...item, kind: "idea" as const }))].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 4);
   const month = calendarKey(new Date(), data.user.timezone).slice(0, 7);
   const monthlyExpenses = data.expenses.filter((item) => calendarKey(item.transactionAt, data.user.timezone).startsWith(month));
   const spend = monthlyExpenses.filter((item) => item.currency === data.settings.expenseCurrency).reduce((sum, item) => sum + item.total, 0);
-  return <div className="tw-bento">
+  const thisMonth = open.filter((task) => task.dueAt && calendarKey(task.dueAt, data.user.timezone).startsWith(month)).length;
+  return <div className="tw-today-grid">
     <section className="tw-card tw-focus-card">
-      <div className="tw-card-head"><span><i className="tw-pulse" /> Needs attention</span><button onClick={() => onNavigate("tasks")}>All tasks <ArrowRight size={14} /></button></div>
-      {focusTask ? <div className="tw-focus-body"><div><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><h2>{focusTask.title}</h2>{focusTask.description && <p>{focusTask.description}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={14} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={14} />Reminder set</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={17} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={15} /> Edit</button></div></div> : <Empty icon={CheckCircle2} title="You are all clear." copy="Nothing needs your attention right now." />}
+      <div className="tw-card-head"><span><i className="tw-pulse" /> One thing at a time</span><button onClick={() => onNavigate("tasks")}>Open tasks <ArrowRight size={15} /></button></div>
+      {focusTask ? <div className="tw-focus-body"><div><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><h2>{focusTask.title}</h2>{focusTask.description && <p>{focusTask.description}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={15} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={15} />Reminder active</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={18} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={16} /> Edit</button></div></div> : <Empty icon={CheckCircle2} title="You are all clear." copy="Nothing needs your attention right now." />}
       <span className="tw-orbit" aria-hidden="true" />
     </section>
-    <section className="tw-card tw-metric"><span>Overdue</span><b>{overdue}</b><small>{overdue ? "worth a decision" : "nothing trailing behind"}</small></section>
-    <section className="tw-card tw-metric"><span>Today</span><b>{today}</b><small>{today === 1 ? "planned moment" : "planned moments"}</small></section>
-    <section className="tw-card tw-timeline"><div className="tw-section-head"><div><span>Your threadline</span><h3>What comes next</h3></div><button onClick={() => onNavigate("tasks")}><MoreHorizontal size={18} /></button></div>{upcoming.length ? <ol>{upcoming.map((task) => <li key={task.id}><button onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={13} /></button><time><b>{formatTime(task.dueAt, data.user.timezone)}</b><small>{isToday(task.dueAt, data.user.timezone) ? "Today" : formatDate(task.dueAt!, data.user.timezone)}</small></time><div><b>{task.title}</b><small>{task.description ?? (task.nextReminderAt ? "Reminder ready" : "Saved in Threadwise")}</small></div></li>)}</ol> : <Empty icon={CalendarDays} title="No dated tasks yet." copy="Add a time when you want something to reappear." />}</section>
-    <section className="tw-card tw-recent"><div className="tw-section-head"><div><span>Recently captured</span><h3>Still warm</h3></div><button onClick={() => onNavigate("library")}><ArrowRight size={17} /></button></div>{recent.map((item) => <button key={item.id} onClick={() => onNavigate(item.kind === "note" ? "notes" : "ideas")}><span className={item.kind}><>{item.kind === "note" ? <FileText size={15} /> : <Lightbulb size={15} />}</></span><div><b>{item.title}</b><small>{item.kind === "note" ? item.summary : item.concept}</small></div><ChevronRight size={15} /></button>)}</section>
-    <section className="tw-card tw-gallery-peek"><div className="tw-section-head"><div><span>Saved images</span><h3>Your recent frames</h3></div><button onClick={() => onNavigate("images")}><ArrowRight size={17} /></button></div><div>{data.images.slice(0, 4).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={isDemo ? `/demo/${DEMO_IMAGES[index % DEMO_IMAGES.length]}` : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`} alt={image.caption ?? image.fileName ?? "Saved image"} /></button>)}{!data.images.length && <Empty icon={ImageIcon} title="No saved images yet." copy="Send an image to Threadwise in Telegram." />}</div></section>
+    <aside className="tw-day-pulse"><div><span>Overdue</span><b>{overdue}</b><small>{overdue ? "Needs a decision" : "Nothing trailing"}</small></div><div><span>Today</span><b>{today}</b><small>On today’s thread</small></div><div><span>This month</span><b>{thisMonth}</b><small>Dated ahead</small></div></aside>
+    <Threadline groups={groups} timezone={data.user.timezone} onToggle={onToggle} onEdit={onEdit} onOpenTasks={() => onNavigate("tasks")} />
+    <section className="tw-card tw-recent-cards"><div className="tw-section-head"><div><span>Recently captured</span><h3>Still warm</h3></div><button onClick={() => onNavigate("library")}>Open library <ArrowRight size={16} /></button></div><div>{recent.map((item, index) => <button key={item.id} style={{ "--recent-index": index } as React.CSSProperties} onClick={() => onNavigate(item.kind === "note" ? "notes" : "ideas")}><span className={item.kind}>{item.kind === "note" ? <FileText size={17} /> : <Lightbulb size={17} />}</span><small>{item.kind}</small><b>{item.title}</b><p>{item.kind === "note" ? item.summary : item.concept}</p><ArrowRight size={16} /></button>)}</div></section>
+    <section className="tw-card tw-gallery-peek"><div className="tw-section-head"><div><span>Saved images</span><h3>Recent frames</h3></div><button onClick={() => onNavigate("images")}><ArrowRight size={17} /></button></div><div>{data.images.slice(0, 4).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={isDemo ? `/demo/${DEMO_IMAGES[index % DEMO_IMAGES.length]}` : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`} alt={image.caption ?? image.fileName ?? "Saved image"} /></button>)}{!data.images.length && <Empty icon={ImageIcon} title="No saved images yet." copy="Send an image to Threadwise in Telegram." />}</div></section>
     <section className="tw-card tw-spend"><div className="tw-section-head"><div><span>This month</span><h3>{money(spend, data.settings.expenseCurrency)}</h3></div><button onClick={() => onNavigate("expenses")}><ArrowRight size={17} /></button></div><p>{monthlyExpenses.filter((item) => item.currency === data.settings.expenseCurrency).length} {data.settings.expenseCurrency} expenses captured</p><div className="tw-spend-line"><i /></div></section>
-    <section className="tw-card tw-connections"><div className="tw-section-head"><div><span>Connections</span><h3>Quietly in sync</h3></div><Cloud size={17} /></div>{data.integrations.map((item) => <div key={item.name}><span>{item.name[0]}</span><p><b>{item.name}</b><small>{item.detail}</small></p><i className={item.state} /></div>)}</section>
+    <section className="tw-card tw-connections"><div className="tw-section-head"><div><span>Connections</span><h3>Quietly in sync</h3></div><Cloud size={18} /></div>{data.integrations.map((item) => <div key={item.name}><span>{item.name[0]}</span><p><b>{item.name}</b><small>{item.detail}</small></p><i className={item.state} /></div>)}</section>
   </div>;
 }
 
-function TasksView({ tasks, timezone, onToggle, onEdit, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {
-  const [filter, setFilter] = useState<"open" | "done" | "all">("open"); const [query, setQuery] = useState("");
-  const visible = tasks.filter((task) => (filter === "all" || (filter === "open" ? task.status === "OPEN" : task.status === "DONE")) && `${task.title} ${task.description ?? ""}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || +(new Date(a.dueAt ?? "2999")) - +(new Date(b.dueAt ?? "2999")));
-  return <section className="tw-collection"><div className="tw-toolbar"><div className="tw-segmented">{(["open", "done", "all"] as const).map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "done" ? "Completed" : item[0].toUpperCase() + item.slice(1)}</button>)}</div><label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter tasks" /></label></div><div className="tw-list-card">{visible.map((task) => <article className={task.status === "DONE" ? "done" : ""} key={task.id}><button className="tw-check" onClick={() => onToggle(task)}>{task.status === "DONE" && <Check size={14} />}</button><button className="tw-row-copy" onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.description ?? (task.nextReminderAt ? "Reminder scheduled" : "Saved in Threadwise")}</small></button><span className={isOverdue(task, timezone) ? "overdue" : ""}><b>{task.dueAt ? formatDate(task.dueAt, timezone, { weekday: "short" }) : "No date"}</b><small>{formatTime(task.dueAt, timezone)}</small></span><div className="tw-row-flags">{task.pinned && <Pin size={14} />}{task.nextReminderAt && <Bell size={14} />}</div><button className="tw-row-action" onClick={() => onEdit(task)}><MoreHorizontal size={18} /></button></article>)}{!visible.length && <Empty icon={ListChecks} title="Nothing here." copy={filter === "done" ? "Completed tasks will collect here." : "Add a task or tell Threadwise what needs doing."} action="Add task" onAction={onAdd} />}</div><LoadMore state={pagination} onLoadMore={onLoadMore} /></section>;
+type ThreadlineGroup = { id: string; label: string; description: string; tasks: DashboardTask[] };
+
+function threadlineBuckets(tasks: DashboardTask[], timezone: string): ThreadlineGroup[] {
+  const todayKey = calendarKey(new Date(), timezone);
+  const month = todayKey.slice(0, 7);
+  const todayNumber = Date.UTC(...todayKey.split("-").map(Number).map((value, index) => index === 1 ? value - 1 : value) as [number, number, number]);
+  const groups: ThreadlineGroup[] = [
+    { id: "overdue", label: "Overdue", description: "Decide, reschedule, or clear", tasks: [] },
+    { id: "today", label: "Today", description: "The active thread", tasks: [] },
+    { id: "week", label: "Next 7 days", description: "Coming into view", tasks: [] },
+    { id: "month", label: "Later this month", description: "Planned, not urgent", tasks: [] },
+    { id: "later", label: "Later", description: "Beyond this month", tasks: [] },
+    { id: "someday", label: "Someday", description: "No date yet", tasks: [] },
+  ];
+  for (const task of tasks) {
+    if (!task.dueAt) { groups[5]!.tasks.push(task); continue; }
+    const dueKey = calendarKey(task.dueAt, timezone);
+    const dueNumber = Date.UTC(...dueKey.split("-").map(Number).map((value, index) => index === 1 ? value - 1 : value) as [number, number, number]);
+    const days = Math.round((dueNumber - todayNumber) / 86_400_000);
+    if (isOverdue(task, timezone)) groups[0]!.tasks.push(task);
+    else if (dueKey === todayKey) groups[1]!.tasks.push(task);
+    else if (days <= 7) groups[2]!.tasks.push(task);
+    else if (dueKey.startsWith(month)) groups[3]!.tasks.push(task);
+    else groups[4]!.tasks.push(task);
+  }
+  for (const group of groups) group.tasks.sort((a, b) => +(new Date(a.dueAt ?? a.createdAt ?? 0)) - +(new Date(b.dueAt ?? b.createdAt ?? 0)));
+  return groups;
 }
 
+function Threadline({ groups, timezone, onToggle, onEdit, onOpenTasks }: { groups: ThreadlineGroup[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onOpenTasks: () => void }) {
+  const visible = groups.filter((group) => group.tasks.length);
+  return <section className="tw-card tw-threadline"><div className="tw-section-head"><div><span>Your threadline</span><h3>From now to someday</h3><p>Tasks grouped by when they need your attention.</p></div><button onClick={onOpenTasks}>See every task <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task with or without a due date; it will land in the right place." />}</section>;
+}
+
+function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onArchive, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onArchive: (task: DashboardTask) => Promise<boolean>; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {
+  const [filter, setFilter] = useState<"today" | "upcoming" | "all" | "done">("all");
+  const [sort, setSort] = useState<"newest" | "due" | "oldest">("newest");
+  const [query, setQuery] = useState("");
+  const [menu, setMenu] = useState<{ task: DashboardTask; x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => { window.removeEventListener("click", close); window.removeEventListener("scroll", close, true); window.removeEventListener("resize", close); };
+  }, [menu]);
+  const visible = tasks.filter((task) => {
+    if (!`${task.title} ${task.description ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
+    if (filter === "done") return task.status === "DONE";
+    if (task.status !== "OPEN") return false;
+    if (filter === "today") return isToday(task.dueAt, timezone);
+    if (filter === "upcoming") return Boolean(task.dueAt && !isToday(task.dueAt, timezone) && !isOverdue(task, timezone));
+    return true;
+  }).sort((a, b) => {
+    const pinned = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+    if (pinned) return pinned;
+    if (sort === "due") return +(new Date(a.dueAt ?? "2999-12-31")) - +(new Date(b.dueAt ?? "2999-12-31"));
+    const aCreated = +(new Date(a.createdAt ?? a.updatedAt ?? 0));
+    const bCreated = +(new Date(b.createdAt ?? b.updatedAt ?? 0));
+    return sort === "oldest" ? aCreated - bCreated : bCreated - aCreated;
+  });
+  const openMenu = (event: React.MouseEvent, task: DashboardTask) => { event.preventDefault(); event.stopPropagation(); setMenu({ task, x: Math.min(event.clientX, window.innerWidth - 230), y: Math.min(event.clientY, window.innerHeight - 280) }); };
+  return <section className="tw-task-board"><div className="tw-task-toolbar"><div className="tw-segmented">{(["today", "upcoming", "all", "done"] as const).map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "done" ? "Completed" : item[0].toUpperCase() + item.slice(1)}</button>)}</div><label className="tw-task-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter tasks as you type" /></label><label className="tw-task-sort">Sort<select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="newest">Newest first</option><option value="due">Due date</option><option value="oldest">Oldest first</option></select></label></div><div className="tw-task-card-list">{visible.map((task, index) => <article className={`tw-task-card ${task.status === "DONE" ? "done" : ""}`} style={{ "--task-index": index } as React.CSSProperties} key={task.id} onContextMenu={(event) => openMenu(event, task)}><button className="tw-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={17} /></button><button className="tw-task-copy" onClick={() => onEdit(task)}><span><em>{task.publicId}</em>{task.pinned && <i><Pin size={13} /> Pinned</i>}{task.snoozedUntil && <i><Clock3 size={13} /> Snoozed</i>}</span><h3>{task.title}</h3><p>{task.description ?? (task.nextReminderAt ? "A reminder is active for this task." : "No extra details yet.")}</p></button><div className={`tw-task-date ${isOverdue(task, timezone) ? "overdue" : ""}`}><CalendarDays size={16} /><span><b>{task.dueAt ? formatDate(task.dueAt, timezone, { weekday: "short", year: "numeric" }) : "No due date"}</b><small>{task.dueAt ? formatTime(task.dueAt, timezone) : "Keep it flexible"}</small></span></div><button className="tw-task-menu" onClick={(event) => openMenu(event, task)} aria-label={`Actions for ${task.title}`} aria-haspopup="menu"><MoreHorizontal size={20} /></button></article>)}{!visible.length && <Empty icon={ListChecks} title="Nothing in this view." copy={filter === "done" ? "Completed tasks will collect here." : "Change the view or add a new task."} action="Add task" onAction={onAdd} />}</div><LoadMore state={pagination} onLoadMore={onLoadMore} />{menu && <TaskContextMenu {...menu} onClose={() => setMenu(null)} onToggle={onToggle} onEdit={onEdit} onPin={onPin} onSnooze={onSnooze} onArchive={onArchive} />}</section>;
+}
+
+function TaskContextMenu({ task, x, y, onClose, onToggle, onEdit, onPin, onSnooze, onArchive }: { task: DashboardTask; x: number; y: number; onClose: () => void; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onArchive: (task: DashboardTask) => Promise<boolean> }) {
+  const act = (action: () => void) => { action(); onClose(); };
+  return <div className="tw-context-menu" role="menu" style={{ left: x, top: y }} onClick={(event) => event.stopPropagation()}><span>{task.publicId}</span><button role="menuitem" onClick={() => act(() => onEdit(task))}><Pencil size={16} /> Edit</button><button role="menuitem" onClick={() => act(() => onToggle(task))}><CheckCircle2 size={16} /> {task.status === "DONE" ? "Restore" : "Complete"}</button><button role="menuitem" onClick={() => act(() => onPin(task))}><Pin size={16} /> {task.pinned ? "Unpin" : "Pin to top"}</button>{task.status === "OPEN" && <button role="menuitem" onClick={() => act(() => onSnooze(task))}><Clock3 size={16} /> Snooze 1 hour</button>}<hr /><button role="menuitem" className="danger" onClick={() => act(() => void onArchive(task))}><Archive size={16} /> Archive</button></div>;
+}
+
+// Retained temporarily as a rollback reference until Phase 2 has completed its visual gate.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function NotesView({ notes, timezone, onEdit, pagination, onLoadMore }: { notes: DashboardNote[]; timezone: string; onEdit: (note: DashboardNote) => void; pagination: PaginationState["notes"]; onLoadMore: () => void }) {
   const [query, setQuery] = useState(""); const visible = notes.filter((note) => `${note.title} ${note.summary} ${note.body ?? ""} ${note.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase()));
   return <section className="tw-collection"><CollectionSearch value={query} onChange={setQuery} placeholder="Search notes and tags" /><div className="tw-card-grid">{visible.map((note) => <button className="tw-note-card" key={note.id} onClick={() => onEdit(note)}>{note.pinned && <Pin className="tw-pin" size={15} />}<span><FileText size={14} /> Note</span><h3>{note.title}</h3><p>{note.body || note.summary}</p><div>{note.tags.map((tag) => <em key={tag}>#{tag}</em>)}</div><footer><time>{formatDate(note.createdAt, timezone, { year: "numeric" })}</time><span>Edit <ArrowRight size={14} /></span></footer></button>)}</div>{!visible.length && <Empty icon={FileText} title="No notes found." copy="Try a different phrase or capture a new note." />}<LoadMore state={pagination} onLoadMore={onLoadMore} /></section>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function IdeasView({ ideas, timezone, onEdit, onConvert, pagination, onLoadMore }: { ideas: DashboardIdea[]; timezone: string; onEdit: (idea: DashboardIdea) => void; onConvert: (idea: DashboardIdea) => void; pagination: PaginationState["ideas"]; onLoadMore: () => void }) {
   const [status, setStatus] = useState<"ALL" | IdeaStatus>("ALL"); const visible = ideas.filter((idea) => status === "ALL" || idea.status === status);
   return <section className="tw-collection"><div className="tw-toolbar"><div className="tw-segmented"><button className={status === "ALL" ? "active" : ""} onClick={() => setStatus("ALL")}>All</button>{["RAW", "PROTOTYPING", "BUILT"].map((item) => <button key={item} className={status === item ? "active" : ""} onClick={() => setStatus(item as IdeaStatus)}>{item.toLowerCase()}</button>)}</div></div><div className="tw-card-grid">{visible.map((idea) => <article className="tw-idea-card" key={idea.id}><button className="tw-idea-main" onClick={() => onEdit(idea)}><div><span><Lightbulb size={14} /> Idea</span><em>{idea.status.toLowerCase()}</em></div><h3>{idea.title}</h3><p>{idea.concept}</p><div className="tw-tags">{idea.tags.map((tag) => <i key={tag}>#{tag}</i>)}</div><footer>{formatDate(idea.createdAt, timezone, { year: "numeric" })}<span>Edit <ArrowRight size={14} /></span></footer></button>{!(["BUILT", "REJECTED"] as IdeaStatus[]).includes(idea.status) && <button className="tw-convert" onClick={() => onConvert(idea)}><Zap size={14} /> Turn into task</button>}</article>)}</div>{!visible.length && <Empty icon={Lightbulb} title="No ideas in this stage." copy="Every useful project starts as a small spark." />}<LoadMore state={pagination} onLoadMore={onLoadMore} /></section>;
 }
 
 function imageSrc(image: DashboardImage, isDemo: boolean, index = 0) { return isDemo ? `/demo/${image.fileName && DEMO_IMAGES.includes(image.fileName) ? image.fileName : DEMO_IMAGES[index % DEMO_IMAGES.length]}` : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ImagesView({ images, timezone, isDemo, onEdit, onDelete, onBatchDelete, onCreateNote, pagination, onLoadMore }: { images: DashboardImage[]; timezone: string; isDemo: boolean; onEdit: (image: DashboardImage) => void; onDelete: (image: DashboardImage) => Promise<boolean>; onBatchDelete: (images: DashboardImage[]) => Promise<boolean>; onCreateNote: (image: DashboardImage) => void; pagination: PaginationState["images"]; onLoadMore: () => void }) {
   const [query, setQuery] = useState(""); const [documents, setDocuments] = useState(false); const [active, setActive] = useState<DashboardImage | null>(null); const [selected, setSelected] = useState<Set<string>>(new Set());
   const visible = images.filter((image) => (!documents || image.mediaKind.toLowerCase() === "document") && `${image.caption ?? ""} ${image.ocrText ?? ""} ${image.fileName ?? ""}`.toLowerCase().includes(query.toLowerCase()));
@@ -506,6 +730,7 @@ function ImageLightbox({ image, images, isDemo, onClose, onMove, onEdit, onDelet
   return <div ref={dialogRef} className="tw-lightbox" role="dialog" aria-modal="true" aria-label={image.caption ?? "Image preview"}><header><span>{images.findIndex((item) => item.id === image.id) + 1} of {images.length}</span><div><button onClick={onEdit}><Pencil size={17} /> Edit caption</button><button onClick={onCreateNote}><FileText size={17} /> Make note</button><button onClick={onDelete} aria-label="Delete image"><Trash2 size={17} /></button><button ref={closeRef} onClick={onClose} aria-label="Close preview"><X size={20} /></button></div></header><button className="tw-lightbox-arrow left" onClick={() => onMove(-1)} aria-label="Previous image"><ChevronLeft size={28} /></button><figure onPointerDown={(event) => { pointerStart.current = event.clientX; }} onPointerUp={(event) => { if (pointerStart.current === null) return; const delta = event.clientX - pointerStart.current; if (Math.abs(delta) > 55) onMove(delta > 0 ? -1 : 1); pointerStart.current = null; }}><img draggable={false} src={imageSrc(image, isDemo, images.indexOf(image))} alt={image.caption ?? image.fileName ?? "Saved image"} /><figcaption><b>{image.caption || image.fileName || "Untitled image"}</b>{image.ocrText && <p>{image.ocrText}</p>}</figcaption></figure><button className="tw-lightbox-arrow right" onClick={() => onMove(1)} aria-label="Next image"><ChevronRight size={28} /></button></div>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ExpensesView({ expenses, timezone, currency, integration, onSync, onEdit, onAdd, pagination, onLoadMore, announce }: { expenses: DashboardExpense[]; timezone: string; currency: string; integration?: IntegrationStatus; onSync: () => Promise<void>; onEdit: (expense: DashboardExpense) => void; onAdd: () => void; pagination: PaginationState["expenses"]; onLoadMore: () => void; announce: (message: string) => void }) {
   const [syncing, setSyncing] = useState(false);
   const month = calendarKey(new Date(), timezone).slice(0, 7); const monthly = expenses.filter((expense) => calendarKey(expense.transactionAt, timezone).startsWith(month)); const current = monthly.filter((expense) => expense.currency === currency); const total = current.reduce((sum, expense) => sum + expense.total, 0);
@@ -520,7 +745,7 @@ function LibraryView({ data, tab, onTab, onNavigate, isDemo }: { data: Dashboard
 }
 
 function SearchView({ data, isDemo, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; onOpen: (kind: SearchResult["kind"]) => void; announce: (message: string) => void }) {
-  const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false); const searchRequest = useRef(0);
   const local = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
     ...data.tasks.map((item) => ({ id: item.id, publicId: item.publicId, kind: "task" as const, title: item.title, excerpt: item.description })),
     ...data.notes.map((item) => ({ id: item.id, publicId: item.publicId, kind: "note" as const, title: item.title, excerpt: item.body || item.summary })),
@@ -528,6 +753,22 @@ function SearchView({ data, isDemo, onOpen, announce }: { data: DashboardSnapsho
     ...data.images.map((item) => ({ id: item.id, publicId: item.publicId, kind: "image" as const, title: item.caption || item.fileName || "Saved image", excerpt: item.ocrText })),
     ...data.expenses.map((item) => ({ id: item.id, publicId: item.publicId, kind: "expense" as const, title: item.merchant || item.description, excerpt: `${item.description} ${item.category ?? ""}` })),
   ].filter((item) => `${item.title} ${item.excerpt ?? ""}`.toLowerCase().includes(q)).slice(0, 30); }, [data, query]);
+  useEffect(() => {
+    const value = query.trim();
+    const request = ++searchRequest.current;
+    const timer = window.setTimeout(() => {
+      if (!value) { setResults([]); setLoading(false); return; }
+      if (isDemo) { setResults(local); setLoading(false); return; }
+      setLoading(true);
+      void api<{ results?: SearchResult[]; items?: SearchResult[] }>(`search?q=${encodeURIComponent(value)}&limit=50`)
+        .then((body) => { if (request === searchRequest.current) setResults(body.results ?? body.items ?? []); })
+        .catch((error) => { if (request === searchRequest.current) { setResults([]); announce(error instanceof Error ? error.message : "Search could not be completed."); } })
+        .finally(() => { if (request === searchRequest.current) setLoading(false); });
+    }, value ? 220 : 0);
+    return () => window.clearTimeout(timer);
+  // `announce` is intentionally omitted so a toast does not repeat the query.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, isDemo, local]);
   const search = async (event: React.FormEvent) => { event.preventDefault(); if (!query.trim()) return; if (isDemo) { setResults(local); return; } setLoading(true); try { const body = await api<{ results?: SearchResult[]; items?: SearchResult[] }>(`search?q=${encodeURIComponent(query)}&limit=50`); setResults(body.results ?? body.items ?? []); } catch (error) { setResults([]); announce(error instanceof Error ? error.message : "Search could not be completed."); } finally { setLoading(false); } };
   const shown = results.length || !isDemo ? results : local;
   return <section className="tw-search-view"><form onSubmit={search}><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search everything you have captured…" /><button className="tw-primary" disabled={!query.trim() || loading}>{loading ? <LoaderCircle className="spin" size={18} /> : "Search"}</button></form><div>{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={17} /> : result.kind === "note" ? <FileText size={17} /> : result.kind === "idea" ? <Lightbulb size={17} /> : result.kind === "image" ? <ImageIcon size={17} /> : <CircleDollarSign size={17} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={16} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Sparkles size={28} /><h2>Remember a fragment.</h2><p>Threadwise searches tasks, notes, ideas, image text, and expenses together.</p></div>}</div></section>;
@@ -540,6 +781,86 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onDisconnect, an
   const exportData = async () => { try { if (isDemo) { const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "threadwise-demo-export.json"; a.click(); URL.revokeObjectURL(url); } else { const response = await fetch("/api/threadwise/privacy/export", { cache: "no-store" }); if (!response.ok) throw new Error("Export could not be prepared."); const blob = await response.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "threadwise-export.json"; a.click(); URL.revokeObjectURL(url); } announce("Your export is ready."); } catch (error) { announce(error instanceof Error ? error.message : "Could not export data."); } };
   const deleteAccount = async () => { if (confirmation !== "DELETE MY THREADWISE DATA") return; if (!window.confirm("This permanently deletes your Threadwise account and saved content. Continue?")) return; try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); } catch (error) { announce(error instanceof Error ? error.message : "Could not delete account."); } };
   return <div className="tw-settings-grid"><section className="tw-settings-main"><div className="tw-settings-section"><div><span>Preferences</span><h2>How Threadwise works</h2><p>These settings apply in Telegram and on the web.</p></div><form onSubmit={save}><label>Timezone<input value={settings.timezone} onChange={(e) => setSettings({ ...settings, timezone: e.target.value })} /></label><div className="tw-form-row"><label>Default reminder interval<select value={settings.reminderIntervalMinutes} onChange={(e) => setSettings({ ...settings, reminderIntervalMinutes: Number(e.target.value) })}><option value="60">1 hour</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="1440">1 day</option></select></label><label>Reminder style<select value={settings.reminderMode} onChange={(e) => setSettings({ ...settings, reminderMode: e.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual</option><option value="DIGEST">Digest</option></select></label></div><div className="tw-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursStart: e.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursEnd: e.target.value || undefined })} /></label></div><label className="tw-switch"><span><b>Private assignee nudges</b><small>Send direct reminders only to the private chat of someone assigned to a task.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(e) => setSettings({ ...settings, directNudgesEnabled: e.target.checked })} /></label><button className="tw-primary" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save preferences</button></form></div><div className="tw-settings-section"><div><span>Integrations</span><h2>Connected services</h2><p>Provider tokens are encrypted before storage.</p></div><div className="tw-integration-list">{data.integrations.map((item) => { const provider = (item.provider ?? item.name.toLowerCase()) as "gmail" | "calendar" | "excel"; return <article key={item.name}><span>{item.name[0]}</span><div><b>{item.name}</b><small>{item.detail}</small></div><em className={item.state}>{item.state}</em>{item.state === "connected" ? <button onClick={() => disconnect(provider)}><Unplug size={15} /> Disconnect</button> : item.connectUrl ? <a href={item.connectUrl}>Connect <ExternalLink size={14} /></a> : <button disabled>Connect in Telegram</button>}</article>; })}</div></div><div className="tw-settings-section tw-danger-zone"><div><span>Data &amp; privacy</span><h2>Your data, your decision</h2><p>Export a readable copy or permanently remove your account.</p></div><button className="tw-secondary" onClick={exportData}><Download size={16} /> Export my data</button><label>To delete everything, type <b>DELETE MY THREADWISE DATA</b><input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></label><button className="tw-danger" disabled={confirmation !== "DELETE MY THREADWISE DATA"} onClick={deleteAccount}><Trash2 size={16} /> Delete account and data</button></div></section><aside className="tw-settings-side"><section><span>Appearance</span><h3>Make it yours</h3><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`} />)}</div></section><section className="tw-privacy-card"><ShieldCheck size={23} /><h3>What “private” means here</h3><p>Telegram authenticates you; Threadwise never receives your Telegram password. Every request is scoped to your Telegram account.</p><p>Your content is <b>not end-to-end encrypted</b>. A small number of authorized production operators can technically access stored content when needed to run or secure the service.</p><p>OAuth tokens are encrypted before storage. If you use AI features, only the relevant content may be sent to the configured AI provider.</p><a href="/privacy">Read the full privacy explanation <ArrowRight size={14} /></a></section><form action="/api/auth/logout" method="post"><button className="tw-secondary" type="submit"><LogOut size={16} /> Sign out</button></form></aside></div>;
+}
+
+function CaptureComposer({ isDemo, timezone, currency, onClose, onSave, announce }: {
+  isDemo: boolean;
+  timezone: string;
+  currency: string;
+  onClose: () => void;
+  onSave: (kind: EditableKind, values: Record<string, unknown>) => Promise<boolean>;
+  announce: (message: string) => void;
+}) {
+  const [text, setText] = useState("");
+  const [preferredKind, setPreferredKind] = useState<"auto" | CaptureKind>("auto");
+  const [preview, setPreview] = useState<CapturePreview | null>(null);
+  const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(false);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  useModalFocus(dialogRef, inputRef, onClose);
+
+  const understand = async () => {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const parsed = isDemo
+        ? demoCapturePreview(text, preferredKind, currency)
+        : asPayload<CapturePreview>(await api("capture/preview", "POST", { text, preferredKind }), "preview");
+      setPreview(parsed);
+      setDraft(parsed.payload);
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Threadwise could not understand that capture.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!preview) { await understand(); return; }
+    setLoading(true);
+    try {
+      if (await onSave(preview.kind, draft)) onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
+  const changeKind = (kind: "auto" | CaptureKind) => { setPreferredKind(kind); setPreview(null); setDraft({}); };
+  const field = (key: string, value: unknown) => setDraft((current) => ({ ...current, [key]: value }));
+  const kinds: Array<"auto" | CaptureKind> = ["auto", "task", "note", "idea", "expense"];
+
+  return <div className="tw-modal-overlay tw-capture-overlay" onMouseDown={onClose}><section ref={dialogRef} className="tw-capture-dialog" role="dialog" aria-modal="true" aria-label="Quick capture" onMouseDown={(event) => event.stopPropagation()}>
+    <header><div><span><Sparkles size={16} /> Quick capture</span><h2>Drop the thought. We’ll untangle it.</h2><p>Write naturally—Threadwise will find the type, details, and time before anything is saved.</p></div><button onClick={onClose} aria-label="Close quick capture"><X size={20} /></button></header>
+    <form onSubmit={submit}>
+      <div className="tw-capture-type-row" aria-label="Capture type">{kinds.map((kind) => <button type="button" key={kind} className={preferredKind === kind ? "active" : ""} onClick={() => changeKind(kind)}>{kind === "auto" ? <Sparkles size={14} /> : kind === "task" ? <ListChecks size={14} /> : kind === "note" ? <FileText size={14} /> : kind === "idea" ? <Lightbulb size={14} /> : <CircleDollarSign size={14} />}{kind}</button>)}</div>
+      <label className="tw-capture-text"><span>What’s on your mind?</span><textarea ref={inputRef} rows={4} maxLength={20_000} value={text} onChange={(event) => { setText(event.target.value); setPreview(null); }} placeholder="Remind me to call Mum tomorrow at 1.30pm…" /></label>
+      {!preview && <div className="tw-capture-hints"><span>Try</span><button type="button" onClick={() => setText("Remind me to review the proposal tomorrow at 1.30pm")}>A reminder</button><button type="button" onClick={() => setText("Idea: a weekly digest that groups related notes")}>An idea</button><button type="button" onClick={() => setText("Spent $12.80 on lunch today")}>An expense</button></div>}
+      {preview && <div className="tw-capture-preview">
+        <div className="tw-capture-preview-head"><span className={preview.kind}>{preview.kind}</span><div><b>Threadwise understood this as {preview.kind === "expense" ? "an" : "a"} {preview.kind}.</b><small>{preview.reason}</small></div><em>{Math.round(preview.confidence * 100)}% match</em></div>
+        {(preview.kind === "task" || preview.kind === "note" || preview.kind === "idea") && <label>Title<input value={String(draft.title ?? "")} onChange={(event) => field("title", event.target.value)} required /></label>}
+        {preview.kind === "task" && <><label>Details<textarea rows={3} value={String(draft.description ?? "")} onChange={(event) => field("description", event.target.value || undefined)} /></label><label>Due date &amp; time<input type="datetime-local" value={zonedInputDate(typeof draft.dueAt === "string" ? draft.dueAt : undefined, timezone)} onChange={(event) => field("dueAt", event.target.value ? zonedInputToIso(event.target.value, timezone) : null)} /></label></>}
+        {preview.kind === "note" && <label>Note<textarea rows={5} value={String(draft.body ?? "")} onChange={(event) => field("body", event.target.value)} required /></label>}
+        {preview.kind === "idea" && <label>Concept<textarea rows={5} value={String(draft.concept ?? "")} onChange={(event) => field("concept", event.target.value)} required /></label>}
+        {preview.kind === "expense" && <><div className="tw-form-row"><label>Merchant<input value={String(draft.merchant ?? "")} onChange={(event) => field("merchant", event.target.value || undefined)} /></label><label>Total<input type="number" min="0" step="0.01" value={String(draft.total ?? "")} onChange={(event) => field("total", Number(event.target.value))} required /></label></div><label>Description<input value={String(draft.description ?? "")} onChange={(event) => field("description", event.target.value || undefined)} /></label><div className="tw-form-row"><label>Currency<input minLength={3} maxLength={3} value={String(draft.currency ?? currency)} onChange={(event) => field("currency", event.target.value.toUpperCase())} required /></label><label>Date &amp; time<input type="datetime-local" value={zonedInputDate(typeof draft.transactionAt === "string" ? draft.transactionAt : new Date().toISOString(), timezone)} onChange={(event) => field("transactionAt", zonedInputToIso(event.target.value, timezone))} required /></label></div></>}
+      </div>}
+      <footer><span>{preview ? "Review the details before saving." : "Nothing is saved until you confirm."}</span><button type="button" className="tw-secondary" onClick={onClose}>Cancel</button><button className="tw-primary" disabled={loading || !text.trim()}>{loading ? <LoaderCircle className="spin" size={17} /> : preview ? <Check size={17} /> : <Sparkles size={17} />}{preview ? `Save ${preview.kind}` : "Understand"}</button></footer>
+    </form>
+  </section></div>;
+}
+
+function demoCapturePreview(text: string, preferred: "auto" | CaptureKind, currency: string): CapturePreview {
+  const kind: CaptureKind = preferred !== "auto"
+    ? preferred
+    : /(?:spent|paid|expense|\$\s*\d)/i.test(text) ? "expense"
+      : /(?:idea|concept|what if)/i.test(text) ? "idea"
+        : /(?:remind|task|todo|need to|tomorrow|today|at \d)/i.test(text) ? "task" : "note";
+  const title = text.replace(/^(?:idea|note|task|remind me to)\s*[:,-]?\s*/i, "").slice(0, 90);
+  const payload = kind === "task" ? { title }
+    : kind === "note" ? { title, body: text, tags: [] }
+      : kind === "idea" ? { title, concept: text, tags: [], status: "RAW" }
+        : { description: text, total: Number(text.match(/\d+(?:\.\d{1,2})?/)?.[0] ?? 0), currency, transactionAt: new Date().toISOString() };
+  return { kind, confidence: .92, reason: "Demo classification based on the words you used.", sourceText: text, payload };
 }
 
 function EntityEditor({ state, busy, currency, timezone, onClose, onSave, onDelete, onConvert }: { state: EditorState; busy: boolean; currency: string; timezone: string; onClose: () => void; onSave: (kind: EditableKind, values: Record<string, unknown>, item?: EditorState["item"]) => void; onDelete: (kind: EditableKind, item: NonNullable<EditorState["item"]>) => void; onConvert: (idea: DashboardIdea) => void }) {
