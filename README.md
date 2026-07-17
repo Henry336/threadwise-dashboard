@@ -15,6 +15,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - Expense capture, editing, CSV export, and connected Excel synchronization
 - Data export, integration disconnect, and confirmed account deletion controls
 - Telegram OIDC Authorization Code + PKCE login routes
+- Full-document Telegram login navigation so OAuth redirects are never intercepted by the Next.js client router
 - Signed, HTTP-only sessions and a server-only Threadwise API adapter
 - A realistic interactive demo at `/dashboard?demo=1`
 - Staggered load-in motion, route transitions, skeletons, mobile sheets, light/dark themes, user accents, focus states, and reduced-motion support

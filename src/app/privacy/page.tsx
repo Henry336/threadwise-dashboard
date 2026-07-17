@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       </section>
       <section className="privacy-control">
         <div><span>Your controls</span><h2>You can leave with your data.</h2><p>From Dashboard → Settings → Data &amp; privacy, you can export a readable copy of your Threadwise data or permanently delete your account and stored content.</p></div>
-        <Link className="button button-primary" href="/api/auth/login">Continue with Telegram</Link>
+        <a className="button button-primary" href="/api/auth/login">Continue with Telegram</a>
       </section>
       <footer><ThreadwiseMark /><p>This explanation is part of the product, not fine-print theatre.</p></footer>
     </main>

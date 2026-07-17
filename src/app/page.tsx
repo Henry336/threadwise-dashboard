@@ -31,7 +31,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
               {session ? (
                 <Link className="button button-primary" href="/dashboard">Continue as {session.firstName}<ArrowUpRight size={17} /></Link>
               ) : authReady ? (
-                <Link className="button button-primary" href="/api/auth/login">Continue with Telegram<ArrowUpRight size={17} /></Link>
+                <a className="button button-primary" href="/api/auth/login">Continue with Telegram<ArrowUpRight size={17} /></a>
               ) : (
                 <Link className="button button-primary" href="/dashboard?demo=1">Explore the demo<ArrowUpRight size={17} /></Link>
               )}

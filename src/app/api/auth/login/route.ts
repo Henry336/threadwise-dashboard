@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   authorization.searchParams.set("code_challenge", challenge);
   authorization.searchParams.set("code_challenge_method", "S256");
   const response = NextResponse.redirect(authorization);
+  response.headers.set("Cache-Control", "no-store");
   const cookie = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge: TEN_MINUTES };
   response.cookies.set("threadwise_oauth_state", state, cookie);
   response.cookies.set("threadwise_oauth_nonce", nonce, cookie);
