@@ -2,6 +2,25 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.4.0 - Group Collaboration
+
+### Shared workspaces
+- Added a restrained **Group overview** with overdue, unassigned, awaiting-reply, and blocked attention cards, active handoffs, recent movement, and a lightweight **This week** summary.
+- Added shared task filters for My work, Unassigned, Blocked, Awaiting reply, and individual members, with live search and readable responsive task cards.
+- Added a **People** workload view, derived **Stand-up** view, and chronological **Activity** view without turning collaboration into employee surveillance.
+
+### Assignment flow
+- Added a responsive task collaboration sheet for assign, unassign, accept, decline, block, unblock, and handoff actions.
+- Kept dashboard and Telegram task state on one source of truth, with live browser refresh and quiet Telegram bridge messages for meaningful web changes.
+- Preserved group role boundaries while allowing each member to update their own assignment response.
+
+### Interface language
+- Replaced generic red and green status dots across personal and group surfaces with Threadwise's hooked thread cue, small line motifs, and explicit sync copy.
+- Added compact stagger motion, anchored desktop panels, mobile bottom sheets, touch-safe controls, and reduced-motion fallbacks.
+
+### Quality
+- Verified lint, the validated snapshot contract, a production Next.js build, and real Chromium layouts at 1440×900 and 390×844.
+
 ## v0.3.0 - Shared Group Workspaces
 
 ### Added

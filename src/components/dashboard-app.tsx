@@ -10,6 +10,7 @@ import {
   ListChecks, LoaderCircle, LogOut, Menu, Moon, MoreHorizontal, Pencil,
   Pin, Plus, RefreshCw, Search, Settings, ShieldCheck, Sparkles, Sun, Trash2, Unplug,
   Wifi, WifiOff, X, Zap,
+  Activity, ClipboardList, UsersRound,
 } from "lucide-react";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { ActionMenu, useActionMenu } from "./action-menu";
@@ -21,20 +22,30 @@ import {
   PhaseTwoImagesView,
   PhaseTwoNotesView,
 } from "./phase-two-collections";
+import {
+  GroupActivityView,
+  GroupOverview,
+  GroupPeople,
+  GroupStandup,
+  GroupTasksView,
+  TaskCollaborationSheet,
+  type CollaborationPayload,
+  type GroupTaskScope,
+} from "./group-workspace";
 import type {
   DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, DashboardSettings,
   DashboardSnapshot, DashboardTask, EntityKind, IdeaStatus, IntegrationStatus, SearchResult,
   CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
 } from "@/lib/types";
 
-export type DashboardView = "today" | "tasks" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
+export type DashboardView = "today" | "tasks" | "people" | "standup" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
 type EditorState = { kind: EditableKind; item?: DashboardTask | DashboardNote | DashboardIdea | DashboardExpense | DashboardImage; seed?: string };
 type PaginationState = Record<"tasks" | "notes" | "ideas" | "expenses" | "images", { page: number; hasMore: boolean; loading: boolean }>;
 type IdeaBriefState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
 const ACCENTS = { iris: "#168b83", coral: "#dc6a52", mint: "#2aa889" } as const;
-const NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
+const PERSONAL_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "today", label: "Today", icon: Inbox },
   { id: "tasks", label: "Tasks", icon: ListChecks },
   { id: "notes", label: "Notes", icon: FileText },
@@ -44,6 +55,20 @@ const NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "search", label: "Search", icon: Search },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+const GROUP_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
+  { id: "today", label: "Overview", icon: Inbox },
+  { id: "tasks", label: "Tasks", icon: ListChecks },
+  { id: "people", label: "People", icon: UsersRound },
+  { id: "standup", label: "Stand-up", icon: ClipboardList },
+  { id: "activity", label: "Activity", icon: Activity },
+  { id: "notes", label: "Notes", icon: FileText },
+  { id: "ideas", label: "Ideas", icon: Lightbulb },
+  { id: "images", label: "Images", icon: ImageIcon },
+  { id: "expenses", label: "Expenses", icon: CircleDollarSign },
+  { id: "search", label: "Search", icon: Search },
+  { id: "settings", label: "Settings", icon: Settings },
+];
+const NAV = [...PERSONAL_NAV, ...GROUP_NAV.filter((item) => !PERSONAL_NAV.some((candidate) => candidate.id === item.id))];
 const DEMO_IMAGES = ["garden-light.svg", "launch-board.svg", "morning-cafe.svg", "receipt.svg", "city-rain.svg", "book-stack.svg"];
 const IDEA_STATUSES: IdeaStatus[] = ["RAW", "CLARIFIED", "SELECTED", "PROTOTYPING", "BUILT", "PAUSED", "REJECTED"];
 
@@ -194,6 +219,8 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
   const [busy, setBusy] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [ideaBrief, setIdeaBrief] = useState<IdeaBriefState | null>(null);
+  const [groupTaskScope, setGroupTaskScope] = useState<GroupTaskScope>("all");
+  const [collaborationTask, setCollaborationTask] = useState<DashboardTask | null>(null);
   const [syncState, setSyncState] = useState<"connecting" | "live" | "reconnecting" | "offline">(isDemo ? "live" : "connecting");
   const [lastSyncedAt, setLastSyncedAt] = useState(initialData.generatedAt);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -227,6 +254,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
     try {
       const snapshot = await api<DashboardSnapshot>("snapshot");
       setData(snapshot);
+      setCollaborationTask((current) => current ? snapshot.tasks.find((task) => task.id === current.id) ?? null : null);
       setLastSyncedAt(snapshot.generatedAt);
       setSyncState("live");
       hydratedCollections.current.clear();
@@ -516,10 +544,37 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
     announce("Expenses synced to Excel.");
   };
 
+  const openGroupTasks = (scope: GroupTaskScope) => {
+    setGroupTaskScope(scope);
+    navigate("tasks");
+  };
+  const updateCollaboration = async (task: DashboardTask, payload: CollaborationPayload) => {
+    if (isDemo || data.workspace.kind !== "GROUP") return false;
+    setBusy(true);
+    try {
+      await api(`tasks/${task.id}/collaboration`, "POST", payload);
+      await refreshSnapshot();
+      setCollaborationTask(null);
+      announce(payload.action === "handoff" ? "Handoff shared with the group." : "Assignment updated.");
+      return true;
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Could not update that assignment.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const openTasks = data.tasks.filter((task) => task.status === "OPEN");
   const todayTasks = openTasks.filter((task) => isToday(task.dueAt, data.user.timezone));
   const overdueTasks = openTasks.filter((task) => isOverdue(task, data.user.timezone));
   const focusTask = overdueTasks[0] ?? todayTasks[0] ?? openTasks[0];
+  const navItems = data.workspace.kind === "GROUP" ? GROUP_NAV : PERSONAL_NAV;
+  const workspaceNav = navItems.filter((item) => item.id !== "search" && item.id !== "settings");
+  const manageNav = navItems.filter((item) => item.id === "search" || item.id === "settings");
+  const groupOwnHeading = data.workspace.kind === "GROUP" && (["today", "people", "standup", "activity"] as DashboardView[]).includes(activeView);
+  const showCaptureLaunch = !(["search", "settings", "people", "standup", "activity"] as DashboardView[]).includes(activeView)
+    && !(data.workspace.kind === "GROUP" && (["today", "tasks"] as DashboardView[]).includes(activeView));
 
   return (
     <div className="tw-shell" style={{ "--accent": ACCENTS[accent] } as React.CSSProperties}>
@@ -529,14 +584,14 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
         <button className="tw-quick-button" onClick={() => setCaptureOpen(true)}><Plus size={17} /> Quick capture <kbd>N</kbd></button>
         <nav aria-label="Dashboard">
           <p>Workspace</p>
-          {NAV.slice(0, 6).map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span>{id === "tasks" && <em>{openTasks.length}</em>}</button>)}
+          {workspaceNav.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span>{id === "tasks" && <em>{openTasks.length}</em>}</button>)}
           <p>Manage</p>
-          {NAV.slice(6).map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span></button>)}
+          {manageNav.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span></button>)}
         </nav>
         <div className="tw-sidebar-foot">
           <button className="tw-telegram-state" data-state={syncState} onClick={() => void refreshSnapshot(true)} disabled={isDemo}>
             {syncState === "live" ? <Wifi size={16} /> : syncState === "offline" ? <WifiOff size={16} /> : <RefreshCw className="spin" size={16} />}
-            <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Live with Telegram" : syncState === "offline" ? "Sync offline" : "Reconnecting"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Updated ${formatRelativeSync(lastSyncedAt)}` : "Your saved view remains available"}</small></span>
+            <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Telegram in sync" : syncState === "offline" ? "Sync offline" : "Reconnecting"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Updated ${formatRelativeSync(lastSyncedAt)}` : "Your saved view remains available"}</small></span>
           </button>
           <button onClick={() => navigate("settings")} className="tw-profile"><span>{data.workspace.name[0]}</span><div><b>{data.workspace.name}</b><small>{data.workspace.kind === "GROUP" ? `${data.workspace.role.toLowerCase()} · shared` : `@${data.user.username ?? "threadwise"}`}</small></div><ChevronRight size={16} /></button>
         </div>
@@ -547,7 +602,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
           <button className="tw-icon-button tw-menu-button" onClick={() => setMoreOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
           <span className="tw-mobile-brand"><ThreadwiseMark compact /></span>
           <div className="tw-mobile-workspace"><WorkspaceSwitcher current={data.workspace} workspaces={workspaces} disabled={isDemo} /></div>
-          <div className="tw-crumb"><span>{data.workspace.kind === "GROUP" ? data.workspace.name : "Personal"}</span><ChevronRight size={12} /><b>{NAV.find((entry) => entry.id === activeView)?.label ?? "Library"}</b></div>
+          <div className="tw-crumb"><span>{data.workspace.kind === "GROUP" ? data.workspace.name : "Personal"}</span><ChevronRight size={12} /><b>{navItems.find((entry) => entry.id === activeView)?.label ?? "Library"}</b></div>
           <div className="tw-top-actions">
             {isDemo && <span className="tw-demo-pill">Demo · changes stay here</span>}
             <button className="tw-search-button" onClick={() => setPaletteOpen(true)}><Search size={16} /><span>Find anything</span><kbd>⌘ K</kbd></button>
@@ -557,11 +612,18 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
         </header>
 
         <div className="tw-content" key={activeView}>
-          <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />
-          {!(["search", "settings"] as DashboardView[]).includes(activeView) && <button className="tw-capture-launch" onClick={() => setCaptureOpen(true)}><span><Sparkles size={20} /></span><div><b>Capture in plain language</b><small>“Remind me at 1.30pm”, a note, an idea, or an expense</small></div><kbd>N</kbd><ArrowRight size={18} /></button>}
+          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
+          {showCaptureLaunch && <button className="tw-capture-launch" onClick={() => setCaptureOpen(true)}><span><Sparkles size={20} /></span><div><b>Capture in plain language</b><small>“Remind me at 1.30pm”, a note, an idea, or an expense</small></div><kbd>N</kbd><ArrowRight size={18} /></button>}
 
-          {activeView === "today" && <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />}
-          {activeView === "tasks" && <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />}
+          {activeView === "today" && (data.workspace.kind === "GROUP"
+            ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onManageTask={setCollaborationTask} />
+            : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
+          {activeView === "tasks" && (data.workspace.kind === "GROUP" && data.collaboration
+            ? <GroupTasksView tasks={data.tasks} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />
+            : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
+          {activeView === "people" && <GroupPeople data={data} onOpenTasks={openGroupTasks} />}
+          {activeView === "standup" && <GroupStandup data={data} onManageTask={setCollaborationTask} />}
+          {activeView === "activity" && <GroupActivityView data={data} />}
           {activeView === "notes" && <PhaseTwoNotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} onPin={(note) => void toggleCollectionPin("note", note)} onDelete={(note) => removeEntity("note", note)} onBatchDelete={removeNotes} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
           {activeView === "ideas" && <PhaseTwoIdeasView ideas={data.ideas} timezone={data.user.timezone} onEdit={(idea) => setEditor({ kind: "idea", item: idea })} onPin={(idea) => void toggleCollectionPin("idea", idea)} onArchive={(idea) => removeEntity("idea", idea)} onAnalyze={(idea) => void analyzeIdea(idea)} onConvert={convertIdea} pagination={pagination.ideas} onLoadMore={() => loadMore("ideas")} />}
           {activeView === "images" && <PhaseTwoImagesView images={data.images} timezone={data.user.timezone} isDemo={isDemo} onEdit={(image) => setEditor({ kind: "image", item: image })} onPin={(image) => void toggleCollectionPin("image", image)} onDelete={(image) => removeEntity("image", image)} onBatchDelete={removeImages} onCreateNote={(image) => setEditor({ kind: "note", seed: image.ocrText || image.caption || "" })} pagination={pagination.images} onLoadMore={() => loadMore("images")} />}
@@ -575,18 +637,21 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
       </main>
 
       <nav className="tw-mobile-nav" aria-label="Mobile dashboard">
-        <button className={activeView === "today" ? "active" : ""} onClick={() => navigate("today")}><Inbox size={20} /><span>Today</span></button>
+        <button className={activeView === "today" ? "active" : ""} onClick={() => navigate("today")}><Inbox size={20} /><span>{data.workspace.kind === "GROUP" ? "Overview" : "Today"}</span></button>
         <button className={activeView === "tasks" ? "active" : ""} onClick={() => navigate("tasks")}><ListChecks size={20} /><span>Tasks</span></button>
         <button className="capture" onClick={() => setCaptureOpen(true)} aria-label="Capture something"><Plus size={25} /></button>
-        <button className={["library", "notes", "ideas", "images"].includes(activeView) ? "active" : ""} onClick={() => navigate("library")}><BookOpen size={20} /><span>Library</span></button>
+        {data.workspace.kind === "GROUP"
+          ? <button className={activeView === "people" ? "active" : ""} onClick={() => navigate("people")}><UsersRound size={20} /><span>People</span></button>
+          : <button className={["library", "notes", "ideas", "images"].includes(activeView) ? "active" : ""} onClick={() => navigate("library")}><BookOpen size={20} /><span>Library</span></button>}
         <button className={moreOpen ? "active" : ""} onClick={() => setMoreOpen(true)}><Menu size={20} /><span>More</span></button>
       </nav>
 
       {editor && <EntityEditor state={editor} busy={busy} currency={data.settings.expenseCurrency} timezone={data.user.timezone} onClose={() => setEditor(null)} onSave={saveEntity} onDelete={removeEntity} onConvert={convertIdea} />}
       {captureOpen && <CaptureComposer isDemo={isDemo} timezone={data.user.timezone} currency={data.settings.expenseCurrency} onClose={() => setCaptureOpen(false)} onSave={saveEntity} announce={announce} />}
-      {paletteOpen && <CommandPalette data={data} onClose={() => setPaletteOpen(false)} onNavigate={(view) => { navigate(view); setPaletteOpen(false); }} />}
-      {moreOpen && <MobileMore activeView={activeView} onClose={() => setMoreOpen(false)} onNavigate={navigate} />}
+      {paletteOpen && <CommandPalette data={data} items={navItems} onClose={() => setPaletteOpen(false)} onNavigate={(view) => { navigate(view); setPaletteOpen(false); }} />}
+      {moreOpen && <MobileMore activeView={activeView} items={navItems} onClose={() => setMoreOpen(false)} onNavigate={navigate} />}
       {ideaBrief && <PhaseTwoIdeaBriefDialog state={ideaBrief} onClose={() => setIdeaBrief(null)} onRefresh={() => void analyzeIdea(ideaBrief.idea, true)} />}
+      {collaborationTask && data.collaboration && <TaskCollaborationSheet task={collaborationTask} collaboration={data.collaboration} manager={data.workspace.role !== "MEMBER"} busy={busy} onClose={() => setCollaborationTask(null)} onAction={(payload) => updateCollaboration(collaborationTask, payload)} />}
       {toast && <div className="tw-toast" role="status"><CheckCircle2 size={16} />{toast}</div>}
     </div>
   );
@@ -612,6 +677,9 @@ function PageHeading({ view, workspace, name, timezone, onAdd }: { view: Dashboa
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
     today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: ["Tasks", workspace.kind === "GROUP" ? "Shared work, owners, and reminders in one thread." : "Things to do, reminders when they matter."],
+    people: ["People", "Shared workload, ownership, and blockers at a glance."],
+    standup: ["Stand-up", "Done, next, and blocked—without another meeting form."],
+    activity: ["Activity", "A concise record of meaningful shared changes."],
     library: ["Library", "Notes, ideas, and images—kept together."], notes: ["Notes", "Useful things you wanted to keep."],
     ideas: ["Ideas", "Small sparks, ready when you are."], images: ["Images", "Every saved frame, easy to find again."],
     expenses: ["Expenses", "A clear view of what moved."], search: ["Search everything", "Titles, words, receipts, and remembered fragments."],
@@ -631,7 +699,7 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
   const thisMonth = open.filter((task) => task.dueAt && calendarKey(task.dueAt, data.user.timezone).startsWith(month)).length;
   return <div className="tw-today-grid">
     <section className="tw-card tw-focus-card">
-      <div className="tw-card-head"><span><i className="tw-pulse" /> One thing at a time</span><button onClick={() => onNavigate("tasks")}>Open tasks <ArrowRight size={15} /></button></div>
+      <div className="tw-card-head"><span><span className="tw-thread-cue" aria-hidden="true"><i /><i /></span> One thing at a time</span><button onClick={() => onNavigate("tasks")}>Open tasks <ArrowRight size={15} /></button></div>
       {focusTask ? <div className="tw-focus-body"><div><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><h2>{focusTask.title}</h2>{focusTask.description && <p>{focusTask.description}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={15} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={15} />Reminder active</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={18} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={16} /> Edit</button></div></div> : <Empty icon={CheckCircle2} title="You are all clear." copy="Nothing needs your attention right now." />}
       <span className="tw-orbit" aria-hidden="true" />
     </section>
@@ -640,7 +708,7 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
     <section className="tw-card tw-recent-cards"><div className="tw-section-head"><div><span>Recently captured</span><h3>Still warm</h3></div><button onClick={() => onNavigate("library")}>Open library <ArrowRight size={16} /></button></div><div>{recent.map((item, index) => <button key={item.id} style={{ "--recent-index": index } as React.CSSProperties} onClick={() => onNavigate(item.kind === "note" ? "notes" : "ideas")}><span className={item.kind}>{item.kind === "note" ? <FileText size={17} /> : <Lightbulb size={17} />}</span><small>{item.kind}</small><b>{item.title}</b><p>{item.kind === "note" ? item.summary : item.concept}</p><ArrowRight size={16} /></button>)}</div></section>
     <section className="tw-card tw-gallery-peek"><div className="tw-section-head"><div><span>Saved images</span><h3>Recent frames</h3></div><button onClick={() => onNavigate("images")}><ArrowRight size={17} /></button></div><div>{data.images.slice(0, 4).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={isDemo ? `/demo/${DEMO_IMAGES[index % DEMO_IMAGES.length]}` : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`} alt={image.caption ?? image.fileName ?? "Saved image"} /></button>)}{!data.images.length && <Empty icon={ImageIcon} title="No saved images yet." copy="Send an image to Threadwise in Telegram." />}</div></section>
     <section className="tw-card tw-spend"><div className="tw-section-head"><div><span>This month</span><h3>{money(spend, data.settings.expenseCurrency)}</h3></div><button onClick={() => onNavigate("expenses")}><ArrowRight size={17} /></button></div><p>{monthlyExpenses.filter((item) => item.currency === data.settings.expenseCurrency).length} {data.settings.expenseCurrency} expenses captured</p><div className="tw-spend-line"><i /></div></section>
-    <section className="tw-card tw-connections"><div className="tw-section-head"><div><span>Connections</span><h3>Quietly in sync</h3></div><Cloud size={18} /></div>{data.integrations.map((item) => <div key={item.name}><span>{item.name[0]}</span><p><b>{item.name}</b><small>{item.detail}</small></p><i className={item.state} /></div>)}</section>
+    <section className="tw-card tw-connections"><div className="tw-section-head"><div><span>Connections</span><h3>Quietly in sync</h3></div><Cloud size={18} /></div>{data.integrations.map((item) => <div key={item.name}><span>{item.name[0]}</span><p><b>{item.name}</b><small>{item.detail}</small></p><span className="tw-connection-state" data-state={item.state} title={item.state}>{item.state === "connected" ? <Cloud size={13} /> : item.state === "attention" ? <RefreshCw size={13} /> : <Unplug size={13} />}</span></div>)}</section>
   </div>;
 }
 
@@ -1017,7 +1085,7 @@ function EntityEditor({ state, busy, currency, timezone, onClose, onSave, onDele
   </form></section></div>;
 }
 
-function CommandPalette({ data, onClose, onNavigate }: { data: DashboardSnapshot; onClose: () => void; onNavigate: (view: DashboardView) => void }) {
+function CommandPalette({ data, items, onClose, onNavigate }: { data: DashboardSnapshot; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) {
   const [query, setQuery] = useState(""); const input = useRef<HTMLInputElement>(null); const dialogRef = useRef<HTMLElement | null>(null); useModalFocus(dialogRef, input, onClose);
   const results = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
     ...data.tasks.map((item) => ({ title: item.title, detail: item.description, view: "tasks" as DashboardView, icon: ListChecks })),
@@ -1026,10 +1094,10 @@ function CommandPalette({ data, onClose, onNavigate }: { data: DashboardSnapshot
     ...data.images.map((item) => ({ title: item.caption || item.fileName || "Saved image", detail: item.ocrText, view: "images" as DashboardView, icon: ImageIcon })),
     ...data.expenses.map((item) => ({ title: item.merchant || item.description, detail: item.description, view: "expenses" as DashboardView, icon: CircleDollarSign })),
   ].filter((item) => `${item.title} ${item.detail ?? ""}`.toLowerCase().includes(q)).slice(0, 8); }, [data, query]);
-  return <div className="tw-command-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Find anything" onMouseDown={(event) => event.stopPropagation()}><header><Search size={20} /><input ref={input} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find anything…" /><kbd>ESC</kbd></header><div>{!query && <><p>Go somewhere</p>{NAV.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)}><span><Icon size={17} /></span><b>{label}</b><ArrowRight size={15} /></button>)}</>}{query && results.map(({ title, detail, view, icon: Icon }, index) => <button key={`${title}-${index}`} onClick={() => onNavigate(view)}><span><Icon size={17} /></span><div><b>{title}</b><small>{detail}</small></div><ArrowRight size={15} /></button>)}{query && !results.length && <Empty icon={Search} title="No threads found." copy="Open full search for deeper results." action="Open search" onAction={() => onNavigate("search")} />}</div><footer><span><kbd>⌘ K</kbd> anywhere</span><button onClick={onClose}>Close</button></footer></section></div>;
+  return <div className="tw-command-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Find anything" onMouseDown={(event) => event.stopPropagation()}><header><Search size={20} /><input ref={input} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find anything…" /><kbd>ESC</kbd></header><div>{!query && <><p>Go somewhere</p>{items.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)}><span><Icon size={17} /></span><b>{label}</b><ArrowRight size={15} /></button>)}</>}{query && results.map(({ title, detail, view, icon: Icon }, index) => <button key={`${title}-${index}`} onClick={() => onNavigate(view)}><span><Icon size={17} /></span><div><b>{title}</b><small>{detail}</small></div><ArrowRight size={15} /></button>)}{query && !results.length && <Empty icon={Search} title="No threads found." copy="Open full search for deeper results." action="Open search" onAction={() => onNavigate("search")} />}</div><footer><span><kbd>⌘ K</kbd> anywhere</span><button onClick={onClose}>Close</button></footer></section></div>;
 }
 
-function MobileMore({ activeView, onClose, onNavigate }: { activeView: DashboardView; onClose: () => void; onNavigate: (view: DashboardView) => void }) { const dialogRef = useRef<HTMLElement | null>(null); const closeRef = useRef<HTMLButtonElement | null>(null); useModalFocus(dialogRef, closeRef, onClose); return <div className="tw-mobile-sheet-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="More navigation" onMouseDown={(event) => event.stopPropagation()}><header><span>Threadwise</span><button ref={closeRef} onClick={onClose} aria-label="Close navigation"><X size={20} /></button></header>{NAV.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => onNavigate(id)}><Icon size={19} /><span>{label}</span><ChevronRight size={16} /></button>)}</section></div>; }
+function MobileMore({ activeView, items, onClose, onNavigate }: { activeView: DashboardView; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) { const dialogRef = useRef<HTMLElement | null>(null); const closeRef = useRef<HTMLButtonElement | null>(null); useModalFocus(dialogRef, closeRef, onClose); return <div className="tw-mobile-sheet-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="More navigation" onMouseDown={(event) => event.stopPropagation()}><header><span>Threadwise</span><button ref={closeRef} onClick={onClose} aria-label="Close navigation"><X size={20} /></button></header>{items.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => onNavigate(id)}><Icon size={19} /><span>{label}</span><ChevronRight size={16} /></button>)}</section></div>; }
 function CollectionSearch({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) { return <div className="tw-toolbar"><label><Search size={15} /><input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} /></label></div>; }
 function LoadMore({ state, onLoadMore }: { state: { hasMore: boolean; loading: boolean }; onLoadMore: () => void }) { return state.hasMore ? <button className="tw-load-more" onClick={onLoadMore} disabled={state.loading}>{state.loading ? <LoaderCircle className="spin" size={17} /> : <ChevronDown size={17} />} Load more</button> : null; }
 function Empty({ icon: Icon, title, copy, action, onAction }: { icon: typeof Inbox; title: string; copy: string; action?: string; onAction?: () => void }) { return <div className="tw-empty"><Icon size={27} /><b>{title}</b><span>{copy}</span>{action && <button onClick={onAction}>{action}</button>}</div>; }

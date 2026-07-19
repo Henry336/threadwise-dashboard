@@ -8,7 +8,7 @@ const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 const MAX_BODY_BYTES = 96_000;
 
 function isAllowedPath(path: string) {
-  return /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:gmail|calendar|excel)\/disconnect|integrations\/excel\/sync|privacy\/(?:export|account))$/.test(path);
+  return /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:gmail|calendar|excel)\/disconnect|integrations\/excel\/sync|privacy\/(?:export|account))$/.test(path);
 }
 
 function methodAllowed(method: string, path: string) {
@@ -16,7 +16,7 @@ function methodAllowed(method: string, path: string) {
   if (path === "capture/preview") return method === "POST";
   if (path === "settings") return method === "GET" || method === "PATCH";
   if (/^(tasks|notes|ideas|expenses|images)$/.test(path)) return method === "GET" || method === "POST" && path !== "images";
-  if (/^integrations\/.+\/disconnect$/.test(path) || path === "integrations/excel/sync" || /\/(?:convert-to-task|analyze)$/.test(path)) return method === "POST";
+  if (/^integrations\/.+\/disconnect$/.test(path) || path === "integrations/excel/sync" || /\/(?:convert-to-task|analyze|collaboration)$/.test(path)) return method === "POST";
   if (path === "privacy/account") return method === "DELETE";
   if (/^(tasks|notes|ideas|expenses|images)\//.test(path)) return method === "PATCH" || method === "DELETE";
   return false;

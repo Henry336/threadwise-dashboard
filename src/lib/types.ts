@@ -18,6 +18,17 @@ export type DashboardWorkspace = {
   memberCount?: number;
 };
 
+export type DashboardTaskAssignee = {
+  id: string;
+  telegramId?: string;
+  username?: string;
+  displayName: string;
+  status: "PENDING" | "ACCEPTED" | "DECLINED" | "BLOCKED";
+  statusReason?: string;
+  respondedAt?: string;
+  updatedAt: string;
+};
+
 export type DashboardTask = {
   id: string;
   publicId: string;
@@ -33,6 +44,7 @@ export type DashboardTask = {
   pinned?: boolean;
   reminderCount?: number;
   assignee?: string;
+  assignees?: DashboardTaskAssignee[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -156,6 +168,39 @@ export type DashboardSnapshot = {
   activity: { day: string; captures: number; completed: number }[];
   integrations: IntegrationStatus[];
   settings: DashboardSettings;
+  collaboration?: {
+    viewerTelegramId: string;
+    members: Array<{
+      telegramId: string;
+      username?: string;
+      displayName: string;
+      initials: string;
+      role: "OWNER" | "ADMIN" | "MEMBER";
+      lastSeenAt: string;
+      openTasks: number;
+      blockedTasks: number;
+      awaitingTasks: number;
+    }>;
+    activity: Array<{
+      id: string;
+      type: string;
+      actorTelegramId: string;
+      actorName: string;
+      taskPublicId?: string;
+      taskTitle?: string;
+      summary: string;
+      createdAt: string;
+    }>;
+    summary: {
+      overdue: number;
+      unassigned: number;
+      awaitingAcknowledgement: number;
+      blocked: number;
+      createdThisWeek: number;
+      completedThisWeek: number;
+      handoffsThisWeek: number;
+    };
+  };
 };
 
 export type EntityKind = "task" | "note" | "idea" | "expense" | "image";

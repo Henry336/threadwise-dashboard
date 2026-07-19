@@ -28,6 +28,17 @@ const optionalClock = z.preprocess(
   clock.optional(),
 ).catch(undefined);
 
+const TaskAssigneeSchema = z.object({
+  id: text(100),
+  telegramId: z.string().regex(/^[1-9]\d{0,19}$/).optional(),
+  username: optionalText(64),
+  displayName: text(240),
+  status: z.enum(["PENDING", "ACCEPTED", "DECLINED", "BLOCKED"]),
+  statusReason: optionalText(500),
+  respondedAt: isoDate.optional(),
+  updatedAt: isoDate,
+});
+
 const TaskSchema = z.object({
   id: text(100), publicId: text(50), title: text(500), description: optionalText(5_000),
   dueAt: isoDate.nullish().transform((value) => value ?? undefined),
@@ -38,6 +49,7 @@ const TaskSchema = z.object({
   recurrenceRule: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).nullish().transform((value) => value ?? undefined),
   recurring: z.boolean().optional(), pinned: z.boolean().optional(),
   reminderCount: z.number().int().min(0).max(100_000).optional(), assignee: optionalText(200),
+  assignees: z.array(TaskAssigneeSchema).max(100).optional(),
   createdAt: isoDate.optional(), updatedAt: isoDate.optional(),
 });
 
@@ -114,6 +126,39 @@ export const DashboardSnapshotSchema = z.object({
     expenseCurrency: z.string().regex(/^[A-Z]{3}$/),
     ocrLanguages: text(200),
     directNudgesEnabled: z.boolean(),
+  }).optional(),
+  collaboration: z.object({
+    viewerTelegramId: z.string().regex(/^[1-9]\d{0,19}$/),
+    members: z.array(z.object({
+      telegramId: z.string().regex(/^[1-9]\d{0,19}$/),
+      username: optionalText(64),
+      displayName: text(240),
+      initials: text(8),
+      role: z.enum(["OWNER", "ADMIN", "MEMBER"]),
+      lastSeenAt: isoDate,
+      openTasks: z.number().int().min(0).max(100_000),
+      blockedTasks: z.number().int().min(0).max(100_000),
+      awaitingTasks: z.number().int().min(0).max(100_000),
+    })).max(10_000),
+    activity: z.array(z.object({
+      id: text(100),
+      type: text(60),
+      actorTelegramId: z.string().regex(/^[1-9]\d{0,19}$/),
+      actorName: text(240),
+      taskPublicId: optionalText(50),
+      taskTitle: optionalText(500),
+      summary: text(1_000),
+      createdAt: isoDate,
+    })).max(100),
+    summary: z.object({
+      overdue: z.number().int().min(0).max(100_000),
+      unassigned: z.number().int().min(0).max(100_000),
+      awaitingAcknowledgement: z.number().int().min(0).max(100_000),
+      blocked: z.number().int().min(0).max(100_000),
+      createdThisWeek: z.number().int().min(0).max(100_000),
+      completedThisWeek: z.number().int().min(0).max(100_000),
+      handoffsThisWeek: z.number().int().min(0).max(100_000),
+    }),
   }).optional(),
 });
 

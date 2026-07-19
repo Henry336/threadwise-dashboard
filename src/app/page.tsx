@@ -15,7 +15,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
       <header className="landing-nav">
         <ThreadwiseMark />
         <div className="landing-nav-actions">
-          <span className="landing-status"><span /> Works with Telegram</span>
+            <span className="landing-status"><span className="landing-thread-cue" aria-hidden="true"><i /><i /></span> Works with Telegram</span>
           <Link className="button button-quiet" href={session ? "/dashboard" : "/dashboard?demo=1"}>
             {session ? "Open dashboard" : "View the demo"}
           </Link>

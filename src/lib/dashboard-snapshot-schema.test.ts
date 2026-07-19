@@ -87,4 +87,36 @@ describe("dashboard snapshot contract", () => {
     expect(parsed.ideas[0]?.brief).toEqual(brief);
     expect(parsed.images?.[0]?.pinned).toBe(true);
   });
+
+  it("accepts shared assignment states and the compact group collaboration summary", () => {
+    const parsed = parseDashboardSnapshot({
+      ...snapshot("03:00", "06:00"),
+      tasks: [{
+        id: "task-1", publicId: "TASK-1", title: "Prepare launch notes", status: "OPEN",
+        assignees: [{
+          id: "assignee-1", telegramId: "123456789", displayName: "Henry",
+          status: "BLOCKED", statusReason: "Waiting for figures",
+          updatedAt: "2026-07-17T12:00:00.000Z",
+        }],
+      }],
+      collaboration: {
+        viewerTelegramId: "123456789",
+        members: [{
+          telegramId: "123456789", displayName: "Henry", initials: "H", role: "OWNER",
+          lastSeenAt: "2026-07-17T12:00:00.000Z", openTasks: 1, blockedTasks: 1, awaitingTasks: 0,
+        }],
+        activity: [{
+          id: "activity-1", type: "TASK_BLOCKED", actorTelegramId: "123456789", actorName: "Henry",
+          taskPublicId: "TASK-1", summary: "Henry blocked TASK-1.", createdAt: "2026-07-17T12:00:00.000Z",
+        }],
+        summary: {
+          overdue: 0, unassigned: 0, awaitingAcknowledgement: 0, blocked: 1,
+          createdThisWeek: 1, completedThisWeek: 0, handoffsThisWeek: 0,
+        },
+      },
+    });
+
+    expect(parsed.tasks[0]?.assignees?.[0]).toMatchObject({ status: "BLOCKED", statusReason: "Waiting for figures" });
+    expect(parsed.collaboration?.summary.blocked).toBe(1);
+  });
 });

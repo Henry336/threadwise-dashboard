@@ -9,6 +9,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - A responsive public landing page and personalized dashboard
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Today, Tasks, Notes, Ideas, Images, Expenses, Search, and Settings views
+- Separate group workspaces with Overview, shared Tasks, People, Stand-up, Activity, assignee acknowledgements, handoffs, and a seven-day summary
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
 - A date-grouped image gallery with OCR/caption search, selection, a keyboard-friendly lightbox, and note conversion
@@ -49,7 +50,7 @@ Browser → Vercel Next.js BFF → private Render /api/v1 → Threadwise service
               └── Telegram Mini App or OIDC session
 ```
 
-The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group-owned data is deliberately excluded until Threadwise has a verifiable human-to-group membership model.
+The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group workspaces resolve through opaque workspace ids and require recorded membership plus a live Telegram membership check before any shared data is returned.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DESIGN.md](docs/DESIGN.md).
 
