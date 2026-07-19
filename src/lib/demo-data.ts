@@ -9,6 +9,7 @@ const at = (dayOffset: number, hour: number, minute = 0) => {
 
 export function getDemoSnapshot(): DashboardSnapshot {
   return {
+    workspace: { id: "personal", kind: "PERSONAL", name: "Demo workspace", role: "OWNER" },
     user: {
       telegramId: "demo",
       firstName: "Maya",

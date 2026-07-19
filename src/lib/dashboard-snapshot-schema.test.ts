@@ -40,9 +40,11 @@ describe("dashboard snapshot contract", () => {
     expect(parsed.user.firstName).toBe("Henry");
   });
 
-  it("still rejects an invalid authenticated user identity", () => {
+  it("accepts a resolved group owner but rejects malformed workspace identities", () => {
     const input = snapshot("03:00", "06:00");
     input.user.telegramId = "chat:-100";
+    expect(parseDashboardSnapshot(input).user.telegramId).toBe("chat:-100");
+    input.user.telegramId = "chat:not-a-group";
     expect(() => parseDashboardSnapshot(input)).toThrow();
   });
 

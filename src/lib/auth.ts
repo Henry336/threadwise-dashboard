@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "threadwise_session";
+export const WORKSPACE_COOKIE = "threadwise_workspace";
 
 export type SessionUser = {
   telegramId: string;
@@ -53,6 +54,12 @@ export function verifySessionToken(token?: string): SessionUser | null {
 export async function getSessionUser() {
   const store = await cookies();
   return verifySessionToken(store.get(SESSION_COOKIE)?.value);
+}
+
+export async function getSelectedWorkspace() {
+  const store = await cookies();
+  const value = store.get(WORKSPACE_COOKIE)?.value;
+  return value && /^(?:personal|[0-9a-f-]{36})$/i.test(value) ? value : "personal";
 }
 
 export function isTelegramAuthConfigured() {

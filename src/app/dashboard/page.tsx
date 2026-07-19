@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardApp } from "@/components/dashboard-app";
-import { getSessionUser } from "@/lib/auth";
-import { DashboardDataContractError, ThreadwiseApiError, getDashboardSnapshot } from "@/lib/threadwise-api";
+import { getSelectedWorkspace, getSessionUser } from "@/lib/auth";
+import { DashboardDataContractError, ThreadwiseApiError, getDashboardSnapshot, getDashboardWorkspaces } from "@/lib/threadwise-api";
+import type { DashboardWorkspace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const session = await getSessionUser();
   const isDemo = params.demo === "1";
   if (!session && !isDemo) redirect("/");
+  const selectedWorkspace = isDemo ? "personal" : await getSelectedWorkspace();
 
   let snapshot = null;
+  let workspaces: DashboardWorkspace[] = [];
   let failure: "authentication" | "data" | "service" = "service";
   try {
-    snapshot = await getDashboardSnapshot(session, { demo: isDemo });
+    [snapshot, workspaces] = await Promise.all([
+      getDashboardSnapshot(session, { demo: isDemo, workspace: selectedWorkspace }),
+      isDemo ? Promise.resolve([]) : getDashboardWorkspaces(session),
+    ]);
   } catch (error) {
     failure = error instanceof DashboardDataContractError
       ? "data"
@@ -51,10 +57,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <span className="eyebrow">{copy.eyebrow}</span>
           <h1>{copy.title}</h1>
           <p>{copy.body}</p>
-          <div><Link className="button button-primary" href="/dashboard">Retry</Link><Link className="button button-quiet" href="/dashboard?demo=1">Open the demo</Link><Link className="button button-quiet" href="/">Back home</Link></div>
+          <div><Link className="button button-primary" href="/dashboard">Retry</Link>{selectedWorkspace !== "personal" && <Link className="button button-quiet" href="/api/workspace/select?workspace=personal&next=/dashboard">Open personal workspace</Link>}<Link className="button button-quiet" href="/dashboard?demo=1">Open the demo</Link><Link className="button button-quiet" href="/">Back home</Link></div>
         </div>
       </main>
     );
   }
-  return <DashboardApp initialData={snapshot} isDemo={isDemo} initialView={params.view} />;
+  const availableWorkspaces = workspaces.length ? workspaces : [snapshot.workspace];
+  return <DashboardApp initialData={snapshot} workspaces={availableWorkspaces} isDemo={isDemo} initialView={params.view} />;
 }

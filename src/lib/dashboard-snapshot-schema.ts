@@ -83,8 +83,15 @@ const ExpenseSchema = z.object({
 });
 
 export const DashboardSnapshotSchema = z.object({
+  workspace: z.object({
+    id: z.union([z.literal("personal"), z.string().uuid()]),
+    kind: z.enum(["PERSONAL", "GROUP"]),
+    name: text(240),
+    role: z.enum(["OWNER", "ADMIN", "MEMBER"]),
+    memberCount: z.number().int().min(0).max(100_000).optional(),
+  }).optional(),
   user: z.object({
-    telegramId: z.string().regex(/^[1-9]\d{0,19}$/), firstName: text(120), fullName: text(240),
+    telegramId: z.string().regex(/^(?:[1-9]\d{0,19}|chat:-\d{1,20})$/), firstName: text(120), fullName: text(240),
     username: optionalText(64), avatarUrl: z.string().url().max(2_000).optional(), timezone,
     accent: z.enum(["iris", "coral", "mint"]),
   }),

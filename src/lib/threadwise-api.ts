@@ -3,7 +3,7 @@ import "server-only";
 import { importPKCS8, SignJWT } from "jose";
 import { getDemoSnapshot } from "./demo-data";
 import type { SessionUser } from "./auth";
-import type { DashboardSettings, DashboardSnapshot } from "./types";
+import type { DashboardSettings, DashboardSnapshot, DashboardWorkspace } from "./types";
 import { parseDashboardSnapshot } from "./dashboard-snapshot-schema";
 
 function defaultSettings(timeZone: string): DashboardSettings {
@@ -35,12 +35,15 @@ function apiBaseUrl() {
   return `${baseUrl.replace(/\/$/, "")}/api/v1/dashboard`;
 }
 
-export async function threadwiseFetch(user: SessionUser, path = "", init: RequestInit = {}) {
+export async function threadwiseFetch(user: SessionUser, path = "", init: RequestInit = {}, workspace = "personal") {
   const token = await createServiceToken(user.telegramId);
   const suffix = path ? `/${path.replace(/^\/+/, "")}` : "";
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  if (workspace !== "personal") headers.set("X-Threadwise-Workspace", workspace);
   return fetch(`${apiBaseUrl()}${suffix}`, {
     ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${token}` },
+    headers,
     cache: "no-store",
     signal: init.signal ?? AbortSignal.timeout(12_000),
   });
@@ -62,12 +65,12 @@ export class DashboardDataContractError extends Error {
 
 export async function getDashboardSnapshot(
   user: SessionUser | null,
-  options: { demo?: boolean } = {},
+  options: { demo?: boolean; workspace?: string } = {},
 ): Promise<DashboardSnapshot> {
   if (options.demo) return getDemoSnapshot();
   if (!user) throw new Error("A signed-in user is required");
 
-  const response = await threadwiseFetch(user);
+  const response = await threadwiseFetch(user, "", {}, options.workspace);
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     let code = "unknown";
@@ -91,7 +94,44 @@ export async function getDashboardSnapshot(
   }
   return {
     ...parsed,
+    workspace: parsed.workspace ?? {
+      id: "personal",
+      kind: "PERSONAL",
+      name: parsed.user.firstName,
+      role: "OWNER",
+    },
     images: parsed.images ?? [],
     settings: parsed.settings ?? defaultSettings(parsed.user.timezone),
   } as DashboardSnapshot;
+}
+
+export async function getDashboardWorkspaces(user: SessionUser | null): Promise<DashboardWorkspace[]> {
+  if (!user) return [];
+  try {
+    const response = await threadwiseFetch(user, "workspaces");
+    if (!response.ok) return [];
+    const body = await response.json() as { workspaces?: unknown };
+    if (!Array.isArray(body.workspaces)) return [];
+    return body.workspaces.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const value = item as Record<string, unknown>;
+      if (
+        typeof value.id !== "string"
+        || typeof value.name !== "string"
+        || !["PERSONAL", "GROUP"].includes(String(value.kind))
+        || !["OWNER", "ADMIN", "MEMBER"].includes(String(value.role))
+      ) return [];
+      return [{
+        id: value.id,
+        kind: value.kind as DashboardWorkspace["kind"],
+        name: value.name.slice(0, 240),
+        role: value.role as DashboardWorkspace["role"],
+        ...(typeof value.memberCount === "number" ? { memberCount: value.memberCount } : {}),
+      }];
+    }).slice(0, 100);
+  } catch {
+    // Workspace discovery is additive. A healthy selected snapshot must remain usable
+    // if the optional switcher list has a transient network failure.
+    return [];
+  }
 }

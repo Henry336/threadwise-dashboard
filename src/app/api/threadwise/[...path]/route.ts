@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
+import { getSelectedWorkspace, getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { threadwiseFetch } from "@/lib/threadwise-api";
 
 export const dynamic = "force-dynamic";
@@ -8,11 +8,11 @@ const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 const MAX_BODY_BYTES = 96_000;
 
 function isAllowedPath(path: string) {
-  return /^(?:snapshot|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:gmail|calendar|excel)\/disconnect|integrations\/excel\/sync|privacy\/(?:export|account))$/.test(path);
+  return /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:gmail|calendar|excel)\/disconnect|integrations\/excel\/sync|privacy\/(?:export|account))$/.test(path);
 }
 
 function methodAllowed(method: string, path: string) {
-  if (path === "snapshot" || path === "events" || path === "search" || path === "privacy/export" || /\/content$/.test(path)) return method === "GET";
+  if (path === "snapshot" || path === "workspaces" || path === "events" || path === "search" || path === "privacy/export" || /\/content$/.test(path)) return method === "GET";
   if (path === "capture/preview") return method === "POST";
   if (path === "settings") return method === "GET" || method === "PATCH";
   if (/^(tasks|notes|ideas|expenses|images)$/.test(path)) return method === "GET" || method === "POST" && path !== "images";
@@ -73,13 +73,14 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
   }
 
   try {
+    const workspace = path === "workspaces" ? "personal" : await getSelectedWorkspace();
     const query = request.nextUrl.searchParams.toString();
     const upstream = await threadwiseFetch(user, `${path}${query ? `?${query}` : ""}`, {
       method,
       headers: body ? { "Content-Type": "application/json", Accept: request.headers.get("accept") ?? "application/json" } : { Accept: request.headers.get("accept") ?? "application/json" },
       body,
       ...(path === "events" ? { signal: request.signal } : {}),
-    });
+    }, workspace);
 
     if (path === "events" && upstream.ok && upstream.body) {
       const response = new NextResponse(upstream.body, {

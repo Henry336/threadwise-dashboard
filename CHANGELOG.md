@@ -2,6 +2,17 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.3.0 - Shared Group Workspaces
+
+### Added
+- Added a workspace switcher for personal and Telegram group workspaces on desktop and mobile.
+- Added a separate group dashboard presentation with shared copy, membership and role context, admin-gated group defaults, and group-aware expense metrics.
+- Added a secure workspace-selection cookie and proxy scope so live events, images, search, capture, and every collection mutation stay attached to the selected workspace.
+
+### Boundaries
+- Group dashboard requests are still signed by the human Telegram user and then verified against current group membership by the bot service.
+- Personal Gmail, Calendar, Excel, export, and account-deletion controls are never shown or accepted in group scope.
+
 ## Unreleased - Phase 3: Actions, Navigation, and Mobile Polish
 
 ### Collection actions

@@ -10,6 +10,14 @@ export type DashboardUser = {
   accent: Accent;
 };
 
+export type DashboardWorkspace = {
+  id: string;
+  kind: "PERSONAL" | "GROUP";
+  name: string;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  memberCount?: number;
+};
+
 export type DashboardTask = {
   id: string;
   publicId: string;
@@ -137,6 +145,7 @@ export type SearchResult = {
 };
 
 export type DashboardSnapshot = {
+  workspace: DashboardWorkspace;
   user: DashboardUser;
   generatedAt: string;
   tasks: DashboardTask[];

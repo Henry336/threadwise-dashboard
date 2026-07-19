@@ -24,7 +24,7 @@ import {
 import type {
   DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, DashboardSettings,
   DashboardSnapshot, DashboardTask, EntityKind, IdeaStatus, IntegrationStatus, SearchResult,
-  CaptureKind, CapturePreview, IdeaBrief,
+  CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
 } from "@/lib/types";
 
 export type DashboardView = "today" | "tasks" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
@@ -181,7 +181,7 @@ class ClientApiError extends Error {
   }
 }
 
-export function DashboardApp({ initialData, isDemo, initialView: requestedView }: { initialData: DashboardSnapshot; isDemo: boolean; initialView?: string }) {
+export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string }) {
   const [data, setData] = useState(initialData);
   const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
@@ -525,6 +525,7 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
     <div className="tw-shell" style={{ "--accent": ACCENTS[accent] } as React.CSSProperties}>
       <aside className="tw-sidebar">
         <div className="tw-brand-row"><ThreadwiseMark /></div>
+        <WorkspaceSwitcher current={data.workspace} workspaces={workspaces} disabled={isDemo} />
         <button className="tw-quick-button" onClick={() => setCaptureOpen(true)}><Plus size={17} /> Quick capture <kbd>N</kbd></button>
         <nav aria-label="Dashboard">
           <p>Workspace</p>
@@ -537,7 +538,7 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
             {syncState === "live" ? <Wifi size={16} /> : syncState === "offline" ? <WifiOff size={16} /> : <RefreshCw className="spin" size={16} />}
             <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Live with Telegram" : syncState === "offline" ? "Sync offline" : "Reconnecting"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Updated ${formatRelativeSync(lastSyncedAt)}` : "Your saved view remains available"}</small></span>
           </button>
-          <button onClick={() => navigate("settings")} className="tw-profile"><span>{data.user.firstName[0]}</span><div><b>{data.user.fullName}</b><small>@{data.user.username ?? "threadwise"}</small></div><ChevronRight size={16} /></button>
+          <button onClick={() => navigate("settings")} className="tw-profile"><span>{data.workspace.name[0]}</span><div><b>{data.workspace.name}</b><small>{data.workspace.kind === "GROUP" ? `${data.workspace.role.toLowerCase()} · shared` : `@${data.user.username ?? "threadwise"}`}</small></div><ChevronRight size={16} /></button>
         </div>
       </aside>
 
@@ -545,17 +546,18 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
         <header className="tw-topbar">
           <button className="tw-icon-button tw-menu-button" onClick={() => setMoreOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
           <span className="tw-mobile-brand"><ThreadwiseMark compact /></span>
-          <div className="tw-crumb"><span>Personal</span><ChevronRight size={12} /><b>{NAV.find((entry) => entry.id === activeView)?.label ?? "Library"}</b></div>
+          <div className="tw-mobile-workspace"><WorkspaceSwitcher current={data.workspace} workspaces={workspaces} disabled={isDemo} /></div>
+          <div className="tw-crumb"><span>{data.workspace.kind === "GROUP" ? data.workspace.name : "Personal"}</span><ChevronRight size={12} /><b>{NAV.find((entry) => entry.id === activeView)?.label ?? "Library"}</b></div>
           <div className="tw-top-actions">
             {isDemo && <span className="tw-demo-pill">Demo · changes stay here</span>}
             <button className="tw-search-button" onClick={() => setPaletteOpen(true)}><Search size={16} /><span>Find anything</span><kbd>⌘ K</kbd></button>
             <button className="tw-icon-button" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button>
-            <button className="tw-icon-button tw-avatar" onClick={() => navigate("settings")} aria-label="Open settings">{data.user.firstName[0]}</button>
+            <button className="tw-icon-button tw-avatar" onClick={() => navigate("settings")} aria-label="Open settings">{data.workspace.name[0]}</button>
           </div>
         </header>
 
         <div className="tw-content" key={activeView}>
-          <PageHeading view={activeView} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />
+          <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />
           {!(["search", "settings"] as DashboardView[]).includes(activeView) && <button className="tw-capture-launch" onClick={() => setCaptureOpen(true)}><span><Sparkles size={20} /></span><div><b>Capture in plain language</b><small>“Remind me at 1.30pm”, a note, an idea, or an expense</small></div><kbd>N</kbd><ArrowRight size={18} /></button>}
 
           {activeView === "today" && <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />}
@@ -563,10 +565,12 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
           {activeView === "notes" && <PhaseTwoNotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} onPin={(note) => void toggleCollectionPin("note", note)} onDelete={(note) => removeEntity("note", note)} onBatchDelete={removeNotes} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
           {activeView === "ideas" && <PhaseTwoIdeasView ideas={data.ideas} timezone={data.user.timezone} onEdit={(idea) => setEditor({ kind: "idea", item: idea })} onPin={(idea) => void toggleCollectionPin("idea", idea)} onArchive={(idea) => removeEntity("idea", idea)} onAnalyze={(idea) => void analyzeIdea(idea)} onConvert={convertIdea} pagination={pagination.ideas} onLoadMore={() => loadMore("ideas")} />}
           {activeView === "images" && <PhaseTwoImagesView images={data.images} timezone={data.user.timezone} isDemo={isDemo} onEdit={(image) => setEditor({ kind: "image", item: image })} onPin={(image) => void toggleCollectionPin("image", image)} onDelete={(image) => removeEntity("image", image)} onBatchDelete={removeImages} onCreateNote={(image) => setEditor({ kind: "note", seed: image.ocrText || image.caption || "" })} pagination={pagination.images} onLoadMore={() => loadMore("images")} />}
-          {activeView === "expenses" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
+          {activeView === "expenses" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} shared={data.workspace.kind === "GROUP"} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
           {activeView === "library" && <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />}
           {activeView === "search" && <SearchView data={data} isDemo={isDemo} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "expenses" : `${kind}s` as DashboardView)} announce={announce} />}
-          {activeView === "settings" && <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onDisconnect={(provider) => setData((current) => ({ ...current, integrations: current.integrations.map((item) => (item.provider ?? item.name.toLowerCase()) === provider ? { ...item, state: "available", detail: "Disconnected" } : item) }))} announce={announce} />}
+          {activeView === "settings" && (data.workspace.kind === "GROUP"
+            ? <GroupSettingsView data={data} workspace={data.workspace} onSave={(settings) => setData((current) => ({ ...current, settings }))} announce={announce} />
+            : <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onDisconnect={(provider) => setData((current) => ({ ...current, integrations: current.integrations.map((item) => (item.provider ?? item.name.toLowerCase()) === provider ? { ...item, state: "available", detail: "Disconnected" } : item) }))} announce={announce} />)}
         </div>
       </main>
 
@@ -588,11 +592,26 @@ export function DashboardApp({ initialData, isDemo, initialView: requestedView }
   );
 }
 
-function PageHeading({ view, name, timezone, onAdd }: { view: DashboardView; name: string; timezone: string; onAdd: () => void }) {
+function WorkspaceSwitcher({ current, workspaces, disabled }: { current: DashboardWorkspace; workspaces: DashboardWorkspace[]; disabled?: boolean }) {
+  const choices = workspaces.some((workspace) => workspace.id === current.id) ? workspaces : [current, ...workspaces];
+  return <label className="tw-workspace-switcher">
+    <span>{current.kind === "GROUP" ? "Shared group" : "Your workspace"}</span>
+    <select
+      value={current.id}
+      disabled={disabled}
+      aria-label="Switch Threadwise workspace"
+      onChange={(event) => window.location.assign(`/api/workspace/select?workspace=${encodeURIComponent(event.target.value)}&next=/dashboard`)}
+    >
+      {choices.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.kind === "GROUP" ? "Group · " : "Personal · "}{workspace.name}</option>)}
+    </select>
+  </label>;
+}
+
+function PageHeading({ view, workspace, name, timezone, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; onAdd: () => void }) {
   const hour = Number(new Intl.DateTimeFormat("en-SG", { hour: "2-digit", hour12: false, timeZone: timezone }).format(new Date()));
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
-    today: [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: ["Tasks", "Things to do, reminders when they matter."],
+    today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: ["Tasks", workspace.kind === "GROUP" ? "Shared work, owners, and reminders in one thread." : "Things to do, reminders when they matter."],
     library: ["Library", "Notes, ideas, and images—kept together."], notes: ["Notes", "Useful things you wanted to keep."],
     ideas: ["Ideas", "Small sparks, ready when you are."], images: ["Images", "Every saved frame, easy to find again."],
     expenses: ["Expenses", "A clear view of what moved."], search: ["Search everything", "Titles, words, receipts, and remembered fragments."],
@@ -805,6 +824,43 @@ function LegacySettingsView({ data, isDemo, accent, onAccent, onSave, onDisconne
   const exportData = async () => { try { if (isDemo) { const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "threadwise-demo-export.json"; a.click(); URL.revokeObjectURL(url); } else { const response = await fetch("/api/threadwise/privacy/export", { cache: "no-store" }); if (!response.ok) throw new Error("Export could not be prepared."); const blob = await response.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "threadwise-export.json"; a.click(); URL.revokeObjectURL(url); } announce("Your export is ready."); } catch (error) { announce(error instanceof Error ? error.message : "Could not export data."); } };
   const deleteAccount = async () => { if (confirmation !== "DELETE MY THREADWISE DATA") return; if (!window.confirm("This permanently deletes your Threadwise account and saved content. Continue?")) return; try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); } catch (error) { announce(error instanceof Error ? error.message : "Could not delete account."); } };
   return <div className="tw-settings-grid"><section className="tw-settings-main"><div className="tw-settings-section"><div><span>Preferences</span><h2>How Threadwise works</h2><p>These settings apply in Telegram and on the web.</p></div><form onSubmit={save}><label>Timezone<input value={settings.timezone} onChange={(e) => setSettings({ ...settings, timezone: e.target.value })} /></label><div className="tw-form-row"><label>Default reminder interval<select value={settings.reminderIntervalMinutes} onChange={(e) => setSettings({ ...settings, reminderIntervalMinutes: Number(e.target.value) })}><option value="60">1 hour</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="1440">1 day</option></select></label><label>Reminder style<select value={settings.reminderMode} onChange={(e) => setSettings({ ...settings, reminderMode: e.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual</option><option value="DIGEST">Digest</option></select></label></div><div className="tw-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursStart: e.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursEnd: e.target.value || undefined })} /></label></div><label className="tw-switch"><span><b>Private assignee nudges</b><small>Send direct reminders only to the private chat of someone assigned to a task.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(e) => setSettings({ ...settings, directNudgesEnabled: e.target.checked })} /></label><button className="tw-primary" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save preferences</button></form></div><div className="tw-settings-section"><div><span>Integrations</span><h2>Connected services</h2><p>Provider tokens are encrypted before storage.</p></div><div className="tw-integration-list">{data.integrations.map((item) => { const provider = (item.provider ?? item.name.toLowerCase()) as "gmail" | "calendar" | "excel"; return <article key={item.name}><span>{item.name[0]}</span><div><b>{item.name}</b><small>{item.detail}</small></div><em className={item.state}>{item.state}</em>{item.state === "connected" ? <button onClick={() => disconnect(provider)}><Unplug size={15} /> Disconnect</button> : item.connectUrl ? <a href={item.connectUrl}>Connect <ExternalLink size={14} /></a> : <button disabled>Connect in Telegram</button>}</article>; })}</div></div><div className="tw-settings-section tw-danger-zone"><div><span>Data &amp; privacy</span><h2>Your data, your decision</h2><p>Export a readable copy or permanently remove your account.</p></div><button className="tw-secondary" onClick={exportData}><Download size={16} /> Export my data</button><label>To delete everything, type <b>DELETE MY THREADWISE DATA</b><input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></label><button className="tw-danger" disabled={confirmation !== "DELETE MY THREADWISE DATA"} onClick={deleteAccount}><Trash2 size={16} /> Delete account and data</button></div></section><aside className="tw-settings-side"><section><span>Appearance</span><h3>Make it yours</h3><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`} />)}</div></section><section className="tw-privacy-card"><ShieldCheck size={23} /><h3>What “private” means here</h3><p>Telegram authenticates you; Threadwise never receives your Telegram password. Every request is scoped to your Telegram account.</p><p>Your content is <b>not end-to-end encrypted</b>. A small number of authorized production operators can technically access stored content when needed to run or secure the service.</p><p>OAuth tokens are encrypted before storage. If you use AI features, only the relevant content may be sent to the configured AI provider.</p><a href="/privacy">Read the full privacy explanation <ArrowRight size={14} /></a></section><form action="/api/auth/logout" method="post"><button className="tw-secondary" type="submit"><LogOut size={16} /> Sign out</button></form></aside></div>;
+}
+
+function GroupSettingsView({ data, workspace, onSave, announce }: { data: DashboardSnapshot; workspace: DashboardWorkspace; onSave: (value: DashboardSettings) => void; announce: (message: string) => void }) {
+  const [settings, setSettings] = useState(data.settings);
+  const [saving, setSaving] = useState(false);
+  const canManage = workspace.role === "OWNER" || workspace.role === "ADMIN";
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canManage) return;
+    setSaving(true);
+    try {
+      const payload = { ...settings, quietHoursStart: settings.quietHoursStart || null, quietHoursEnd: settings.quietHoursEnd || null };
+      const saved = asPayload<DashboardSettings>(await api("settings", "PATCH", payload), "settings");
+      onSave(saved);
+      announce("Shared settings updated for the group.");
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Could not save group settings.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <section className="tw-group-settings">
+    <header className="tw-group-settings-hero"><div><span>Shared workspace</span><h2>{workspace.name}</h2><p>Changes here affect this Telegram group only. Personal notes, integrations, and account controls remain separate.</p></div><div><b>{workspace.memberCount ?? "—"}</b><span>known members</span><small>Your role · {workspace.role.toLowerCase()}</small></div></header>
+    <div className="tw-group-settings-grid">
+      <form onSubmit={save}>
+        <header><span>Group defaults</span><h3>How this group is reminded</h3><p>{canManage ? "Telegram admins can tune these shared defaults." : "Only a Telegram group admin can change these values."}</p></header>
+        <fieldset disabled={!canManage || saving}>
+          <div className="tw-form-row"><label>Timezone<input value={settings.timezone} onChange={(event) => setSettings({ ...settings, timezone: event.target.value })} /></label><label>Expense currency<input minLength={3} maxLength={3} value={settings.expenseCurrency} onChange={(event) => setSettings({ ...settings, expenseCurrency: event.target.value.toUpperCase() })} /></label></div>
+          <div className="tw-form-row"><label>Reminder rhythm<select value={settings.reminderIntervalMinutes} onChange={(event) => setSettings({ ...settings, reminderIntervalMinutes: Number(event.target.value) })}><option value="60">Every hour</option><option value="180">Every 3 hours</option><option value="360">Every 6 hours</option><option value="1440">Daily</option></select></label><label>Delivery style<select value={settings.reminderMode} onChange={(event) => setSettings({ ...settings, reminderMode: event.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual cards</option><option value="DIGEST">Compact digest</option></select></label></div>
+          <div className="tw-form-row"><label>Quiet hours begin<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || undefined })} /></label></div>
+          <label className="tw-switch"><span><b>Private assignee nudges</b><small>Members assigned to a shared task can receive its reminder privately.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(event) => setSettings({ ...settings, directNudgesEnabled: event.target.checked })} /></label>
+          {canManage && <button className="tw-primary tw-settings-save" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save group defaults</button>}
+        </fieldset>
+      </form>
+      <aside><article><ShieldCheck size={22} /><div><h3>Separate by design</h3><p>This dashboard reads only the shared records owned by this group. It cannot open a member&apos;s personal Threadwise workspace.</p></div></article><article><Cloud size={22} /><div><h3>No personal connections</h3><p>Gmail, Calendar, Excel, exports, and account deletion remain in each person&apos;s private workspace.</p></div></article><a className="tw-secondary" href="/api/workspace/select?workspace=personal&next=/dashboard">Switch to personal workspace</a></aside>
+    </div>
+  </section>;
 }
 
 function SettingsView({ data, isDemo, accent, onAccent, onSave, onDisconnect, announce }: { data: DashboardSnapshot; isDemo: boolean; accent: keyof typeof ACCENTS; onAccent: (value: keyof typeof ACCENTS) => void; onSave: (value: DashboardSettings) => void; onDisconnect: (provider: "gmail" | "calendar" | "excel") => void; announce: (message: string) => void }) {
