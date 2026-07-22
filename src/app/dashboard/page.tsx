@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string; view?: string }> }) {
   const params = await searchParams;
   const session = await getSessionUser();
-  const isDemo = params.demo === "1";
+  const isDemo = params.demo === "1" || params.demo === "group";
   if (!session && !isDemo) redirect("/");
-  const selectedWorkspace = isDemo ? "personal" : await getSelectedWorkspace();
+  const selectedWorkspace = isDemo ? (params.demo === "group" ? "group" : "personal") : await getSelectedWorkspace();
 
   let snapshot = null;
   let workspaces: DashboardWorkspace[] = [];

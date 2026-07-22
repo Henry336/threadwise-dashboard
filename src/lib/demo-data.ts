@@ -228,3 +228,55 @@ export function getDemoSnapshot(): DashboardSnapshot {
     },
   };
 }
+
+export function getGroupDemoSnapshot(): DashboardSnapshot {
+  const personal = getDemoSnapshot();
+  const now = new Date().toISOString();
+  const groupTaskCopy: Record<string, { title: string; description?: string }> = {
+    "task-3": { title: "Confirm the launch venue", description: "Lock the room and share access details with the team." },
+    "task-4": { title: "Prepare the venue fallback", description: "Waiting for venue confirmation." },
+    "task-7": { title: "Schedule the final rehearsal", description: "Find a time that works for every assignee." },
+  };
+  const members: NonNullable<DashboardSnapshot["collaboration"]>["members"] = [
+    { telegramId: "1001", username: "maya", displayName: "Maya", initials: "M", role: "OWNER", lastSeenAt: now, openTasks: 2, blockedTasks: 0, awaitingTasks: 0 },
+    { telegramId: "1002", username: "alex", displayName: "Alex", initials: "A", role: "ADMIN", lastSeenAt: now, openTasks: 2, blockedTasks: 0, awaitingTasks: 1 },
+    { telegramId: "1003", username: "priya", displayName: "Priya", initials: "P", role: "MEMBER", lastSeenAt: now, openTasks: 1, blockedTasks: 1, awaitingTasks: 0 },
+  ];
+  const assignment = (id: string, member: typeof members[number], status: "PENDING" | "ACCEPTED" | "BLOCKED", statusReason?: string) => ({
+    id,
+    telegramId: member.telegramId,
+    username: member.username,
+    displayName: member.displayName,
+    status,
+    ...(statusReason ? { statusReason } : {}),
+    updatedAt: now,
+  });
+  const tasks = personal.tasks.map((task, index) => ({
+    ...task,
+    ...(groupTaskCopy[task.id] ?? {}),
+    createdAt: task.dueAt ?? now,
+    updatedAt: now,
+    assignees: index === 0 ? [assignment("assignment-1", members[0], "ACCEPTED")]
+      : index === 1 ? [assignment("assignment-2", members[1], "PENDING")]
+        : index === 3 ? [assignment("assignment-3", members[2], "BLOCKED", "Waiting for venue confirmation")]
+          : [],
+  }));
+  return {
+    ...personal,
+    workspace: { id: "group-demo", kind: "GROUP", name: "Launch circle", role: "OWNER", memberCount: members.length },
+    user: { ...personal.user, telegramId: "1001", firstName: "Maya" },
+    tasks,
+    expenses: [],
+    integrations: [],
+    collaboration: {
+      viewerTelegramId: "1001",
+      members,
+      activity: [
+        { id: "activity-1", type: "TASK_COMPLETED", actorTelegramId: "1001", actorName: "Maya", taskPublicId: "T-163", taskTitle: "Archive the old workspace", summary: "Maya completed T-163.", createdAt: at(0, 9, 8) },
+        { id: "activity-2", type: "TASK_ASSIGNED", actorTelegramId: "1001", actorName: "Maya", taskPublicId: "T-191", taskTitle: "Send project notes to the team", summary: "Maya assigned T-191 to Alex.", createdAt: at(-1, 18, 20) },
+        { id: "activity-3", type: "TASK_BLOCKED", actorTelegramId: "1003", actorName: "Priya", taskPublicId: "T-177", taskTitle: "Prepare the venue fallback", summary: "Priya blocked T-177 while waiting for venue confirmation.", createdAt: at(-1, 14, 5) },
+      ],
+      summary: { overdue: 1, unassigned: 3, awaitingAcknowledgement: 1, blocked: 1, createdThisWeek: 6, completedThisWeek: 1, handoffsThisWeek: 1 },
+    },
+  };
+}

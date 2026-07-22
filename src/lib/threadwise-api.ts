@@ -1,7 +1,7 @@
 import "server-only";
 
 import { importPKCS8, SignJWT } from "jose";
-import { getDemoSnapshot } from "./demo-data";
+import { getDemoSnapshot, getGroupDemoSnapshot } from "./demo-data";
 import type { SessionUser } from "./auth";
 import type { DashboardSettings, DashboardSnapshot, DashboardWorkspace } from "./types";
 import { parseDashboardSnapshot } from "./dashboard-snapshot-schema";
@@ -67,7 +67,7 @@ export async function getDashboardSnapshot(
   user: SessionUser | null,
   options: { demo?: boolean; workspace?: string } = {},
 ): Promise<DashboardSnapshot> {
-  if (options.demo) return getDemoSnapshot();
+  if (options.demo) return options.workspace === "group" ? getGroupDemoSnapshot() : getDemoSnapshot();
   if (!user) throw new Error("A signed-in user is required");
 
   const response = await threadwiseFetch(user, "", {}, options.workspace);

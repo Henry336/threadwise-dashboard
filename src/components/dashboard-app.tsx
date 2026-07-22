@@ -26,7 +26,8 @@ import {
   GroupActivityView,
   GroupOverview,
   GroupPeople,
-  GroupStandup,
+  GroupProgress,
+  GroupResources,
   GroupTasksView,
   TaskCollaborationSheet,
   type CollaborationPayload,
@@ -38,7 +39,7 @@ import type {
   CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
 } from "@/lib/types";
 
-export type DashboardView = "today" | "tasks" | "people" | "standup" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
+export type DashboardView = "today" | "tasks" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
 type EditorState = { kind: EditableKind; item?: DashboardTask | DashboardNote | DashboardIdea | DashboardExpense | DashboardImage; seed?: string };
 type PaginationState = Record<"tasks" | "notes" | "ideas" | "expenses" | "images", { page: number; hasMore: boolean; loading: boolean }>;
@@ -57,18 +58,14 @@ const PERSONAL_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] =
 ];
 const GROUP_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "today", label: "Overview", icon: Inbox },
-  { id: "tasks", label: "Tasks", icon: ListChecks },
+  { id: "tasks", label: "Work", icon: ListChecks },
   { id: "people", label: "People", icon: UsersRound },
-  { id: "standup", label: "Stand-up", icon: ClipboardList },
+  { id: "progress", label: "Progress", icon: ClipboardList },
   { id: "activity", label: "Activity", icon: Activity },
-  { id: "notes", label: "Notes", icon: FileText },
-  { id: "ideas", label: "Ideas", icon: Lightbulb },
-  { id: "images", label: "Images", icon: ImageIcon },
-  { id: "expenses", label: "Expenses", icon: CircleDollarSign },
+  { id: "library", label: "Resources", icon: BookOpen },
   { id: "search", label: "Search", icon: Search },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "settings", label: "Manage group", icon: Settings },
 ];
-const NAV = [...PERSONAL_NAV, ...GROUP_NAV.filter((item) => !PERSONAL_NAV.some((candidate) => candidate.id === item.id))];
 const DEMO_IMAGES = ["garden-light.svg", "launch-board.svg", "morning-cafe.svg", "receipt.svg", "city-rain.svg", "book-stack.svg"];
 const IDEA_STATUSES: IdeaStatus[] = ["RAW", "CLARIFIED", "SELECTED", "PROTOTYPING", "BUILT", "PAUSED", "REJECTED"];
 
@@ -146,8 +143,15 @@ function asPayload<T>(body: unknown, key: string): T {
   const value = body as Record<string, unknown>;
   return (value[key] ?? body) as T;
 }
-function initialView(value?: string): DashboardView {
-  return NAV.some((item) => item.id === value) ? value as DashboardView : value === "library" ? "library" : "today";
+function viewAllowed(value: DashboardView, workspace: DashboardWorkspace): boolean {
+  if (workspace.kind === "PERSONAL") return PERSONAL_NAV.some((item) => item.id === value) || value === "library";
+  if (value === "expenses") return false;
+  if (value === "settings" && workspace.role === "MEMBER") return false;
+  return GROUP_NAV.some((item) => item.id === value) || ["notes", "ideas", "images"].includes(value);
+}
+function initialView(value: string | undefined, workspace: DashboardWorkspace): DashboardView {
+  const candidate = value === "standup" ? "progress" : value as DashboardView | undefined;
+  return candidate && viewAllowed(candidate, workspace) ? candidate : "today";
 }
 function useModalFocus<T extends HTMLElement, U extends HTMLElement>(
   container: React.RefObject<T | null>,
@@ -208,7 +212,7 @@ class ClientApiError extends Error {
 
 export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string }) {
   const [data, setData] = useState(initialData);
-  const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView));
+  const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView, initialData.workspace));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -240,6 +244,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
     toastTimer.current = window.setTimeout(() => setToast(null), 2800);
   };
   const navigate = (view: DashboardView) => {
+    if (!viewAllowed(view, data.workspace)) view = "today";
     setActiveView(view);
     setMoreOpen(false);
     const url = new URL(window.location.href);
@@ -569,23 +574,27 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
   const todayTasks = openTasks.filter((task) => isToday(task.dueAt, data.user.timezone));
   const overdueTasks = openTasks.filter((task) => isOverdue(task, data.user.timezone));
   const focusTask = overdueTasks[0] ?? todayTasks[0] ?? openTasks[0];
-  const navItems = data.workspace.kind === "GROUP" ? GROUP_NAV : PERSONAL_NAV;
+  const groupManager = data.workspace.role === "OWNER" || data.workspace.role === "ADMIN";
+  const navItems = data.workspace.kind === "GROUP"
+    ? GROUP_NAV.filter((item) => item.id !== "settings" || groupManager)
+    : PERSONAL_NAV;
   const workspaceNav = navItems.filter((item) => item.id !== "search" && item.id !== "settings");
   const manageNav = navItems.filter((item) => item.id === "search" || item.id === "settings");
-  const groupOwnHeading = data.workspace.kind === "GROUP" && (["today", "people", "standup", "activity"] as DashboardView[]).includes(activeView);
-  const showCaptureLaunch = !(["search", "settings", "people", "standup", "activity"] as DashboardView[]).includes(activeView)
-    && !(data.workspace.kind === "GROUP" && (["today", "tasks"] as DashboardView[]).includes(activeView));
+  const groupOwnHeading = data.workspace.kind === "GROUP" && (["today", "people", "progress", "activity", "library"] as DashboardView[]).includes(activeView);
+  const showCaptureLaunch = !(["search", "settings", "people", "progress", "activity"] as DashboardView[]).includes(activeView)
+    && !(data.workspace.kind === "GROUP" && (["today", "tasks", "library"] as DashboardView[]).includes(activeView));
+  const profileView: DashboardView = data.workspace.kind === "GROUP" ? (groupManager ? "settings" : "people") : "settings";
 
   return (
     <div className="tw-shell" style={{ "--accent": ACCENTS[accent] } as React.CSSProperties}>
       <aside className="tw-sidebar">
         <div className="tw-brand-row"><ThreadwiseMark /></div>
         <WorkspaceSwitcher current={data.workspace} workspaces={workspaces} disabled={isDemo} />
-        <button className="tw-quick-button" onClick={() => setCaptureOpen(true)}><Plus size={17} /> Quick capture <kbd>N</kbd></button>
+        <button className="tw-quick-button" onClick={() => setCaptureOpen(true)}><Plus size={17} /> {data.workspace.kind === "GROUP" ? "Add to group" : "Quick capture"} <kbd>N</kbd></button>
         <nav aria-label="Dashboard">
           <p>Workspace</p>
           {workspaceNav.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span>{id === "tasks" && <em>{openTasks.length}</em>}</button>)}
-          <p>Manage</p>
+          {manageNav.length > 0 && <p>{data.workspace.kind === "GROUP" ? "Tools" : "Manage"}</p>}
           {manageNav.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span></button>)}
         </nav>
         <div className="tw-sidebar-foot">
@@ -593,7 +602,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
             {syncState === "live" ? <Wifi size={16} /> : syncState === "offline" ? <WifiOff size={16} /> : <RefreshCw className="spin" size={16} />}
             <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Telegram in sync" : syncState === "offline" ? "Sync offline" : "Reconnecting"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Updated ${formatRelativeSync(lastSyncedAt)}` : "Your saved view remains available"}</small></span>
           </button>
-          <button onClick={() => navigate("settings")} className="tw-profile"><span>{data.workspace.name[0]}</span><div><b>{data.workspace.name}</b><small>{data.workspace.kind === "GROUP" ? `${data.workspace.role.toLowerCase()} · shared` : `@${data.user.username ?? "threadwise"}`}</small></div><ChevronRight size={16} /></button>
+          <button onClick={() => navigate(profileView)} className="tw-profile"><span>{data.workspace.name[0]}</span><div><b>{data.workspace.name}</b><small>{data.workspace.kind === "GROUP" ? `${data.workspace.role.toLowerCase()} · shared` : `@${data.user.username ?? "threadwise"}`}</small></div><ChevronRight size={16} /></button>
         </div>
       </aside>
 
@@ -607,7 +616,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
             {isDemo && <span className="tw-demo-pill">Demo · changes stay here</span>}
             <button className="tw-search-button" onClick={() => setPaletteOpen(true)}><Search size={16} /><span>Find anything</span><kbd>⌘ K</kbd></button>
             <button className="tw-icon-button" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button>
-            <button className="tw-icon-button tw-avatar" onClick={() => navigate("settings")} aria-label="Open settings">{data.workspace.name[0]}</button>
+            <button className="tw-icon-button tw-avatar" onClick={() => navigate(profileView)} aria-label={data.workspace.kind === "GROUP" ? "Open group profile" : "Open settings"}>{data.workspace.name[0]}</button>
           </div>
         </header>
 
@@ -622,14 +631,16 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
             ? <GroupTasksView tasks={data.tasks} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />
             : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
           {activeView === "people" && <GroupPeople data={data} onOpenTasks={openGroupTasks} />}
-          {activeView === "standup" && <GroupStandup data={data} onManageTask={setCollaborationTask} />}
+          {activeView === "progress" && <GroupProgress data={data} onManageTask={setCollaborationTask} />}
           {activeView === "activity" && <GroupActivityView data={data} />}
           {activeView === "notes" && <PhaseTwoNotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} onPin={(note) => void toggleCollectionPin("note", note)} onDelete={(note) => removeEntity("note", note)} onBatchDelete={removeNotes} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
           {activeView === "ideas" && <PhaseTwoIdeasView ideas={data.ideas} timezone={data.user.timezone} onEdit={(idea) => setEditor({ kind: "idea", item: idea })} onPin={(idea) => void toggleCollectionPin("idea", idea)} onArchive={(idea) => removeEntity("idea", idea)} onAnalyze={(idea) => void analyzeIdea(idea)} onConvert={convertIdea} pagination={pagination.ideas} onLoadMore={() => loadMore("ideas")} />}
           {activeView === "images" && <PhaseTwoImagesView images={data.images} timezone={data.user.timezone} isDemo={isDemo} onEdit={(image) => setEditor({ kind: "image", item: image })} onPin={(image) => void toggleCollectionPin("image", image)} onDelete={(image) => removeEntity("image", image)} onBatchDelete={removeImages} onCreateNote={(image) => setEditor({ kind: "note", seed: image.ocrText || image.caption || "" })} pagination={pagination.images} onLoadMore={() => loadMore("images")} />}
-          {activeView === "expenses" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} shared={data.workspace.kind === "GROUP"} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
-          {activeView === "library" && <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />}
-          {activeView === "search" && <SearchView data={data} isDemo={isDemo} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "expenses" : `${kind}s` as DashboardView)} announce={announce} />}
+          {activeView === "expenses" && data.workspace.kind === "PERSONAL" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
+          {activeView === "library" && (data.workspace.kind === "GROUP"
+            ? <GroupResources data={data} onOpen={(view) => navigate(view)} onAdd={() => setCaptureOpen(true)} />
+            : <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />)}
+          {activeView === "search" && <SearchView data={data} isDemo={isDemo} allowExpenses={data.workspace.kind === "PERSONAL"} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "expenses" : `${kind}s` as DashboardView)} announce={announce} />}
           {activeView === "settings" && (data.workspace.kind === "GROUP"
             ? <GroupSettingsView data={data} workspace={data.workspace} onSave={(settings) => setData((current) => ({ ...current, settings }))} announce={announce} />
             : <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onDisconnect={(provider) => setData((current) => ({ ...current, integrations: current.integrations.map((item) => (item.provider ?? item.name.toLowerCase()) === provider ? { ...item, state: "available", detail: "Disconnected" } : item) }))} announce={announce} />)}
@@ -638,7 +649,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
 
       <nav className="tw-mobile-nav" aria-label="Mobile dashboard">
         <button className={activeView === "today" ? "active" : ""} onClick={() => navigate("today")}><Inbox size={20} /><span>{data.workspace.kind === "GROUP" ? "Overview" : "Today"}</span></button>
-        <button className={activeView === "tasks" ? "active" : ""} onClick={() => navigate("tasks")}><ListChecks size={20} /><span>Tasks</span></button>
+        <button className={activeView === "tasks" ? "active" : ""} onClick={() => navigate("tasks")}><ListChecks size={20} /><span>{data.workspace.kind === "GROUP" ? "Work" : "Tasks"}</span></button>
         <button className="capture" onClick={() => setCaptureOpen(true)} aria-label="Capture something"><Plus size={25} /></button>
         {data.workspace.kind === "GROUP"
           ? <button className={activeView === "people" ? "active" : ""} onClick={() => navigate("people")}><UsersRound size={20} /><span>People</span></button>
@@ -647,7 +658,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
       </nav>
 
       {editor && <EntityEditor state={editor} busy={busy} currency={data.settings.expenseCurrency} timezone={data.user.timezone} onClose={() => setEditor(null)} onSave={saveEntity} onDelete={removeEntity} onConvert={convertIdea} />}
-      {captureOpen && <CaptureComposer isDemo={isDemo} timezone={data.user.timezone} currency={data.settings.expenseCurrency} onClose={() => setCaptureOpen(false)} onSave={saveEntity} announce={announce} />}
+      {captureOpen && <CaptureComposer isDemo={isDemo} timezone={data.user.timezone} currency={data.settings.expenseCurrency} allowExpenses={data.workspace.kind === "PERSONAL"} groupName={data.workspace.kind === "GROUP" ? data.workspace.name : undefined} onClose={() => setCaptureOpen(false)} onSave={saveEntity} announce={announce} />}
       {paletteOpen && <CommandPalette data={data} items={navItems} onClose={() => setPaletteOpen(false)} onNavigate={(view) => { navigate(view); setPaletteOpen(false); }} />}
       {moreOpen && <MobileMore activeView={activeView} items={navItems} onClose={() => setMoreOpen(false)} onNavigate={navigate} />}
       {ideaBrief && <PhaseTwoIdeaBriefDialog state={ideaBrief} onClose={() => setIdeaBrief(null)} onRefresh={() => void analyzeIdea(ideaBrief.idea, true)} />}
@@ -676,14 +687,14 @@ function PageHeading({ view, workspace, name, timezone, onAdd }: { view: Dashboa
   const hour = Number(new Intl.DateTimeFormat("en-SG", { hour: "2-digit", hour12: false, timeZone: timezone }).format(new Date()));
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
-    today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: ["Tasks", workspace.kind === "GROUP" ? "Shared work, owners, and reminders in one thread." : "Things to do, reminders when they matter."],
+    today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", workspace.kind === "GROUP" ? "Shared work, assignees, and reminders in one thread." : "Things to do, reminders when they matter."],
     people: ["People", "Shared workload, ownership, and blockers at a glance."],
-    standup: ["Stand-up", "Done, next, and blocked—without another meeting form."],
+    progress: ["Progress", "Done, next, and blocked—without another meeting form."],
     activity: ["Activity", "A concise record of meaningful shared changes."],
-    library: ["Library", "Notes, ideas, and images—kept together."], notes: ["Notes", "Useful things you wanted to keep."],
-    ideas: ["Ideas", "Small sparks, ready when you are."], images: ["Images", "Every saved frame, easy to find again."],
+    library: [workspace.kind === "GROUP" ? "Resources" : "Library", workspace.kind === "GROUP" ? "Shared notes, ideas, and visual references in one place." : "Notes, ideas, and images—kept together."], notes: [workspace.kind === "GROUP" ? "Shared notes" : "Notes", "Useful things worth keeping."],
+    ideas: [workspace.kind === "GROUP" ? "Shared ideas" : "Ideas", "Small sparks, ready when you are."], images: [workspace.kind === "GROUP" ? "Shared images" : "Images", "Every saved frame, easy to find again."],
     expenses: ["Expenses", "A clear view of what moved."], search: ["Search everything", "Titles, words, receipts, and remembered fragments."],
-    settings: ["Settings", "Make Threadwise work the way you do."],
+    settings: workspace.kind === "GROUP" ? ["Manage group", "Shared defaults and role-gated controls."] : ["Settings", "Make Threadwise work the way you do."],
   };
   const canAdd = ["tasks", "notes", "ideas", "expenses"].includes(view);
   return <div className="tw-heading"><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(new Date())}</p><h1>{copy[view][0]}</h1><span>{copy[view][1]}</span></div>{canAdd && <button className="tw-primary" onClick={onAdd}><Plus size={17} /> Add {view.slice(0, -1)}</button>}</div>;
@@ -848,15 +859,15 @@ function LibraryView({ data, tab, onTab, onNavigate, isDemo }: { data: Dashboard
   return <section className="tw-library"><div className="tw-library-tabs">{(["notes", "ideas", "images"] as const).map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => onTab(item)}>{item === "notes" ? <FileText size={16} /> : item === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}{item}<span>{data[item].length}</span></button>)}</div>{tab === "images" ? <div className="tw-library-photo-strip">{data.images.slice(0, 8).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={imageSrc(image, isDemo, index)} alt={image.caption ?? "Saved image"} /><span>{image.caption ?? image.fileName}</span></button>)}</div> : <div className="tw-library-rows">{(tab === "notes" ? data.notes : data.ideas).slice(0, 20).map((item) => <button key={item.id} onClick={() => onNavigate(tab)}><span>{tab === "notes" ? <FileText size={16} /> : <Lightbulb size={16} />}</span><div><b>{item.title}</b><small>{"summary" in item ? item.summary : item.concept}</small></div><time>{formatDate(item.createdAt, data.user.timezone)}</time><ChevronRight size={16} /></button>)}</div>}<button className="tw-library-all" onClick={() => onNavigate(tab)}>Open all {tab}<ArrowRight size={15} /></button></section>;
 }
 
-function SearchView({ data, isDemo, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; onOpen: (kind: SearchResult["kind"]) => void; announce: (message: string) => void }) {
+function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; allowExpenses: boolean; onOpen: (kind: SearchResult["kind"]) => void; announce: (message: string) => void }) {
   const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false); const [kind, setKind] = useState<"all" | SearchResult["kind"]>("all"); const searchRequest = useRef(0);
   const local = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
     ...data.tasks.map((item) => ({ id: item.id, publicId: item.publicId, kind: "task" as const, title: item.title, excerpt: item.description })),
     ...data.notes.map((item) => ({ id: item.id, publicId: item.publicId, kind: "note" as const, title: item.title, excerpt: item.body || item.summary })),
     ...data.ideas.map((item) => ({ id: item.id, publicId: item.publicId, kind: "idea" as const, title: item.title, excerpt: item.concept })),
     ...data.images.map((item) => ({ id: item.id, publicId: item.publicId, kind: "image" as const, title: item.caption || item.fileName || "Saved image", excerpt: item.ocrText })),
-    ...data.expenses.map((item) => ({ id: item.id, publicId: item.publicId, kind: "expense" as const, title: item.merchant || item.description, excerpt: `${item.description} ${item.category ?? ""}` })),
-  ].filter((item) => `${item.title} ${item.excerpt ?? ""}`.toLowerCase().includes(q)).slice(0, 30); }, [data, query]);
+    ...(allowExpenses ? data.expenses.map((item) => ({ id: item.id, publicId: item.publicId, kind: "expense" as const, title: item.merchant || item.description, excerpt: `${item.description} ${item.category ?? ""}` })) : []),
+  ].filter((item) => `${item.title} ${item.excerpt ?? ""}`.toLowerCase().includes(q)).slice(0, 30); }, [allowExpenses, data, query]);
   useEffect(() => {
     const value = query.trim();
     const request = ++searchRequest.current;
@@ -875,11 +886,11 @@ function SearchView({ data, isDemo, onOpen, announce }: { data: DashboardSnapsho
   }, [query, isDemo, local]);
   const allShown = results.length || !isDemo ? results : local;
   const shown = kind === "all" ? allShown : allShown.filter((result) => result.kind === kind);
-  const filters: Array<"all" | SearchResult["kind"]> = ["all", "task", "note", "idea", "image", "expense"];
+  const filters: Array<"all" | SearchResult["kind"]> = ["all", "task", "note", "idea", "image", ...(allowExpenses ? ["expense" as const] : [])];
   return <section className="tw-search-view tw-search-live">
     <div className="tw-search-live-box"><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search while you type…" />{loading ? <LoaderCircle className="spin" size={18} /> : query ? <span>{shown.length} {shown.length === 1 ? "match" : "matches"}</span> : <kbd>LIVE</kbd>}</div>
     <div className="tw-search-filters" aria-label="Filter search results">{filters.map((filter) => <button key={filter} className={kind === filter ? "active" : ""} onClick={() => setKind(filter)}>{filter === "all" ? "Everything" : `${filter}s`}</button>)}</div>
-    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Sparkles size={28} /><h2>Remember a fragment.</h2><p>Results appear as you type across tasks, notes, ideas, image text, and expenses.</p></div>}</div>
+    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Sparkles size={28} /><h2>Remember a fragment.</h2><p>Results appear as you type across tasks, notes, ideas, and searchable image text{allowExpenses ? ", plus expenses" : ""}.</p></div>}</div>
   </section>;
 }
 
@@ -919,7 +930,7 @@ function GroupSettingsView({ data, workspace, onSave, announce }: { data: Dashbo
       <form onSubmit={save}>
         <header><span>Group defaults</span><h3>How this group is reminded</h3><p>{canManage ? "Telegram admins can tune these shared defaults." : "Only a Telegram group admin can change these values."}</p></header>
         <fieldset disabled={!canManage || saving}>
-          <div className="tw-form-row"><label>Timezone<input value={settings.timezone} onChange={(event) => setSettings({ ...settings, timezone: event.target.value })} /></label><label>Expense currency<input minLength={3} maxLength={3} value={settings.expenseCurrency} onChange={(event) => setSettings({ ...settings, expenseCurrency: event.target.value.toUpperCase() })} /></label></div>
+          <label>Group timezone<input value={settings.timezone} onChange={(event) => setSettings({ ...settings, timezone: event.target.value })} /></label>
           <div className="tw-form-row"><label>Reminder rhythm<select value={settings.reminderIntervalMinutes} onChange={(event) => setSettings({ ...settings, reminderIntervalMinutes: Number(event.target.value) })}><option value="60">Every hour</option><option value="180">Every 3 hours</option><option value="360">Every 6 hours</option><option value="1440">Daily</option></select></label><label>Delivery style<select value={settings.reminderMode} onChange={(event) => setSettings({ ...settings, reminderMode: event.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual cards</option><option value="DIGEST">Compact digest</option></select></label></div>
           <div className="tw-form-row"><label>Quiet hours begin<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || undefined })} /></label></div>
           <label className="tw-switch"><span><b>Private assignee nudges</b><small>Members assigned to a shared task can receive its reminder privately.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(event) => setSettings({ ...settings, directNudgesEnabled: event.target.checked })} /></label>
@@ -983,10 +994,12 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onDisconnect, an
   </section>;
 }
 
-function CaptureComposer({ isDemo, timezone, currency, onClose, onSave, announce }: {
+function CaptureComposer({ isDemo, timezone, currency, allowExpenses, groupName, onClose, onSave, announce }: {
   isDemo: boolean;
   timezone: string;
   currency: string;
+  allowExpenses: boolean;
+  groupName?: string;
   onClose: () => void;
   onSave: (kind: EditableKind, values: Record<string, unknown>) => Promise<boolean>;
   announce: (message: string) => void;
@@ -1007,6 +1020,10 @@ function CaptureComposer({ isDemo, timezone, currency, onClose, onSave, announce
       const parsed = isDemo
         ? demoCapturePreview(text, preferredKind, currency)
         : asPayload<CapturePreview>(await api("capture/preview", "POST", { text, preferredKind }), "preview");
+      if (!allowExpenses && parsed.kind === "expense") {
+        announce("Expenses stay in your personal workspace. Switch to Personal to save this one.");
+        return;
+      }
       setPreview(parsed);
       setDraft(parsed.payload);
     } catch (error) {
@@ -1028,14 +1045,14 @@ function CaptureComposer({ isDemo, timezone, currency, onClose, onSave, announce
   };
   const changeKind = (kind: "auto" | CaptureKind) => { setPreferredKind(kind); setPreview(null); setDraft({}); };
   const field = (key: string, value: unknown) => setDraft((current) => ({ ...current, [key]: value }));
-  const kinds: Array<"auto" | CaptureKind> = ["auto", "task", "note", "idea", "expense"];
+  const kinds: Array<"auto" | CaptureKind> = ["auto", "task", "note", "idea", ...(allowExpenses ? ["expense" as const] : [])];
 
   return <div className="tw-modal-overlay tw-capture-overlay" onMouseDown={onClose}><section ref={dialogRef} className="tw-capture-dialog" role="dialog" aria-modal="true" aria-label="Quick capture" onMouseDown={(event) => event.stopPropagation()}>
-    <header><div><span><Sparkles size={16} /> Quick capture</span><h2>Drop the thought. We’ll untangle it.</h2><p>Write naturally—Threadwise will find the type, details, and time before anything is saved.</p></div><button onClick={onClose} aria-label="Close quick capture"><X size={20} /></button></header>
+    <header><div><span><Sparkles size={16} /> {groupName ? `Add to ${groupName}` : "Quick capture"}</span><h2>{groupName ? "Turn the chat into shared context." : "Drop the thought. We’ll untangle it."}</h2><p>{groupName ? "Add shared work, a note, or an idea. Threadwise will structure it before anything is saved." : "Write naturally—Threadwise will find the type, details, and time before anything is saved."}</p></div><button onClick={onClose} aria-label="Close quick capture"><X size={20} /></button></header>
     <form onSubmit={submit}>
       <div className="tw-capture-type-row" aria-label="Capture type">{kinds.map((kind) => <button type="button" key={kind} className={preferredKind === kind ? "active" : ""} onClick={() => changeKind(kind)}>{kind === "auto" ? <Sparkles size={14} /> : kind === "task" ? <ListChecks size={14} /> : kind === "note" ? <FileText size={14} /> : kind === "idea" ? <Lightbulb size={14} /> : <CircleDollarSign size={14} />}{kind}</button>)}</div>
       <label className="tw-capture-text"><span>What’s on your mind?</span><textarea ref={inputRef} rows={4} maxLength={20_000} value={text} onChange={(event) => { setText(event.target.value); setPreview(null); }} placeholder="Remind me to call Mum tomorrow at 1.30pm…" /></label>
-      {!preview && <div className="tw-capture-hints"><span>Try</span><button type="button" onClick={() => setText("Remind me to review the proposal tomorrow at 1.30pm")}>A reminder</button><button type="button" onClick={() => setText("Idea: a weekly digest that groups related notes")}>An idea</button><button type="button" onClick={() => setText("Spent $12.80 on lunch today")}>An expense</button></div>}
+      {!preview && <div className="tw-capture-hints"><span>Try</span><button type="button" onClick={() => setText("Remind me to review the proposal tomorrow at 1.30pm")}>A reminder</button><button type="button" onClick={() => setText("Idea: a weekly digest that groups related notes")}>An idea</button>{allowExpenses && <button type="button" onClick={() => setText("Spent $12.80 on lunch today")}>An expense</button>}</div>}
       {preview && <div className="tw-capture-preview">
         <div className="tw-capture-preview-head"><span className={preview.kind}>{preview.kind}</span><div><b>Threadwise understood this as {preview.kind === "expense" ? "an" : "a"} {preview.kind}.</b><small>{preview.reason}</small></div><em>{Math.round(preview.confidence * 100)}% match</em></div>
         {(preview.kind === "task" || preview.kind === "note" || preview.kind === "idea") && <label>Title<input value={String(draft.title ?? "")} onChange={(event) => field("title", event.target.value)} required /></label>}

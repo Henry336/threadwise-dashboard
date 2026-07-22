@@ -3,12 +3,16 @@
 import { useState } from "react";
 import {
   ArrowRight,
+  BookOpen,
   CalendarClock,
   Check,
   ChevronRight,
   CircleUserRound,
   Clock3,
+  FileText,
   Hand,
+  Image as ImageIcon,
+  Lightbulb,
   ListChecks,
   MessageSquareText,
   MoreHorizontal,
@@ -67,7 +71,7 @@ export function GroupOverview({
 
   return <div className="tw-group-overview">
     <section className="tw-group-intro">
-      <div><p><span className="tw-thread-cue" aria-hidden="true"><i /><i /></span>Group overview</p><h2>A clear handoff from chat to action.</h2><span>See what needs a person, a reply, or a quick decision—without turning the group into a project-management maze.</span></div>
+      <div><p><span className="tw-thread-cue" aria-hidden="true"><i /><i /></span>Group overview <em className="tw-group-role"><ShieldCheck size={13} /> {data.workspace.role.toLowerCase()}</em></p><h2>A clear handoff from chat to action.</h2><span>See what needs a person, a reply, or a quick decision—without turning the group into a project-management maze.</span></div>
       <div className="tw-member-ribbon" aria-label={`${collaboration.members.length} known members`}>
         <AvatarStack members={collaboration.members} />
         <button onClick={onOpenPeople}>{collaboration.members.length} people <ArrowRight size={15} /></button>
@@ -107,6 +111,33 @@ export function GroupPeople({ data, onOpenTasks }: { data: DashboardSnapshot; on
       <div className="tw-workload-line"><i style={{ width: `${Math.max(6, member.openTasks / max * 100)}%` }} /></div>
       <footer><span><b>{member.openTasks}</b> open</span><span><b>{member.awaitingTasks}</b> awaiting reply</span><span><b>{member.blockedTasks}</b> blocked</span></footer>
     </button>)}</div>
+  </section>;
+}
+
+export function GroupResources({
+  data,
+  onOpen,
+  onAdd,
+}: {
+  data: DashboardSnapshot;
+  onOpen: (view: "notes" | "ideas" | "images") => void;
+  onAdd: () => void;
+}) {
+  const collections = [
+    { id: "notes" as const, label: "Shared notes", count: data.notes.length, copy: "Decisions, context, and useful details", icon: FileText },
+    { id: "ideas" as const, label: "Shared ideas", count: data.ideas.length, copy: "Possibilities the group can return to", icon: Lightbulb },
+    { id: "images" as const, label: "Visual references", count: data.images.length, copy: "Searchable screenshots and saved frames", icon: ImageIcon },
+  ];
+  const recent = [
+    ...data.notes.map((item) => ({ id: item.id, kind: "notes" as const, title: item.title, detail: item.summary, createdAt: item.createdAt })),
+    ...data.ideas.map((item) => ({ id: item.id, kind: "ideas" as const, title: item.title, detail: item.concept, createdAt: item.createdAt })),
+    ...data.images.map((item) => ({ id: item.id, kind: "images" as const, title: item.caption || item.fileName || "Saved image", detail: item.ocrText || "Visual reference", createdAt: item.createdAt })),
+  ].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 8);
+
+  return <section className="tw-group-resources">
+    <header className="tw-group-page-intro"><span>Resources</span><h2>Shared context, without digging through chat.</h2><p>Notes, ideas, and searchable images live together here. Work remains in the Work view; personal expenses stay private.</p><button className="tw-primary" onClick={onAdd}><Plus size={16} /> Add resource</button></header>
+    <div className="tw-resource-collections">{collections.map(({ id, label, count, copy, icon: Icon }, index) => <button key={id} style={{ "--group-index": index } as React.CSSProperties} onClick={() => onOpen(id)}><span><Icon size={20} /></span><b>{count}</b><h3>{label}</h3><p>{copy}</p><ArrowRight size={17} /></button>)}</div>
+    <div className="tw-resource-recent"><header><div><span>Recently added</span><h3>Fresh group context</h3></div><BookOpen size={20} /></header>{recent.length ? <div>{recent.map((item) => <button key={`${item.kind}-${item.id}`} onClick={() => onOpen(item.kind)}><span>{item.kind === "notes" ? <FileText size={16} /> : item.kind === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}</span><div><b>{item.title}</b><small>{item.detail}</small></div><em>{item.kind.slice(0, -1)}</em><ChevronRight size={16} /></button>)}</div> : <div className="tw-activity-empty"><BookOpen size={24} /><b>No shared resources yet.</b><span>Add a note, idea, or image when the group needs lasting context.</span></div>}</div>
   </section>;
 }
 
@@ -160,7 +191,7 @@ export function GroupTasksView({
         <button className="tw-group-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={16} /></button>
         <button className="tw-group-task-copy" onClick={() => onEdit(task)}><span><em>{task.publicId}</em>{blocked ? <i data-state="blocked"><Unlink size={13} /> Blocked</i> : pending ? <i data-state="pending"><Clock3 size={13} /> Awaiting reply</i> : null}</span><h3>{task.title}</h3><p>{blocked?.statusReason || task.description || "No extra details yet."}</p><small>{task.dueAt ? new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(task.dueAt)) : "No due date"}</small></button>
         <div className="tw-group-task-owners"><AssigneeStack assignees={assignees} limit={4} /><button onClick={() => onManage(task)}><MoreHorizontal size={18} /><span>Assignments</span></button></div>
-        <div className="tw-group-task-actions"><button onClick={() => onEdit(task)}><Pencil size={14} /> Edit</button><button onClick={() => onManage(task)}><UsersRound size={14} /> Owners</button></div>
+        <div className="tw-group-task-actions"><button onClick={() => onEdit(task)}><Pencil size={14} /> Edit</button><button onClick={() => onManage(task)}><UsersRound size={14} /> Assignees</button></div>
       </article>;
     })}</div>
     {!visible.length && <div className="tw-group-task-empty"><ListChecks size={24} /><b>No tasks in this view.</b><span>Change the filter or add a shared task.</span><button onClick={onAdd}><Plus size={16} /> Add task</button></div>}
@@ -168,11 +199,11 @@ export function GroupTasksView({
   </section>;
 }
 
-export function GroupStandup({ data, onManageTask }: { data: DashboardSnapshot; onManageTask: (task: DashboardTask) => void }) {
+export function GroupProgress({ data, onManageTask }: { data: DashboardSnapshot; onManageTask: (task: DashboardTask) => void }) {
   const collaboration = data.collaboration;
   if (!collaboration) return null;
   return <section className="tw-standup-view">
-    <header className="tw-group-page-intro"><span>Stand-up</span><h2>Done, next, blocked.</h2><p>A lightweight read of shared work—not another form everyone has to fill in.</p></header>
+    <header className="tw-group-page-intro"><span>Progress</span><h2>Done, next, blocked.</h2><p>A live summary derived from shared work—not another form everyone has to fill in.</p></header>
     <div className="tw-standup-list">{collaboration.members.map((member, index) => {
       const assigned = data.tasks.filter((task) => task.status === "OPEN" && (task.assignees ?? []).some((item) => item.telegramId === member.telegramId));
       const blocked = assigned.filter((task) => (task.assignees ?? []).some((item) => item.telegramId === member.telegramId && item.status === "BLOCKED"));
@@ -225,7 +256,7 @@ export function TaskCollaborationSheet({
   const available = collaboration.members.filter((member) => !assignees.some((item) => item.telegramId === member.telegramId));
   return <div className="tw-collab-overlay" onMouseDown={onClose}>
     <section className="tw-collab-sheet" role="dialog" aria-modal="true" aria-label={`Assignments for ${task.title}`} onMouseDown={(event) => event.stopPropagation()}>
-      <header><div><span>{task.publicId}</span><h2>{task.title}</h2><p>Owners and acknowledgements stay in sync with the Telegram group.</p></div><button onClick={onClose} aria-label="Close assignment panel"><X size={20} /></button></header>
+      <header><div><span>{task.publicId}</span><h2>{task.title}</h2><p>Assignments and acknowledgements stay in sync with the Telegram group.</p></div><button onClick={onClose} aria-label="Close assignment panel"><X size={20} /></button></header>
       <div className="tw-collab-assignees">
         {assignees.map((assignee) => {
           const own = assignee.telegramId === collaboration.viewerTelegramId;
@@ -242,9 +273,9 @@ export function TaskCollaborationSheet({
             {canManage && <div className="tw-handoff-row"><input value={reason[assignee.id] ?? ""} onChange={(event) => setReason((current) => ({ ...current, [assignee.id]: event.target.value }))} placeholder="Optional blocker or handoff note" /><select value={handoffTarget[assignee.id] ?? ""} onChange={(event) => setHandoffTarget((current) => ({ ...current, [assignee.id]: event.target.value }))}><option value="">Hand off to…</option>{collaboration.members.filter((member) => member.telegramId !== assignee.telegramId).map((member) => <option key={member.telegramId} value={member.telegramId}>{member.displayName}</option>)}</select><button disabled={busy || !handoffTarget[assignee.id]} onClick={() => onAction({ action: "handoff", assigneeId: assignee.id, targetTelegramId: handoffTarget[assignee.id], reason: reason[assignee.id] })}><ArrowRight size={15} /> Handoff</button></div>}
           </article>;
         })}
-        {!assignees.length && <div className="tw-collab-empty"><UsersRound size={22} /><b>No owner yet</b><span>Add someone from the known group members below.</span></div>}
+        {!assignees.length && <div className="tw-collab-empty"><UsersRound size={22} /><b>No assignee yet</b><span>{manager ? "Choose someone from the active group members below." : "A group owner or administrator can assign this work."}</span></div>}
       </div>
-      <footer><label><UserPlus size={16} /><select value={target} onChange={(event) => setTarget(event.target.value)}><option value="">Add an assignee…</option>{available.map((member) => <option key={member.telegramId} value={member.telegramId}>{member.displayName}</option>)}</select></label><button className="tw-primary" disabled={busy || !target} onClick={() => onAction({ action: "assign", targetTelegramId: target })}>Assign</button></footer>
+      {manager ? <footer><label><UserPlus size={16} /><select value={target} onChange={(event) => setTarget(event.target.value)}><option value="">Add an assignee…</option>{available.map((member) => <option key={member.telegramId} value={member.telegramId}>{member.displayName}</option>)}</select></label><button className="tw-primary" disabled={busy || !target} onClick={() => onAction({ action: "assign", targetTelegramId: target })}>Assign</button></footer> : <footer className="tw-collab-member-note"><ShieldCheck size={16} /><span><b>Assignments are admin-managed</b><small>You can accept, decline, block, unblock, remove, or hand off your own work above.</small></span></footer>}
     </section>
   </div>;
 }

@@ -2,6 +2,22 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.5.0 - Distinct Group Workspaces
+
+### Group information architecture
+- Replaced the personal-dashboard clone with a focused group flow: **Overview**, **Work**, **People**, **Progress**, **Activity**, **Resources**, Search, and role-aware group management.
+- Renamed Stand-up to **Progress** and kept its useful done, next, and blocked summary without imposing meeting jargon on every group.
+- Consolidated shared notes, ideas, and images into a compact Resources library while keeping their full collection views available from each resource card.
+- Kept Expenses and personal integrations exclusive to personal workspaces.
+
+### Permissions and interaction
+- Hid management navigation and assignment-creation controls from regular members, with authoritative owner/admin checks still enforced by the bot service.
+- Preserved self-service assignment responses and handoffs for every member.
+- Added group-specific capture language, responsive role labels, touch-safe navigation, and a dedicated group demo for desktop and mobile QA.
+
+### Quality
+- Verified the key group flows in Chromium at desktop and 390px mobile widths with no browser errors or warnings.
+
 ## v0.4.0 - Group Collaboration
 
 ### Shared workspaces
