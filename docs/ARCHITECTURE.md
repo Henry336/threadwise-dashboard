@@ -10,7 +10,7 @@ Telegram OIDC ──→ Vercel session
 Browser ──→ Next.js server routes ──→ Render /api/v1 ──→ existing services ──→ Postgres
 ```
 
-Vercel does not receive the database URL, Telegram bot token, Gmail/Calendar/Microsoft tokens, or reusable Telegram file identifiers. The bot remains the canonical mutation layer so reminders, recurrence, audit, undo, and settings rescheduling keep their existing invariants.
+Vercel does not receive the database URL, Telegram bot token, Calendar/Microsoft tokens, or reusable Telegram file identifiers. The bot remains the canonical mutation layer so reminders, recurrence, audit, undo, settings rescheduling, and integration synchronization keep their existing invariants.
 
 ## Authentication
 
@@ -39,7 +39,9 @@ The intended production variant uses an asymmetric keypair: the private signing 
 - Every resource lookup includes the server-derived `userId`.
 - Request bodies never accept `userId`.
 - User text renders as plain JSX; no untrusted HTML is injected.
-- Group owners (`chat:<id>`) are excluded until a verified membership model exists.
+- Personal resources resolve from the signed Telegram subject. Group resources additionally resolve through an opaque workspace id, recorded membership, and a live Telegram membership check.
+- Privileged group mutations re-check the current Telegram owner/admin role; ordinary members retain control of their own assignment response.
+- Expenses, Calendar, Excel, export, and account deletion remain personal-only surfaces.
 
 The API must never expose embeddings, raw provider payloads, OAuth state, access or refresh tokens, Telegram file IDs, receipt hashes, or assignee Telegram IDs. It may return the user-facing task, note, idea, image caption/OCR, expense, and settings fields needed by the product.
 
@@ -49,7 +51,9 @@ Mutations are accepted only through the same-origin Vercel BFF. Each Render rout
 
 ## Production surface
 
-The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, idea conversion, image delivery, search, shared settings, Excel synchronization, integration disconnect, privacy export, and confirmed account deletion.
+The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, idea conversion, image delivery, search, shared settings, group collaboration, privacy export, and confirmed account deletion. Personal integration routes cover direct Calendar/Excel OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, Excel workbook initialization/opening/synchronization, and disconnect.
+
+External providers are mirrors rather than authoritative stores. A task or expense is committed in Threadwise first; a failed provider operation is recoverable and cannot erase that record. OAuth completion returns to the Connections view with a bounded result code rather than provider error details.
 
 Deployment gates are:
 
@@ -57,4 +61,4 @@ Deployment gates are:
 2. Verify desktop and mobile demo flows in a real browser.
 3. Configure Telegram OIDC origins/callbacks and Vercel secrets.
 4. Verify real-user isolation with at least two Telegram accounts.
-5. Keep group work out of scope until a verifiable human-to-group membership model exists.
+5. Verify personal/group workspace separation and owner/admin enforcement with at least two Telegram roles.

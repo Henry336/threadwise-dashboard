@@ -11,6 +11,7 @@ function defaultSettings(timeZone: string): DashboardSettings {
     timezone: timeZone, reminderIntervalMinutes: 180, quietHoursStart: "22:00", quietHoursEnd: "08:00",
     maxRemindersPerDay: 24, dueNudgeMinutes: 5, reminderMode: "INDIVIDUAL",
     expenseCurrency: "SGD", ocrLanguages: "eng", directNudgesEnabled: false,
+    calendarAutoSync: false, excelAutoSync: false,
   };
 }
 

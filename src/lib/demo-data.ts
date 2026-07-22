@@ -210,9 +210,8 @@ export function getDemoSnapshot(): DashboardSnapshot {
       { day: "Sun", captures: 6, completed: 4 },
     ],
     integrations: [
-      { name: "Gmail", state: "connected", detail: "Scanned 18 min ago" },
-      { name: "Calendar", state: "connected", detail: "2 events today" },
-      { name: "Excel", state: "connected", detail: "Expenses synced" },
+      { provider: "calendar", name: "Calendar", state: "connected", detail: "2 dated tasks synced", autoSync: true, syncedCount: 2, unsyncedCount: 1 },
+      { provider: "excel", name: "Excel", state: "connected", detail: "Threadwise Expenses.xlsx", autoSync: true, syncedCount: 3, unsyncedCount: 0, workbookName: "Threadwise Expenses.xlsx" },
     ],
     settings: {
       timezone: "Asia/Singapore",
@@ -225,6 +224,8 @@ export function getDemoSnapshot(): DashboardSnapshot {
       expenseCurrency: "SGD",
       ocrLanguages: "eng",
       directNudgesEnabled: false,
+      calendarAutoSync: true,
+      excelAutoSync: true,
     },
   };
 }

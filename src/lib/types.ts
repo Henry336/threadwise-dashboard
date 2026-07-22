@@ -43,6 +43,9 @@ export type DashboardTask = {
   recurring?: boolean;
   pinned?: boolean;
   reminderCount?: number;
+  calendarEventId?: string;
+  calendarEventUrl?: string;
+  calendarSyncedAt?: string;
   assignee?: string;
   assignees?: DashboardTaskAssignee[];
   createdAt?: string;
@@ -127,11 +130,16 @@ export type DashboardExpense = {
 };
 
 export type IntegrationStatus = {
-  name: "Gmail" | "Calendar" | "Excel";
-  provider?: "gmail" | "calendar" | "excel";
+  name: "Calendar" | "Excel";
+  provider: "calendar" | "excel";
   state: "connected" | "attention" | "available";
   detail: string;
-  connectUrl?: string;
+  accountEmail?: string;
+  autoSync: boolean;
+  syncedCount: number;
+  unsyncedCount: number;
+  workbookName?: string;
+  workbookUrl?: string;
 };
 
 export type DashboardSettings = {
@@ -145,6 +153,8 @@ export type DashboardSettings = {
   expenseCurrency: string;
   ocrLanguages: string;
   directNudgesEnabled: boolean;
+  calendarAutoSync: boolean;
+  excelAutoSync: boolean;
 };
 
 export type SearchResult = {

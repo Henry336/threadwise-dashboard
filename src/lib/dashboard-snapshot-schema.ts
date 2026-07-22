@@ -49,6 +49,8 @@ const TaskSchema = z.object({
   recurrenceRule: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).nullish().transform((value) => value ?? undefined),
   recurring: z.boolean().optional(), pinned: z.boolean().optional(),
   reminderCount: z.number().int().min(0).max(100_000).optional(), assignee: optionalText(200),
+  calendarEventId: optionalText(500), calendarEventUrl: z.string().url().optional(),
+  calendarSyncedAt: isoDate.nullish().transform((value) => value ?? undefined),
   assignees: z.array(TaskAssigneeSchema).max(100).optional(),
   createdAt: isoDate.optional(), updatedAt: isoDate.optional(),
 });
@@ -112,9 +114,12 @@ export const DashboardSnapshotSchema = z.object({
   images: z.array(ImageSchema).max(1_000).optional(), expenses: z.array(ExpenseSchema).max(500),
   activity: z.array(z.object({ day: text(12), captures: z.number().int().min(0).max(10_000), completed: z.number().int().min(0).max(10_000) })).max(31),
   integrations: z.array(z.object({
-    name: z.enum(["Gmail", "Calendar", "Excel"]), provider: z.enum(["gmail", "calendar", "excel"]).optional(),
-    state: z.enum(["connected", "attention", "available"]), detail: text(500), connectUrl: z.string().url().optional(),
-  })).max(3),
+    name: z.enum(["Calendar", "Excel"]), provider: z.enum(["calendar", "excel"]),
+    state: z.enum(["connected", "attention", "available"]), detail: text(500),
+    accountEmail: optionalText(320), autoSync: z.boolean(),
+    syncedCount: z.number().int().min(0).max(1_000_000), unsyncedCount: z.number().int().min(0).max(1_000_000),
+    workbookName: optionalText(500), workbookUrl: z.string().url().optional(),
+  })).max(2),
   settings: z.object({
     timezone,
     reminderIntervalMinutes: z.number().int().min(1).max(525_600),
@@ -126,6 +131,8 @@ export const DashboardSnapshotSchema = z.object({
     expenseCurrency: z.string().regex(/^[A-Z]{3}$/),
     ocrLanguages: text(200),
     directNudgesEnabled: z.boolean(),
+    calendarAutoSync: z.boolean().default(false),
+    excelAutoSync: z.boolean().default(false),
   }).optional(),
   collaboration: z.object({
     viewerTelegramId: z.string().regex(/^[1-9]\d{0,19}$/),

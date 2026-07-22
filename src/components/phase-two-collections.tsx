@@ -258,12 +258,13 @@ function categoryGradient(categories: [string, number][], total: number) {
   return `conic-gradient(${stops.join(", ")})`;
 }
 
-export function PhaseTwoExpensesView({ expenses, timezone, currency, integration, shared = false, onSync, onEdit, onAdd, pagination, onLoadMore, announce }: {
+export function PhaseTwoExpensesView({ expenses, timezone, currency, integration, shared = false, onConnect, onSync, onEdit, onAdd, pagination, onLoadMore, announce }: {
   expenses: DashboardExpense[];
   timezone: string;
   currency: string;
   integration?: IntegrationStatus;
   shared?: boolean;
+  onConnect: () => void;
   onSync: () => Promise<void>;
   onEdit: (expense: DashboardExpense) => void;
   onAdd: () => void;
@@ -309,7 +310,7 @@ export function PhaseTwoExpensesView({ expenses, timezone, currency, integration
       <article><span><BarChart3 size={18} /></span><div><small>Largest movement</small><b>{largest ? money(largest.total, currency) : money(0, currency)}</b><p>{largest?.merchant || largest?.description || "Nothing captured yet"}</p></div></article>
       <article><span><Cloud size={18} /></span><div><small>{shared ? "Shared captures" : "Excel coverage"}</small><b>{shared ? current.length : `${current.length ? Math.round(synced / current.length * 100) : 0}%`}</b><p>{shared ? "Visible to verified group members" : `${synced} of ${current.length} synced`}</p></div></article>
     </div>
-    {integration && <div className="tw-phase-sync-ribbon"><span><Cloud size={18} /><div><b>{integration.state === "connected" ? "Excel is connected" : "Your ledger can travel"}</b><small>{integration.detail}</small></div></span>{integration.state === "connected" ? <button onClick={() => void sync()} disabled={syncing}>{syncing ? <LoaderCircle className="spin" size={15} /> : <RefreshCw size={15} />} Sync now</button> : <a href="https://t.me/threadwise_1_bot" target="_blank" rel="noreferrer">Connect in Telegram <ExternalLink size={14} /></a>}</div>}
+    {integration && <div className="tw-phase-sync-ribbon"><span><Cloud size={18} /><div><b>{integration.state === "connected" ? "Excel is connected" : "Connect your expense workbook"}</b><small>{integration.detail}</small></div></span>{integration.state === "connected" ? <button onClick={() => void sync()} disabled={syncing}>{syncing ? <LoaderCircle className="spin" size={15} /> : <RefreshCw size={15} />} Sync now</button> : <button onClick={onConnect}>{integration.state === "attention" ? "Create workbook" : "Connect Excel"} <ExternalLink size={14} /></button>}</div>}
     <div className="tw-phase-expense-ledger"><header><div><span>Activity</span><h3>Recent movements</h3></div><div><button onClick={exportCsv}><Download size={16} /> Export</button><button className="tw-primary" onClick={onAdd}><Plus size={16} /> Add expense</button></div></header><div className="tw-phase-expense-rows">{expenses.map((expense) => <button key={expense.id} onClick={() => onEdit(expense)}><span>{(expense.merchant || expense.description || "E")[0].toUpperCase()}</span><div><b>{expense.merchant || expense.description}</b><small>{expense.description}{expense.category ? ` · ${expense.category}` : ""}</small></div><time>{formatDate(expense.transactionAt, timezone, { year: "numeric" })}</time><p><b>{money(expense.total, expense.currency)}</b><small>{expense.excelSyncedAt ? "Synced" : "Not synced"}</small></p><ArrowRight size={17} /></button>)}</div>{!expenses.length && <CollectionEmpty icon={<CircleDollarSign size={27} />} title="No expenses yet" copy="Capture one in Telegram or add it here." />}<LoadMore state={pagination} onLoadMore={onLoadMore} /></div>
   </section>;
 }

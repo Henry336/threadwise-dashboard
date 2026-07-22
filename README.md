@@ -14,6 +14,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
 - A date-grouped image gallery with OCR/caption search, selection, a keyboard-friendly lightbox, and note conversion
 - Expense capture, editing, CSV export, and connected Excel synchronization
+- Direct Google Calendar and Microsoft Excel connection management, auto-sync controls, provider coverage, and contextual task/workbook actions
 - Data export, integration disconnect, and confirmed account deletion controls
 - Automatic Telegram Mini App login using server-verified signed launch data
 - Telegram OIDC Authorization Code + PKCE login for external browsers
@@ -52,7 +53,7 @@ Browser → Vercel Next.js BFF → private Render /api/v1 → Threadwise service
 
 The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group workspaces resolve through opaque workspace ids and require recorded membership plus a live Telegram membership check before any shared data is returned. Privileged group mutations re-check the user's current Telegram owner/admin role, while members retain control of their own assignment response.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DESIGN.md](docs/DESIGN.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DESIGN.md](docs/DESIGN.md), and the canonical [Threadwise product journal](https://github.com/Henry336/threadwise/blob/main/docs/PRODUCT_JOURNAL.md).
 
 ## Design provenance
 

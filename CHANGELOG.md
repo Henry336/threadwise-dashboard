@@ -2,6 +2,23 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.6.0 - Provider Connections
+
+### Calendar and Excel
+- Replaced “Connect in Telegram” dead ends with direct OAuth actions in the personal dashboard.
+- Added provider identity, synchronization coverage, automatic-sync controls, and concise connected/disconnected states.
+- Added Calendar backfill for dated tasks and task-card actions to add, update, open, or remove one durable Google event.
+- Added Excel workbook bootstrap, existing-expense import, open workbook, retry sync, and workbook setup actions.
+- Returned OAuth completions to the Connections view with an explicit success or recovery message.
+
+### Scope and reliability
+- Removed Gmail from the active dashboard and public privacy copy.
+- Kept Connections exclusive to personal workspaces and routed every mutation through the signed Threadwise API.
+- Preserved Threadwise records when either external provider is unavailable; provider synchronization remains a recoverable mirror operation.
+
+### Product record
+- Linked the dashboard to the canonical Threadwise product journal, which records the user friction, decisions, implementation rationale, evidence, and follow-up for this revamp and reconstructs earlier phases from Git history.
+
 ## v0.5.1 - Concise Group Interface
 
 ### Copy and hierarchy

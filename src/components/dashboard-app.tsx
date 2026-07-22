@@ -281,6 +281,18 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const provider = url.searchParams.get("integration");
+    const result = url.searchParams.get("result");
+    if (!provider || !result) return;
+    url.searchParams.delete("integration");
+    url.searchParams.delete("result");
+    window.history.replaceState(null, "", url);
+    const message = result === "connected" ? `${provider === "calendar" ? "Google Calendar" : "Excel"} connected.` : `${provider === "calendar" ? "Google Calendar" : "Excel"} could not connect.`;
+    const timer = window.setTimeout(() => announce(message), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       const typing = ["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement).tagName);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setPaletteOpen(true); }
@@ -548,6 +560,58 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
     }
     announce("Expenses synced to Excel.");
   };
+  const connectIntegration = async (provider: "calendar" | "excel", taskId?: string) => {
+    if (isDemo) { announce(`${provider === "calendar" ? "Calendar" : "Excel"} connection is simulated in the demo.`); return; }
+    try {
+      const response = await api<{ url: string }>(`integrations/${provider}/connect`, "POST", taskId ? { taskId } : {});
+      window.location.assign(response.url);
+    } catch (error) {
+      announce(error instanceof Error ? error.message : `Could not connect ${provider}.`);
+    }
+  };
+  const syncCalendarTasks = async () => {
+    if (isDemo) { announce("Demo dated tasks marked as synced."); return; }
+    const result = await api<{ synced: number; failed: number }>("integrations/calendar/sync", "POST", {});
+    await refreshSnapshot();
+    announce(result.failed > 0 ? `${result.synced} synced; ${result.failed} need another try.` : `${result.synced} dated ${result.synced === 1 ? "task" : "tasks"} synced.`);
+  };
+  const createExcelWorkbook = async () => {
+    if (isDemo) { announce("Demo workbook created."); return; }
+    const result = await api<{ name: string; url?: string }>("integrations/excel/workbook", "POST", {});
+    await refreshSnapshot();
+    announce(`${result.name} is ready.`);
+    if (result.url) window.open(result.url, "_blank", "noopener,noreferrer");
+  };
+  const setIntegrationAutoSync = async (provider: "calendar" | "excel", enabled: boolean) => {
+    const key = provider === "calendar" ? "calendarAutoSync" : "excelAutoSync";
+    const next = { ...data.settings, [key]: enabled };
+    if (!isDemo) {
+      const saved = asPayload<DashboardSettings>(await api("settings", "PATCH", { [key]: enabled }), "settings");
+      setData((current) => ({ ...current, settings: saved }));
+    } else setData((current) => ({ ...current, settings: next }));
+    announce(`Automatic ${provider === "calendar" ? "Calendar" : "Excel"} sync ${enabled ? "on" : "off"}.`);
+  };
+  const updateTaskCalendar = async (task: DashboardTask, action: "sync" | "remove") => {
+    const calendar = data.integrations.find((item) => item.provider === "calendar");
+    if (action === "sync" && calendar?.state !== "connected") {
+      await connectIntegration("calendar", task.id);
+      return;
+    }
+    if (action === "remove" && !window.confirm(`Remove “${task.title}” from Google Calendar? The Threadwise task will stay here.`)) return;
+    if (isDemo) {
+      const patch = action === "sync" ? { calendarEventId: `demo-${task.id}`, calendarSyncedAt: new Date().toISOString() } : { calendarEventId: undefined, calendarEventUrl: undefined, calendarSyncedAt: undefined };
+      setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? { ...entry, ...patch } : entry) }));
+      announce(action === "sync" ? "Task added to the demo calendar." : "Task removed from the demo calendar.");
+      return;
+    }
+    try {
+      const response = await api<{ task: DashboardTask }>("integrations/calendar/task", "POST", { taskId: task.id, action });
+      setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? response.task : entry) }));
+      announce(action === "sync" ? "Task synced to Google Calendar." : "Calendar event removed; the task is unchanged.");
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Calendar could not be updated.");
+    }
+  };
 
   const openGroupTasks = (scope: GroupTaskScope) => {
     setGroupTaskScope(scope);
@@ -629,21 +693,21 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
           {activeView === "tasks" && (data.workspace.kind === "GROUP" && data.collaboration
             ? <GroupTasksView tasks={data.tasks} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />
-            : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
+            : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onCalendar={updateTaskCalendar} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
           {activeView === "people" && <GroupPeople data={data} onOpenTasks={openGroupTasks} />}
           {activeView === "progress" && <GroupProgress data={data} onManageTask={setCollaborationTask} />}
           {activeView === "activity" && <GroupActivityView data={data} />}
           {activeView === "notes" && <PhaseTwoNotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} onPin={(note) => void toggleCollectionPin("note", note)} onDelete={(note) => removeEntity("note", note)} onBatchDelete={removeNotes} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
           {activeView === "ideas" && <PhaseTwoIdeasView ideas={data.ideas} timezone={data.user.timezone} onEdit={(idea) => setEditor({ kind: "idea", item: idea })} onPin={(idea) => void toggleCollectionPin("idea", idea)} onArchive={(idea) => removeEntity("idea", idea)} onAnalyze={(idea) => void analyzeIdea(idea)} onConvert={convertIdea} pagination={pagination.ideas} onLoadMore={() => loadMore("ideas")} />}
           {activeView === "images" && <PhaseTwoImagesView images={data.images} timezone={data.user.timezone} isDemo={isDemo} onEdit={(image) => setEditor({ kind: "image", item: image })} onPin={(image) => void toggleCollectionPin("image", image)} onDelete={(image) => removeEntity("image", image)} onBatchDelete={removeImages} onCreateNote={(image) => setEditor({ kind: "note", seed: image.ocrText || image.caption || "" })} pagination={pagination.images} onLoadMore={() => loadMore("images")} />}
-          {activeView === "expenses" && data.workspace.kind === "PERSONAL" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
+          {activeView === "expenses" && data.workspace.kind === "PERSONAL" && <PhaseTwoExpensesView expenses={data.expenses} timezone={data.user.timezone} currency={data.settings.expenseCurrency} integration={data.integrations.find((item) => item.name === "Excel")} onConnect={() => void (data.integrations.find((item) => item.provider === "excel")?.state === "attention" ? createExcelWorkbook() : connectIntegration("excel"))} onSync={syncExpenses} onEdit={(expense) => setEditor({ kind: "expense", item: expense })} onAdd={() => setEditor({ kind: "expense" })} pagination={pagination.expenses} onLoadMore={() => loadMore("expenses")} announce={announce} />}
           {activeView === "library" && (data.workspace.kind === "GROUP"
             ? <GroupResources data={data} onOpen={(view) => navigate(view)} onAdd={() => setCaptureOpen(true)} />
             : <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />)}
           {activeView === "search" && <SearchView data={data} isDemo={isDemo} allowExpenses={data.workspace.kind === "PERSONAL"} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "expenses" : `${kind}s` as DashboardView)} announce={announce} />}
           {activeView === "settings" && (data.workspace.kind === "GROUP"
             ? <GroupSettingsView data={data} workspace={data.workspace} onSave={(settings) => setData((current) => ({ ...current, settings }))} announce={announce} />
-            : <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onDisconnect={(provider) => setData((current) => ({ ...current, integrations: current.integrations.map((item) => (item.provider ?? item.name.toLowerCase()) === provider ? { ...item, state: "available", detail: "Disconnected" } : item) }))} announce={announce} />)}
+            : <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onConnect={connectIntegration} onSyncCalendar={syncCalendarTasks} onSyncExcel={syncExpenses} onCreateExcel={createExcelWorkbook} onAutoSync={setIntegrationAutoSync} onRefresh={() => refreshSnapshot()} announce={announce} />)}
         </div>
       </main>
 
@@ -757,7 +821,7 @@ function Threadline({ groups, timezone, onToggle, onEdit, onOpenTasks }: { group
   return <section className="tw-card tw-threadline"><div className="tw-section-head"><div><span>Your threadline</span><h3>From now to someday</h3><p>Tasks grouped by when they need your attention.</p></div><button onClick={onOpenTasks}>See every task <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task with or without a due date; it will land in the right place." />}</section>;
 }
 
-function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onArchive, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onArchive: (task: DashboardTask) => Promise<boolean>; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {
+function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onCalendar, onArchive, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onCalendar: (task: DashboardTask, action: "sync" | "remove") => Promise<void>; onArchive: (task: DashboardTask) => Promise<boolean>; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {
   const [filter, setFilter] = useState<"today" | "upcoming" | "all" | "done">("all");
   const [sort, setSort] = useState<"newest" | "due" | "oldest">("newest");
   const [query, setQuery] = useState("");
@@ -777,16 +841,18 @@ function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onArchi
     const bCreated = +(new Date(b.createdAt ?? b.updatedAt ?? 0));
     return sort === "oldest" ? aCreated - bCreated : bCreated - aCreated;
   });
-  return <section className="tw-task-board"><div className="tw-task-toolbar"><div className="tw-segmented">{(["today", "upcoming", "all", "done"] as const).map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "done" ? "Completed" : item[0].toUpperCase() + item.slice(1)}</button>)}</div><label className="tw-task-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter tasks as you type" /></label><label className="tw-task-sort">Sort<select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="newest">Newest first</option><option value="due">Due date</option><option value="oldest">Oldest first</option></select></label></div><div className="tw-task-card-list">{visible.map((task, index) => <article className={`tw-task-card ${task.status === "DONE" ? "done" : ""}`} style={{ "--task-index": index } as React.CSSProperties} key={task.id} onContextMenu={(event) => menu.open(event, task)}><button className="tw-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={17} /></button><button className="tw-task-copy" onClick={() => onEdit(task)}><span><em>{task.publicId}</em>{task.pinned && <i><Pin size={13} /> Pinned</i>}{task.snoozedUntil && <i><Clock3 size={13} /> Snoozed</i>}</span><h3>{task.title}</h3><p>{task.description ?? (task.nextReminderAt ? "A reminder is active for this task." : "No extra details yet.")}</p></button><div className={`tw-task-date ${isOverdue(task, timezone) ? "overdue" : ""}`}><CalendarDays size={16} /><span><b>{task.dueAt ? formatDate(task.dueAt, timezone, { weekday: "short", year: "numeric" }) : "No due date"}</b><small>{task.dueAt ? formatTime(task.dueAt, timezone) : "Keep it flexible"}</small></span></div><button className="tw-task-menu" onClick={(event) => menu.open(event, task)} aria-label={`Actions for ${task.title}`} aria-haspopup="menu"><MoreHorizontal size={20} /></button></article>)}{!visible.length && <Empty icon={ListChecks} title="Nothing in this view." copy={filter === "done" ? "Completed tasks will collect here." : "Change the view or add a new task."} action="Add task" onAction={onAdd} />}</div><LoadMore state={pagination} onLoadMore={onLoadMore} />{menu.menu && <TaskContextMenu state={menu.menu} onClose={menu.close} onToggle={onToggle} onEdit={onEdit} onPin={onPin} onSnooze={onSnooze} onArchive={onArchive} />}</section>;
+  return <section className="tw-task-board"><div className="tw-task-toolbar"><div className="tw-segmented">{(["today", "upcoming", "all", "done"] as const).map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "done" ? "Completed" : item[0].toUpperCase() + item.slice(1)}</button>)}</div><label className="tw-task-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter tasks as you type" /></label><label className="tw-task-sort">Sort<select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="newest">Newest first</option><option value="due">Due date</option><option value="oldest">Oldest first</option></select></label></div><div className="tw-task-card-list">{visible.map((task, index) => <article className={`tw-task-card ${task.status === "DONE" ? "done" : ""}`} style={{ "--task-index": index } as React.CSSProperties} key={task.id} onContextMenu={(event) => menu.open(event, task)}><button className="tw-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={17} /></button><button className="tw-task-copy" onClick={() => onEdit(task)}><span><em>{task.publicId}</em>{task.pinned && <i><Pin size={13} /> Pinned</i>}{task.snoozedUntil && <i><Clock3 size={13} /> Snoozed</i>}{task.calendarEventId && <i><CalendarDays size={13} /> Calendar</i>}</span><h3>{task.title}</h3><p>{task.description ?? (task.nextReminderAt ? "A reminder is active for this task." : "No extra details yet.")}</p></button><div className={`tw-task-date ${isOverdue(task, timezone) ? "overdue" : ""}`}><CalendarDays size={16} /><span><b>{task.dueAt ? formatDate(task.dueAt, timezone, { weekday: "short", year: "numeric" }) : "No due date"}</b><small>{task.dueAt ? formatTime(task.dueAt, timezone) : "Keep it flexible"}</small></span></div><button className="tw-task-menu" onClick={(event) => menu.open(event, task)} aria-label={`Actions for ${task.title}`} aria-haspopup="menu"><MoreHorizontal size={20} /></button></article>)}{!visible.length && <Empty icon={ListChecks} title="Nothing in this view." copy={filter === "done" ? "Completed tasks will collect here." : "Change the view or add a new task."} action="Add task" onAction={onAdd} />}</div><LoadMore state={pagination} onLoadMore={onLoadMore} />{menu.menu && <TaskContextMenu state={menu.menu} onClose={menu.close} onToggle={onToggle} onEdit={onEdit} onPin={onPin} onSnooze={onSnooze} onCalendar={onCalendar} onArchive={onArchive} />}</section>;
 }
 
-function TaskContextMenu({ state, onClose, onToggle, onEdit, onPin, onSnooze, onArchive }: { state: ActionMenuState<DashboardTask>; onClose: () => void; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onArchive: (task: DashboardTask) => Promise<boolean> }) {
+function TaskContextMenu({ state, onClose, onToggle, onEdit, onPin, onSnooze, onCalendar, onArchive }: { state: ActionMenuState<DashboardTask>; onClose: () => void; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onCalendar: (task: DashboardTask, action: "sync" | "remove") => Promise<void>; onArchive: (task: DashboardTask) => Promise<boolean> }) {
   const task = state.item;
   const actions: ActionMenuAction[] = [
     { label: "Edit task", icon: <Pencil size={16} />, onSelect: () => onEdit(task) },
     { label: task.status === "DONE" ? "Restore task" : "Complete task", icon: <CheckCircle2 size={16} />, onSelect: () => onToggle(task) },
     { label: task.pinned ? "Unpin task" : "Pin to top", icon: <Pin size={16} />, onSelect: () => onPin(task) },
     ...(task.status === "OPEN" ? [{ label: "Snooze 1 hour", icon: <Clock3 size={16} />, onSelect: () => onSnooze(task) }] : []),
+    ...(task.calendarEventUrl ? [{ label: "Open Calendar event", icon: <ExternalLink size={16} />, onSelect: () => window.open(task.calendarEventUrl, "_blank", "noopener,noreferrer") }] : []),
+    ...(task.dueAt ? [{ label: task.calendarEventId ? "Remove from Calendar" : "Add to Calendar", icon: <CalendarDays size={16} />, onSelect: () => void onCalendar(task, task.calendarEventId ? "remove" : "sync") }] : []),
     { label: "separator", icon: null, onSelect: () => undefined },
     { label: "Archive task", icon: <Archive size={16} />, danger: true, onSelect: () => void onArchive(task) },
   ];
@@ -894,8 +960,7 @@ function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: D
   </section>;
 }
 
-// Retained until the redesigned settings workspace has cleared its live rollout.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+/* Historical pre-tab settings view retained only as source context during this release.
 function LegacySettingsView({ data, isDemo, accent, onAccent, onSave, onDisconnect, announce }: { data: DashboardSnapshot; isDemo: boolean; accent: keyof typeof ACCENTS; onAccent: (value: keyof typeof ACCENTS) => void; onSave: (value: DashboardSettings) => void; onDisconnect: (provider: "gmail" | "calendar" | "excel") => void; announce: (message: string) => void }) {
   const [settings, setSettings] = useState(data.settings); const [saving, setSaving] = useState(false); const [confirmation, setConfirmation] = useState("");
   const save = async (event: React.FormEvent) => { event.preventDefault(); setSaving(true); try { const payload = { ...settings, quietHoursStart: settings.quietHoursStart || null, quietHoursEnd: settings.quietHoursEnd || null }; const saved = isDemo ? settings : asPayload<DashboardSettings>(await api("settings", "PATCH", payload), "settings"); onSave(saved); announce("Settings saved."); } catch (error) { announce(error instanceof Error ? error.message : "Could not save settings."); } finally { setSaving(false); } };
@@ -904,6 +969,8 @@ function LegacySettingsView({ data, isDemo, accent, onAccent, onSave, onDisconne
   const deleteAccount = async () => { if (confirmation !== "DELETE MY THREADWISE DATA") return; if (!window.confirm("This permanently deletes your Threadwise account and saved content. Continue?")) return; try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); } catch (error) { announce(error instanceof Error ? error.message : "Could not delete account."); } };
   return <div className="tw-settings-grid"><section className="tw-settings-main"><div className="tw-settings-section"><div><span>Preferences</span><h2>How Threadwise works</h2><p>These settings apply in Telegram and on the web.</p></div><form onSubmit={save}><label>Timezone<input value={settings.timezone} onChange={(e) => setSettings({ ...settings, timezone: e.target.value })} /></label><div className="tw-form-row"><label>Default reminder interval<select value={settings.reminderIntervalMinutes} onChange={(e) => setSettings({ ...settings, reminderIntervalMinutes: Number(e.target.value) })}><option value="60">1 hour</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="1440">1 day</option></select></label><label>Reminder style<select value={settings.reminderMode} onChange={(e) => setSettings({ ...settings, reminderMode: e.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual</option><option value="DIGEST">Digest</option></select></label></div><div className="tw-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursStart: e.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursEnd: e.target.value || undefined })} /></label></div><label className="tw-switch"><span><b>Private assignee nudges</b><small>Send direct reminders only to the private chat of someone assigned to a task.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(e) => setSettings({ ...settings, directNudgesEnabled: e.target.checked })} /></label><button className="tw-primary" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save preferences</button></form></div><div className="tw-settings-section"><div><span>Integrations</span><h2>Connected services</h2><p>Provider tokens are encrypted before storage.</p></div><div className="tw-integration-list">{data.integrations.map((item) => { const provider = (item.provider ?? item.name.toLowerCase()) as "gmail" | "calendar" | "excel"; return <article key={item.name}><span>{item.name[0]}</span><div><b>{item.name}</b><small>{item.detail}</small></div><em className={item.state}>{item.state}</em>{item.state === "connected" ? <button onClick={() => disconnect(provider)}><Unplug size={15} /> Disconnect</button> : item.connectUrl ? <a href={item.connectUrl}>Connect <ExternalLink size={14} /></a> : <button disabled>Connect in Telegram</button>}</article>; })}</div></div><div className="tw-settings-section tw-danger-zone"><div><span>Data &amp; privacy</span><h2>Your data, your decision</h2><p>Export a readable copy or permanently remove your account.</p></div><button className="tw-secondary" onClick={exportData}><Download size={16} /> Export my data</button><label>To delete everything, type <b>DELETE MY THREADWISE DATA</b><input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></label><button className="tw-danger" disabled={confirmation !== "DELETE MY THREADWISE DATA"} onClick={deleteAccount}><Trash2 size={16} /> Delete account and data</button></div></section><aside className="tw-settings-side"><section><span>Appearance</span><h3>Make it yours</h3><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`} />)}</div></section><section className="tw-privacy-card"><ShieldCheck size={23} /><h3>What “private” means here</h3><p>Telegram authenticates you; Threadwise never receives your Telegram password. Every request is scoped to your Telegram account.</p><p>Your content is <b>not end-to-end encrypted</b>. A small number of authorized production operators can technically access stored content when needed to run or secure the service.</p><p>OAuth tokens are encrypted before storage. If you use AI features, only the relevant content may be sent to the configured AI provider.</p><a href="/privacy">Read the full privacy explanation <ArrowRight size={14} /></a></section><form action="/api/auth/logout" method="post"><button className="tw-secondary" type="submit"><LogOut size={16} /> Sign out</button></form></aside></div>;
 }
+
+*/
 
 function GroupSettingsView({ data, workspace, onSave, announce }: { data: DashboardSnapshot; workspace: DashboardWorkspace; onSave: (value: DashboardSettings) => void; announce: (message: string) => void }) {
   const [settings, setSettings] = useState(data.settings);
@@ -937,30 +1004,55 @@ function GroupSettingsView({ data, workspace, onSave, announce }: { data: Dashbo
           {canManage && <button className="tw-primary tw-settings-save" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save group defaults</button>}
         </fieldset>
       </form>
-      <aside><article><ShieldCheck size={22} /><div><h3>Separate by design</h3><p>This dashboard reads only the shared records owned by this group. It cannot open a member&apos;s personal Threadwise workspace.</p></div></article><article><Cloud size={22} /><div><h3>No personal connections</h3><p>Gmail, Calendar, Excel, exports, and account deletion remain in each person&apos;s private workspace.</p></div></article><a className="tw-secondary" href="/api/workspace/select?workspace=personal&next=/dashboard">Switch to personal workspace</a></aside>
+      <aside><article><ShieldCheck size={22} /><div><h3>Separate by design</h3><p>This dashboard reads only the shared records owned by this group. It cannot open a member&apos;s personal Threadwise workspace.</p></div></article><article><Cloud size={22} /><div><h3>No personal connections</h3><p>Calendar, Excel, exports, and account deletion remain in each person&apos;s private workspace.</p></div></article><a className="tw-secondary" href="/api/workspace/select?workspace=personal&next=/dashboard">Switch to personal workspace</a></aside>
     </div>
   </section>;
 }
 
-function SettingsView({ data, isDemo, accent, onAccent, onSave, onDisconnect, announce }: { data: DashboardSnapshot; isDemo: boolean; accent: keyof typeof ACCENTS; onAccent: (value: keyof typeof ACCENTS) => void; onSave: (value: DashboardSettings) => void; onDisconnect: (provider: "gmail" | "calendar" | "excel") => void; announce: (message: string) => void }) {
+function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyncCalendar, onSyncExcel, onCreateExcel, onAutoSync, onRefresh, announce }: { data: DashboardSnapshot; isDemo: boolean; accent: keyof typeof ACCENTS; onAccent: (value: keyof typeof ACCENTS) => void; onSave: (value: DashboardSettings) => void; onConnect: (provider: "calendar" | "excel") => Promise<void>; onSyncCalendar: () => Promise<void>; onSyncExcel: () => Promise<void>; onCreateExcel: () => Promise<void>; onAutoSync: (provider: "calendar" | "excel", enabled: boolean) => Promise<void>; onRefresh: () => Promise<void>; announce: (message: string) => void }) {
   type SettingsTab = "general" | "reminders" | "connections" | "privacy";
   const [settings, setSettings] = useState(data.settings);
   const [tab, setTab] = useState<SettingsTab>("general");
   const [saving, setSaving] = useState(false);
   const [confirmation, setConfirmation] = useState("");
+  const [integrationAction, setIntegrationAction] = useState<"calendar" | "excel" | null>(null);
+
+  useEffect(() => {
+    const requested = new URL(window.location.href).searchParams.get("tab");
+    if (!["general", "reminders", "connections", "privacy"].includes(requested ?? "")) return;
+    const timer = window.setTimeout(() => setTab(requested as SettingsTab), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
     try {
       const payload = { ...settings, quietHoursStart: settings.quietHoursStart || null, quietHoursEnd: settings.quietHoursEnd || null };
       const saved = isDemo ? settings : asPayload<DashboardSettings>(await api("settings", "PATCH", payload), "settings");
-      onSave(saved); announce("Settings saved in Telegram and on the web.");
+      setSettings(saved); onSave(saved); announce("Settings saved in Telegram and on the web.");
     } catch (error) { announce(error instanceof Error ? error.message : "Could not save settings."); }
     finally { setSaving(false); }
   };
-  const disconnect = async (provider: "gmail" | "calendar" | "excel") => {
-    try { if (!isDemo) await api(`integrations/${provider}/disconnect`, "POST", {}); onDisconnect(provider); announce(isDemo ? "Disconnected in this demo." : `${provider} disconnected.`); }
-    catch (error) { announce(error instanceof Error ? error.message : "Could not disconnect."); }
+  const runIntegration = async (provider: "calendar" | "excel", action: () => Promise<void>) => {
+    setIntegrationAction(provider);
+    try { await action(); }
+    catch (error) { announce(error instanceof Error ? error.message : "That connection could not be updated."); }
+    finally { setIntegrationAction(null); }
+  };
+  const disconnect = async (provider: "calendar" | "excel") => {
+    const label = provider === "calendar" ? "Google Calendar" : "Excel";
+    if (!window.confirm(`Disconnect ${label}? Your Threadwise data and existing ${provider === "calendar" ? "calendar events" : "workbook"} will stay intact.`)) return;
+    await runIntegration(provider, async () => {
+      if (!isDemo) await api(`integrations/${provider}/disconnect`, "POST", {});
+      await onRefresh();
+      announce(isDemo ? "Disconnected in this demo." : `${label} disconnected.`);
+    });
+  };
+  const toggleAutoSync = async (provider: "calendar" | "excel", enabled: boolean) => {
+    await runIntegration(provider, async () => {
+      await onAutoSync(provider, enabled);
+      setSettings((current) => ({ ...current, [provider === "calendar" ? "calendarAutoSync" : "excelAutoSync"]: enabled }));
+    });
   };
   const exportData = async () => {
     try {
@@ -988,7 +1080,7 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onDisconnect, an
     <div className="tw-settings-panel">
       {tab === "general" && <><header><span>General</span><h2>Your Threadwise defaults</h2><p>Shared instantly by the dashboard and Telegram bot.</p></header><form onSubmit={save}><div className="tw-form-row"><label>Timezone<input value={settings.timezone} onChange={(event) => setSettings({ ...settings, timezone: event.target.value })} /></label><label>Expense currency<input minLength={3} maxLength={3} value={settings.expenseCurrency} onChange={(event) => setSettings({ ...settings, expenseCurrency: event.target.value.toUpperCase() })} /></label></div><label>Image text languages<input value={settings.ocrLanguages} onChange={(event) => setSettings({ ...settings, ocrLanguages: event.target.value })} /><small>Language codes used when making saved images searchable.</small></label><fieldset className="tw-appearance-field"><legend>Accent</legend><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button type="button" key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`}><Check size={14} /></button>)}</div></fieldset>{saveButton}</form></>}
       {tab === "reminders" && <><header><span>Reminders</span><h2>Helpful, never noisy</h2><p>These controls govern bot reminders as well as dashboard-created tasks.</p></header><form onSubmit={save}><div className="tw-form-row"><label>Default rhythm<select value={settings.reminderIntervalMinutes} onChange={(event) => setSettings({ ...settings, reminderIntervalMinutes: Number(event.target.value) })}><option value="60">Every hour</option><option value="180">Every 3 hours</option><option value="360">Every 6 hours</option><option value="1440">Daily</option></select></label><label>Delivery style<select value={settings.reminderMode} onChange={(event) => setSettings({ ...settings, reminderMode: event.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual cards</option><option value="DIGEST">Compact digest</option></select></label></div><div className="tw-form-row"><label>Due-time nudge<select value={settings.dueNudgeMinutes} onChange={(event) => setSettings({ ...settings, dueNudgeMinutes: Number(event.target.value) })}><option value="0">At the due time</option><option value="15">15 minutes before</option><option value="30">30 minutes before</option><option value="60">1 hour before</option></select></label><label>Daily reminder cap<input type="number" min="1" max="50" value={settings.maxRemindersPerDay} onChange={(event) => setSettings({ ...settings, maxRemindersPerDay: Number(event.target.value) })} /></label></div><div className="tw-form-row"><label>Quiet hours begin<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || undefined })} /></label></div><label className="tw-switch"><span><b>Private assignee nudges</b><small>Send a task nudge only to the assigned person’s private chat.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(event) => setSettings({ ...settings, directNudgesEnabled: event.target.checked })} /></label>{saveButton}</form></>}
-      {tab === "connections" && <><header><span>Connections</span><h2>Quietly in sync</h2><p>Connect once, then manage the provider here.</p></header><div className="tw-integration-list tw-settings-connections">{data.integrations.map((item) => { const provider = (item.provider ?? item.name.toLowerCase()) as "gmail" | "calendar" | "excel"; return <article key={item.name}><span>{item.name[0]}</span><div><b>{item.name}</b><small>{item.detail}</small></div><em className={item.state}>{item.state}</em>{item.state === "connected" ? <button onClick={() => void disconnect(provider)}><Unplug size={15} /> Disconnect</button> : item.connectUrl ? <a href={item.connectUrl}>Connect <ExternalLink size={14} /></a> : <a href="https://t.me/threadwise_1_bot" target="_blank" rel="noreferrer">Connect in Telegram <ExternalLink size={14} /></a>}</article>; })}</div></>}
+      {tab === "connections" && <><header><span>Connections</span><h2>Calendar &amp; Excel</h2><p>Connect, sync, or disconnect here.</p></header><div className="tw-integration-cards">{data.integrations.map((item) => { const busy = integrationAction === item.provider; return <article className="tw-integration-card" data-provider={item.provider} key={item.provider}><header><span>{item.provider === "calendar" ? <CalendarDays size={21} /> : <FileText size={21} />}</span><div><h3>{item.name}</h3><p>{item.accountEmail ?? item.detail}</p></div><em className={item.state}>{item.state === "connected" ? "Connected" : item.state === "attention" ? "Needs setup" : "Not connected"}</em></header><div className="tw-integration-metrics"><span><b>{item.syncedCount}</b><small>synced</small></span><span><b>{item.unsyncedCount}</b><small>waiting</small></span>{item.provider === "excel" && item.workbookName && <span className="wide"><b>{item.workbookName}</b><small>workbook</small></span>}</div>{item.state !== "available" && <label className="tw-switch tw-integration-switch"><span><b>Automatic sync</b><small>{item.provider === "calendar" ? "New and edited dated tasks" : "New confirmed expenses"}</small></span><input type="checkbox" checked={item.provider === "calendar" ? settings.calendarAutoSync : settings.excelAutoSync} disabled={busy} onChange={(event) => void toggleAutoSync(item.provider, event.target.checked)} /></label>}<footer>{item.state === "available" ? <button className="tw-primary" disabled={busy} onClick={() => void runIntegration(item.provider, () => onConnect(item.provider))}>{busy ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />} Connect {item.name}</button> : <>{item.provider === "calendar" && <button className="tw-primary" disabled={busy} onClick={() => void runIntegration("calendar", onSyncCalendar)}>{busy ? <LoaderCircle className="spin" size={15} /> : <RefreshCw size={15} />} Sync dated tasks</button>}{item.provider === "excel" && item.state === "attention" && <button className="tw-primary" disabled={busy} onClick={() => void runIntegration("excel", onCreateExcel)}>{busy ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />} Create workbook</button>}{item.provider === "excel" && item.state === "connected" && <button className="tw-primary" disabled={busy} onClick={() => void runIntegration("excel", onSyncExcel)}>{busy ? <LoaderCircle className="spin" size={15} /> : <RefreshCw size={15} />} Sync expenses</button>}{item.workbookUrl && <a href={item.workbookUrl} target="_blank" rel="noreferrer">Open workbook <ExternalLink size={14} /></a>}<button className="tw-secondary" disabled={busy} onClick={() => void disconnect(item.provider)}><Unplug size={15} /> Disconnect</button></>}</footer></article>; })}</div><p className="tw-integration-note"><ShieldCheck size={15} /> Provider tokens are encrypted. A failed sync never deletes the Threadwise copy.</p></>}
       {tab === "privacy" && <><header><span>Privacy</span><h2>Your data, your decision</h2><p>Clear controls without a wall of legal text.</p></header><div className="tw-settings-privacy"><article><ShieldCheck size={22} /><div><h3>How access works</h3><p>Telegram verifies your identity; Threadwise never receives your Telegram password. Dashboard requests are scoped to that same account.</p><a href="/privacy">Read the complete explanation <ArrowRight size={14} /></a></div></article><article><Download size={22} /><div><h3>Take a copy with you</h3><p>Download tasks, notes, ideas, expenses, and image metadata in a readable export.</p><button className="tw-secondary" onClick={() => void exportData()}>Export my data</button></div></article><article className="danger"><Trash2 size={22} /><div><h3>Delete everything</h3><p>This is permanent. Type the exact phrase below before the final confirmation.</p><label><span>DELETE MY THREADWISE DATA</span><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label><button className="tw-danger" disabled={confirmation !== "DELETE MY THREADWISE DATA"} onClick={() => void deleteAccount()}>Delete account and data</button></div></article><form action="/api/auth/logout" method="post"><button className="tw-secondary" type="submit"><LogOut size={16} /> Sign out</button></form></div></>}
     </div>
   </section>;
