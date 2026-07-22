@@ -1,6 +1,6 @@
 # Threadwise Dashboard
 
-A calm, personal web home for everything captured through the Threadwise Telegram bot: tasks, notes, ideas, reminders, expenses, and integrations.
+Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
 The application is intentionally a separate Next.js frontend and backend-for-frontend. Browsers never receive a Supabase connection string, service-role key, Telegram bot token, or provider refresh token.
 
@@ -8,13 +8,12 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 
 - A responsive public landing page and personalized dashboard
 - A command-first capture/search surface with `Ctrl/Cmd + K`
-- Personal Today, Tasks, Notes, Ideas, Images, Expenses, Search, and Settings views
-- Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, assignee acknowledgements, handoffs, and a seven-day summary; Expenses and personal integrations remain private
+- Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
+- Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, assignee acknowledgements, handoffs, and a seven-day summary
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
 - A date-grouped image gallery with OCR/caption search, selection, a keyboard-friendly lightbox, and note conversion
-- Expense capture, editing, CSV export, and connected Excel synchronization
-- Direct Google Calendar and Microsoft Excel connection management, auto-sync controls, provider coverage, and contextual task/workbook actions
+- Secondary Google Calendar connection management, automatic task sync, provider coverage, and contextual task actions
 - Data export, integration disconnect, and confirmed account deletion controls
 - Automatic Telegram Mini App login using server-verified signed launch data
 - Telegram OIDC Authorization Code + PKCE login for external browsers

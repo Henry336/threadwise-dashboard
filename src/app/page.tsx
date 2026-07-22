@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Check, Command, Layers3, LockKeyhole, Sparkles } from "lucide-react";
 import { TelegramMiniAppAuth } from "@/components/telegram-mini-app-auth";
+import { Ari } from "@/components/ari";
 import { ThreadwiseMark } from "@/components/threadwise-mark";
 import { getSessionUser, isTelegramAuthConfigured } from "@/lib/auth";
 
@@ -25,9 +26,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
       <main>
         <section className="landing-hero">
           <div className="hero-copy">
-            <span className="eyebrow"><Sparkles size={14} /> A calmer home for your captures</span>
+            <span className="eyebrow"><Sparkles size={14} /> Capture · Coordinate · Recall</span>
             <h1>Your day,<br /><em>untangled.</em></h1>
-            <p>Tasks, notes, ideas, reminders, and spending—pulled out of chat and arranged around what matters now.</p>
+            <p>Threadwise turns Telegram messages into things people can find, remember, and finish.</p>
             {authError && <p className="auth-notice" role="alert">Telegram sign-in could not be completed. Please try again.</p>}
             <div className="hero-actions">
               {session ? (
@@ -68,14 +69,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
                 </div>
               </div>
             </div>
-            <div className="preview-float"><Layers3 size={16} /><span><b>Captured from Telegram</b><small>“Remember to pick up my parcel”</small></span></div>
+            <div className="preview-float"><Ari variant="avatar-light" className="preview-float-ari" decorative /><Layers3 className="preview-float-capture" size={15} /><span><b>Captured from Telegram</b><small>“Remember to pick up my parcel”</small></span></div>
           </div>
         </section>
 
         <section className="landing-principles" aria-label="Product principles">
-          <div><span>01</span><h3>Capture once</h3><p>Keep using Telegram exactly as you do now.</p></div>
-          <div><span>02</span><h3>See clearly</h3><p>A personal view shaped by urgency and context.</p></div>
-          <div><span>03</span><h3>Act quickly</h3><p>Finish, snooze, search, and return to your day.</p></div>
+          <div><span>01</span><h3>Capture</h3><p>Turn messages into tasks, notes, ideas, and searchable images.</p></div>
+          <div><span>02</span><h3>Coordinate</h3><p>Keep reminders, assignees, and shared work moving.</p></div>
+          <div><span>03</span><h3>Recall</h3><p>Find saved context without digging through chat.</p></div>
         </section>
         <section className="landing-privacy">
           <div><LockKeyhole size={20} /><span><b>Telegram signs you in. Threadwise never sees your Telegram password.</b><small>Your data is user-scoped, provider tokens are encrypted, and stored content is not end-to-end encrypted.</small></span></div>

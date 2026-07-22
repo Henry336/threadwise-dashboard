@@ -2,6 +2,24 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.7.0 - Focus, Quiet Capture, and Ari
+
+### Product hierarchy
+- Established **Capture, Coordinate, Recall** across the landing page, personal workspace, settings, search, and empty-state copy.
+- Adopted “Threadwise turns Telegram messages into things people can find, remember, and finish.” as the shared product position.
+- Removed Expenses and Excel from active navigation, capture, search, Today, settings, and provider surfaces while preserving their underlying implementation and data.
+- Kept Google Calendar as a secondary task integration inside Settings.
+
+### Brand system
+- Replaced the dark compass badge with an adaptive, faceless threaded-path mark that sits naturally in light and dark product chrome.
+- Added Ari light/dark avatars, a full Ari illustration, a matching favicon, reusable SVG sources, and a 512×512 Telegram PNG.
+- Limited Ari to onboarding, empty focus states, and recoverable dashboard failures so the workspace remains calm and professional.
+
+### Layout and quality
+- Rebalanced Today after removing peripheral summary cards: recently captured and saved images now complete the final desktop row and collapse cleanly on mobile.
+- Added focused copy and schema regressions and retained server-filtering safeguards so hidden expense results cannot reappear through live search.
+- Verified the release with lint, all six dashboard contract tests, a production build, and Chromium checks of the landing page, authenticated desktop views, and the 390 px mobile layout with no application console errors.
+
 ## v0.6.0 - Provider Connections
 
 ### Calendar and Excel

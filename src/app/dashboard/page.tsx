@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardApp } from "@/components/dashboard-app";
+import { Ari } from "@/components/ari";
 import { getSelectedWorkspace, getSessionUser } from "@/lib/auth";
 import { DashboardDataContractError, ThreadwiseApiError, getDashboardSnapshot, getDashboardWorkspaces } from "@/lib/threadwise-api";
 import type { DashboardWorkspace } from "@/lib/types";
@@ -54,6 +55,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     return (
       <main className="data-error-shell">
         <div className="data-error-card">
+          <Ari variant="avatar-light" className="data-error-ari" decorative />
           <span className="eyebrow">{copy.eyebrow}</span>
           <h1>{copy.title}</h1>
           <p>{copy.body}</p>

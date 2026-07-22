@@ -7,7 +7,7 @@ Threadwise is used to get thoughts out of the way. Its dashboard should return t
 1. **Needs attention** — one clear decision, not a wall of alerts.
 2. **Threadline** — the next few time-bound moments in chronological order.
 3. **Recently captured** — notes and ideas that are still cognitively warm.
-4. **Rhythm and context** — small activity, spending, and integration summaries.
+4. **Recall context** — recently captured notes, ideas, and searchable images.
 
 The My Day layout is intentionally asymmetric. Cards earn size from relevance and content rather than being forced into equal statistic tiles.
 
@@ -18,6 +18,21 @@ The My Day layout is intentionally asymmetric. Cards earn size from relevance an
 - One user-selected accent, with coral and green reserved for semantic warning/success
 - Rounded rectangles rather than glass panels; no shaders, auroras, custom cursors, or decorative analytics
 - A small animated-thread motif that explains chronology and connection
+
+## Product hierarchy
+
+- **Capture** — tasks, notes, ideas, and searchable images
+- **Coordinate** — reminders, assignees, and shared work
+- **Recall** — search, pins, archives, and the dashboard
+
+Calendar remains a secondary task integration. Frozen experiments do not appear in navigation, capture, search, onboarding, or empty states.
+
+## Identity system
+
+- The faceless threaded-path mark represents Threadwise as a product. It belongs in navigation, favicons, and compact system chrome.
+- Ari is the same thread given a face and body. Ari appears only in onboarding, genuinely empty moments, and friendly recovery states.
+- Both marks use flat geometry, teal thread, warm paper, and deep navy. They avoid gradients, raster artifacts, and a permanently dark circular badge.
+- Dark surfaces use Ari's dark avatar; light surfaces use the light avatar or transparent full figure. The product mark uses teal plus the current text color so it adapts with the theme.
 
 ## Interaction language
 

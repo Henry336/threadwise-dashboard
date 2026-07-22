@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Threadwise — Your day, untangled", template: "%s · Threadwise" },
-  description: "A calm, personal dashboard for everything you capture with Threadwise.",
+  description: "Threadwise turns Telegram messages into things people can find, remember, and finish.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
 };
 

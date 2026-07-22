@@ -41,7 +41,7 @@ export function getDemoSnapshot(): DashboardSnapshot {
       {
         id: "task-3",
         publicId: "T-195",
-        title: "Weekly expense review",
+        title: "Review the project timeline",
         dueAt: at(0, 19, 0),
         status: "OPEN",
         recurring: true,

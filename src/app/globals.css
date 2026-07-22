@@ -683,14 +683,14 @@ kbd { font-family: var(--sans); }
 
 /* Phase 1 — unified brand, readable workspace scale, live capture, Today and Tasks */
 .brand-lockup { gap: 10px; font-size: 20px; font-weight: 790; letter-spacing: -.045em; }
-.brand-mark { width: 36px; height: 36px; flex: 0 0 auto; filter: drop-shadow(0 5px 12px rgba(8,20,25,.13)); }
-.brand-mark .brand-mark-bg { fill: #101922; stroke: none; }
-.brand-mark .brand-mark-ring { fill: none; stroke: #42cdbb; stroke-width: 3.2; }
-.brand-mark .brand-mark-arc { fill: none; stroke: #fff4df; stroke-width: 2.4; stroke-linecap: round; }
-.brand-mark .brand-mark-check { fill: none; stroke: #42cdbb; stroke-width: 3.7; stroke-linecap: round; stroke-linejoin: round; }
-.brand-mark .brand-mark-needle,.brand-mark .brand-mark-hub { fill: #fff4df; stroke: none; }
-.brand-mark .brand-mark-eye { fill: #101922; stroke: none; }
-.brand-mark .brand-mark-thread { fill: #42cdbb; stroke: none; }
+.brand-mark { width: 36px; height: 36px; flex: 0 0 auto; filter: none; }
+.brand-mark .brand-mark-loop { fill: none; stroke: #139b92; stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }
+.brand-mark .brand-mark-thread { fill: none; stroke: currentColor; stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }
+.preview-float-ari { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 13px; }
+.preview-float-capture { margin-left: -15px; padding: 3px; border-radius: 999px; background: #fff; color: #139b92; box-sizing: content-box; }
+.tw-empty-ari { width: 76px; height: 92px; margin-bottom: 2px; object-fit: contain; }
+.data-error-card { position: relative; overflow: hidden; }
+.data-error-ari { width: 82px; height: 82px; float: right; margin: -12px -10px 10px 20px; border-radius: 22px; }
 
 .tw-shell { grid-template-columns: 272px minmax(0,1fr); }
 .tw-sidebar { padding: 28px 20px 20px; }

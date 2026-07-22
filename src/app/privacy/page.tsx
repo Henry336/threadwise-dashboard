@@ -19,8 +19,8 @@ export default function PrivacyPage() {
       </section>
       <section className="privacy-grid">
         <article><Bot size={21} /><span>01</span><h2>Telegram signs you in</h2><p>Telegram authenticates your identity. Threadwise never receives or stores your Telegram password. Dashboard requests are scoped to the Telegram account that signed in.</p></article>
-        <article><KeyRound size={21} /><span>02</span><h2>Connected tokens are encrypted</h2><p>OAuth tokens for Google Calendar and Microsoft Excel are encrypted before they are stored. You can disconnect either provider from your settings.</p></article>
-        <article><Database size={21} /><span>03</span><h2>Your content is not E2EE</h2><p>Tasks, notes, ideas, images, and expenses are not end-to-end encrypted. A small number of authorized production operators can technically access stored content when necessary to operate, troubleshoot, or secure the service.</p></article>
+        <article><KeyRound size={21} /><span>02</span><h2>Connected tokens are encrypted</h2><p>OAuth tokens for connected providers are encrypted before they are stored. Supported connections can be disconnected from your settings.</p></article>
+        <article><Database size={21} /><span>03</span><h2>Your content is not E2EE</h2><p>Saved Threadwise content is not end-to-end encrypted. A small number of authorized production operators can technically access it when necessary to operate, troubleshoot, or secure the service.</p></article>
         <article><Sparkles size={21} /><span>04</span><h2>AI features use relevant context</h2><p>If you use an AI-powered feature, the content relevant to that request may be sent to the configured AI provider. Ordinary dashboard browsing and non-AI actions do not require sending your content to an AI model.</p></article>
       </section>
       <section className="privacy-control">
