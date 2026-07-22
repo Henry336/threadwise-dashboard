@@ -2,6 +2,19 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.5.1 - Concise Group Interface
+
+### Copy and hierarchy
+- Replaced explanatory group-page headlines with direct labels for Overview, People, Progress, Activity, Resources, and Search.
+- Simplified group empty states, overview cards, resource labels, and navigation actions so the interface explains only what the user needs next.
+
+### Overview polish
+- Rebalanced the desktop Overview into complete card rows, eliminating the uneven empty columns created by the previous grid spans.
+- Tightened attention and weekly cards, aligned action and activity panels, and corrected mobile wrapping for unassigned work.
+
+### Quality
+- Verified the revised pages in Chromium at 1440px and 390px widths with no browser errors or warnings.
+
 ## v0.5.0 - Distinct Group Workspaces
 
 ### Group information architecture

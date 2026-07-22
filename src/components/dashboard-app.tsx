@@ -688,12 +688,12 @@ function PageHeading({ view, workspace, name, timezone, onAdd }: { view: Dashboa
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
     today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", workspace.kind === "GROUP" ? "Shared work, assignees, and reminders in one thread." : "Things to do, reminders when they matter."],
-    people: ["People", "Shared workload, ownership, and blockers at a glance."],
-    progress: ["Progress", "Done, next, and blocked—without another meeting form."],
-    activity: ["Activity", "A concise record of meaningful shared changes."],
+    people: ["People", ""],
+    progress: ["Progress", ""],
+    activity: ["Activity", ""],
     library: [workspace.kind === "GROUP" ? "Resources" : "Library", workspace.kind === "GROUP" ? "Shared notes, ideas, and visual references in one place." : "Notes, ideas, and images—kept together."], notes: [workspace.kind === "GROUP" ? "Shared notes" : "Notes", "Useful things worth keeping."],
     ideas: [workspace.kind === "GROUP" ? "Shared ideas" : "Ideas", "Small sparks, ready when you are."], images: [workspace.kind === "GROUP" ? "Shared images" : "Images", "Every saved frame, easy to find again."],
-    expenses: ["Expenses", "A clear view of what moved."], search: ["Search everything", "Titles, words, receipts, and remembered fragments."],
+    expenses: ["Expenses", "A clear view of what moved."], search: ["Search everything", workspace.kind === "GROUP" ? "Tasks, notes, ideas, and images." : "Tasks, notes, ideas, images, and expenses."],
     settings: workspace.kind === "GROUP" ? ["Manage group", "Shared defaults and role-gated controls."] : ["Settings", "Make Threadwise work the way you do."],
   };
   const canAdd = ["tasks", "notes", "ideas", "expenses"].includes(view);
@@ -890,7 +890,7 @@ function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: D
   return <section className="tw-search-view tw-search-live">
     <div className="tw-search-live-box"><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search while you type…" />{loading ? <LoaderCircle className="spin" size={18} /> : query ? <span>{shown.length} {shown.length === 1 ? "match" : "matches"}</span> : <kbd>LIVE</kbd>}</div>
     <div className="tw-search-filters" aria-label="Filter search results">{filters.map((filter) => <button key={filter} className={kind === filter ? "active" : ""} onClick={() => setKind(filter)}>{filter === "all" ? "Everything" : `${filter}s`}</button>)}</div>
-    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Sparkles size={28} /><h2>Remember a fragment.</h2><p>Results appear as you type across tasks, notes, ideas, and searchable image text{allowExpenses ? ", plus expenses" : ""}.</p></div>}</div>
+    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Search size={28} /><h2>Start typing to search.</h2></div>}</div>
   </section>;
 }
 

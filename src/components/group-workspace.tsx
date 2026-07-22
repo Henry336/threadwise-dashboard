@@ -56,10 +56,10 @@ export function GroupOverview({
   const { summary } = collaboration;
   const generatedAt = new Date(data.generatedAt).getTime();
   const attention = [
-    { id: "blocked" as const, label: "Blocked", value: summary.blocked, copy: "Waiting on a decision or dependency", icon: Unlink },
-    { id: "unassigned" as const, label: "Unassigned", value: summary.unassigned, copy: "Open work without an owner", icon: CircleUserRound },
-    { id: "pending" as const, label: "Awaiting reply", value: summary.awaitingAcknowledgement, copy: "Assignments not yet acknowledged", icon: Hand },
-    { id: "all" as const, label: "Overdue", value: summary.overdue, copy: "Past their due time", icon: CalendarClock },
+    { id: "blocked" as const, label: "Blocked", value: summary.blocked, icon: Unlink },
+    { id: "unassigned" as const, label: "Unassigned", value: summary.unassigned, icon: CircleUserRound },
+    { id: "pending" as const, label: "Awaiting reply", value: summary.awaitingAcknowledgement, icon: Hand },
+    { id: "all" as const, label: "Overdue", value: summary.overdue, icon: CalendarClock },
   ];
   const needsAttention = data.tasks
     .filter((task) => task.status === "OPEN" && (
@@ -71,7 +71,7 @@ export function GroupOverview({
 
   return <div className="tw-group-overview">
     <section className="tw-group-intro">
-      <div><p><span className="tw-thread-cue" aria-hidden="true"><i /><i /></span>Group overview <em className="tw-group-role"><ShieldCheck size={13} /> {data.workspace.role.toLowerCase()}</em></p><h2>A clear handoff from chat to action.</h2><span>See what needs a person, a reply, or a quick decision—without turning the group into a project-management maze.</span></div>
+      <div><p><span className="tw-thread-cue" aria-hidden="true"><i /><i /></span>Overview <em className="tw-group-role"><ShieldCheck size={13} /> {data.workspace.role.toLowerCase()}</em></p><h2>{data.workspace.name}</h2></div>
       <div className="tw-member-ribbon" aria-label={`${collaboration.members.length} known members`}>
         <AvatarStack members={collaboration.members} />
         <button onClick={onOpenPeople}>{collaboration.members.length} people <ArrowRight size={15} /></button>
@@ -79,23 +79,23 @@ export function GroupOverview({
     </section>
 
     <section className="tw-group-attention tw-group-surface">
-      <header><div><span>Needs attention</span><h3>Four quick checks</h3></div><button onClick={() => onOpenTasks("all")}>All tasks <ArrowRight size={15} /></button></header>
-      <div className="tw-attention-grid">{attention.map(({ id, label, value, copy, icon: Icon }, index) => <button key={label} style={{ "--group-index": index } as React.CSSProperties} onClick={() => onOpenTasks(id)}><span><Icon size={18} /></span><b>{value}</b><strong>{label}</strong><small>{value ? copy : "Nothing here right now"}</small><ChevronRight size={16} /></button>)}</div>
-    </section>
-
-    <section className="tw-group-work tw-group-surface">
-      <header><div><span>Active handoffs</span><h3>{needsAttention.length ? "The work worth opening" : "Everything has an owner"}</h3></div></header>
-      {needsAttention.length ? <div>{needsAttention.map((task) => <button key={task.id} onClick={() => onManageTask(task)}><TaskGlyph task={task} /><span><b>{task.title}</b><small>{task.publicId} · {taskAttention(task)}</small></span><AssigneeStack assignees={task.assignees ?? []} /><ChevronRight size={16} /></button>)}</div> : <div className="tw-group-clear"><Check size={20} /><b>No loose ends in the current view.</b><span>New messages and dashboard edits will appear here automatically.</span></div>}
+      <header><div><h3>Needs attention</h3></div><button onClick={() => onOpenTasks("all")}>View work <ArrowRight size={15} /></button></header>
+      <div className="tw-attention-grid">{attention.map(({ id, label, value, icon: Icon }, index) => <button key={label} data-active={value > 0} style={{ "--group-index": index } as React.CSSProperties} onClick={() => onOpenTasks(id)}><span><Icon size={18} /></span><b>{value}</b><strong>{label}</strong><ChevronRight size={16} /></button>)}</div>
     </section>
 
     <section className="tw-group-week tw-group-surface">
-      <header><div><span>This week</span><h3>A small factual snapshot</h3></div></header>
+      <header><div><h3>This week</h3></div></header>
       <div><article><b>{summary.createdThisWeek}</b><span>tasks added</span></article><article><b>{summary.completedThisWeek}</b><span>completed</span></article><article><b>{summary.handoffsThisWeek}</b><span>handoffs</span></article></div>
     </section>
 
+    <section className="tw-group-work tw-group-surface">
+      <header><div><h3>Needs action</h3></div></header>
+      {needsAttention.length ? <div>{needsAttention.map((task) => <button key={task.id} onClick={() => onManageTask(task)}><TaskGlyph task={task} /><span><b>{task.title}</b><small>{task.publicId} · {taskAttention(task)}</small></span><AssigneeStack assignees={task.assignees ?? []} /><ChevronRight size={16} /></button>)}</div> : <div className="tw-group-clear"><Check size={20} /><b>Nothing needs action.</b></div>}
+    </section>
+
     <section className="tw-group-activity-peek tw-group-surface">
-      <header><div><span>Recent movement</span><h3>Who changed what</h3></div><button onClick={onOpenActivity}>Open activity <ArrowRight size={15} /></button></header>
-      <ActivityRows activity={collaboration.activity.slice(0, 5)} />
+      <header><div><h3>Recent activity</h3></div><button onClick={onOpenActivity}>View all <ArrowRight size={15} /></button></header>
+      <ActivityRows activity={collaboration.activity.slice(0, 5)} empty />
     </section>
   </div>;
 }
@@ -105,7 +105,7 @@ export function GroupPeople({ data, onOpenTasks }: { data: DashboardSnapshot; on
   if (!collaboration) return null;
   const max = Math.max(1, ...collaboration.members.map((member) => member.openTasks));
   return <section className="tw-people-view">
-    <header className="tw-group-page-intro"><span>People</span><h2>Workload, without the surveillance.</h2><p>Threadwise only shows shared assignments it already knows about. It does not score activity or read unrelated conversation.</p></header>
+    <header className="tw-group-page-intro tw-group-page-intro-compact"><h2>People</h2></header>
     <div className="tw-people-grid">{collaboration.members.map((member, index) => <button key={member.telegramId} style={{ "--group-index": index } as React.CSSProperties} onClick={() => onOpenTasks(`member:${member.telegramId}`)}>
       <header><MemberAvatar member={member} /><span><b>{member.displayName}</b><small>{member.role.toLowerCase()}</small></span><ArrowRight size={16} /></header>
       <div className="tw-workload-line"><i style={{ width: `${Math.max(6, member.openTasks / max * 100)}%` }} /></div>
@@ -124,9 +124,9 @@ export function GroupResources({
   onAdd: () => void;
 }) {
   const collections = [
-    { id: "notes" as const, label: "Shared notes", count: data.notes.length, copy: "Decisions, context, and useful details", icon: FileText },
-    { id: "ideas" as const, label: "Shared ideas", count: data.ideas.length, copy: "Possibilities the group can return to", icon: Lightbulb },
-    { id: "images" as const, label: "Visual references", count: data.images.length, copy: "Searchable screenshots and saved frames", icon: ImageIcon },
+    { id: "notes" as const, label: "Notes", count: data.notes.length, copy: "Decisions and details", icon: FileText },
+    { id: "ideas" as const, label: "Ideas", count: data.ideas.length, copy: "Ideas to revisit", icon: Lightbulb },
+    { id: "images" as const, label: "Images", count: data.images.length, copy: "Searchable images", icon: ImageIcon },
   ];
   const recent = [
     ...data.notes.map((item) => ({ id: item.id, kind: "notes" as const, title: item.title, detail: item.summary, createdAt: item.createdAt })),
@@ -135,9 +135,9 @@ export function GroupResources({
   ].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 8);
 
   return <section className="tw-group-resources">
-    <header className="tw-group-page-intro"><span>Resources</span><h2>Shared context, without digging through chat.</h2><p>Notes, ideas, and searchable images live together here. Work remains in the Work view; personal expenses stay private.</p><button className="tw-primary" onClick={onAdd}><Plus size={16} /> Add resource</button></header>
+    <header className="tw-group-page-intro"><h2>Resources</h2><button className="tw-primary" onClick={onAdd}><Plus size={16} /> Add resource</button></header>
     <div className="tw-resource-collections">{collections.map(({ id, label, count, copy, icon: Icon }, index) => <button key={id} style={{ "--group-index": index } as React.CSSProperties} onClick={() => onOpen(id)}><span><Icon size={20} /></span><b>{count}</b><h3>{label}</h3><p>{copy}</p><ArrowRight size={17} /></button>)}</div>
-    <div className="tw-resource-recent"><header><div><span>Recently added</span><h3>Fresh group context</h3></div><BookOpen size={20} /></header>{recent.length ? <div>{recent.map((item) => <button key={`${item.kind}-${item.id}`} onClick={() => onOpen(item.kind)}><span>{item.kind === "notes" ? <FileText size={16} /> : item.kind === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}</span><div><b>{item.title}</b><small>{item.detail}</small></div><em>{item.kind.slice(0, -1)}</em><ChevronRight size={16} /></button>)}</div> : <div className="tw-activity-empty"><BookOpen size={24} /><b>No shared resources yet.</b><span>Add a note, idea, or image when the group needs lasting context.</span></div>}</div>
+    <div className="tw-resource-recent"><header><h3>Recently added</h3><BookOpen size={20} /></header>{recent.length ? <div>{recent.map((item) => <button key={`${item.kind}-${item.id}`} onClick={() => onOpen(item.kind)}><span>{item.kind === "notes" ? <FileText size={16} /> : item.kind === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}</span><div><b>{item.title}</b><small>{item.detail}</small></div><em>{item.kind.slice(0, -1)}</em><ChevronRight size={16} /></button>)}</div> : <div className="tw-activity-empty"><BookOpen size={24} /><b>No resources yet.</b></div>}</div>
   </section>;
 }
 
@@ -203,7 +203,7 @@ export function GroupProgress({ data, onManageTask }: { data: DashboardSnapshot;
   const collaboration = data.collaboration;
   if (!collaboration) return null;
   return <section className="tw-standup-view">
-    <header className="tw-group-page-intro"><span>Progress</span><h2>Done, next, blocked.</h2><p>A live summary derived from shared work—not another form everyone has to fill in.</p></header>
+    <header className="tw-group-page-intro tw-group-page-intro-compact"><h2>Progress</h2></header>
     <div className="tw-standup-list">{collaboration.members.map((member, index) => {
       const assigned = data.tasks.filter((task) => task.status === "OPEN" && (task.assignees ?? []).some((item) => item.telegramId === member.telegramId));
       const blocked = assigned.filter((task) => (task.assignees ?? []).some((item) => item.telegramId === member.telegramId && item.status === "BLOCKED"));
@@ -221,7 +221,7 @@ export function GroupActivityView({ data }: { data: DashboardSnapshot }) {
   const collaboration = data.collaboration;
   if (!collaboration) return null;
   return <section className="tw-activity-view">
-    <header className="tw-group-page-intro"><span>Activity</span><h2>A quiet record of shared changes.</h2><p>Useful accountability without noisy per-click notifications.</p></header>
+    <header className="tw-group-page-intro tw-group-page-intro-compact"><h2>Activity</h2></header>
     <div className="tw-activity-card"><ActivityRows activity={collaboration.activity} empty /></div>
   </section>;
 }
@@ -281,7 +281,7 @@ export function TaskCollaborationSheet({
 }
 
 function ActivityRows({ activity, empty = false }: { activity: Collaboration["activity"]; empty?: boolean }) {
-  if (!activity.length) return empty ? <div className="tw-activity-empty"><MessageSquareText size={22} /><b>No shared changes recorded yet.</b><span>Assignments, acknowledgements, blockers, and handoffs will collect here.</span></div> : null;
+  if (!activity.length) return empty ? <div className="tw-activity-empty"><MessageSquareText size={22} /><b>No activity yet.</b></div> : null;
   return <div className="tw-activity-rows">{activity.map((item, index) => <article key={item.id} style={{ "--group-index": index } as React.CSSProperties}><span className="tw-activity-glyph">{activityIcon(item.type)}</span><div><b>{item.summary}</b><small>{relativeTime(item.createdAt)}{item.taskTitle ? ` · ${item.taskTitle}` : ""}</small></div>{item.taskPublicId && <em>{item.taskPublicId}</em>}</article>)}</div>;
 }
 
