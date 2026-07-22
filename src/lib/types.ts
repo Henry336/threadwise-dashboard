@@ -166,6 +166,36 @@ export type SearchResult = {
   createdAt?: string;
 };
 
+export type AvailabilityPoll = {
+  id: string;
+  publicId: string;
+  title: string;
+  status: "OPEN" | "FINALIZED" | "CANCELED";
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  durationMinutes: number;
+  dayStartMinutes: number;
+  dayEndMinutes: number;
+  slotMinutes: number;
+  revision: number;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+  telegramMessageId?: string;
+  slots: string[];
+  bestSlots: Array<{ startAt: string; endAt: string; availableCount: number }>;
+  respondentCount: number;
+  memberCount: number;
+  respondents: Array<{ telegramId: string; displayName: string }>;
+  pendingMembers: Array<{ telegramId: string; displayName: string; username?: string }>;
+  viewerResponse?: { timezone: string; availableStarts: string[]; wantsCalendar: boolean };
+  finalStartAt?: string;
+  finalEndAt?: string;
+  finalizedAt?: string;
+  viewerCalendar?: { connected: boolean; synced: boolean; eventUrl?: string };
+};
+
 export type DashboardSnapshot = {
   workspace: DashboardWorkspace;
   user: DashboardUser;
@@ -211,6 +241,7 @@ export type DashboardSnapshot = {
       handoffsThisWeek: number;
     };
   };
+  scheduling?: { polls: AvailabilityPoll[] };
 };
 
 export type EntityKind = "task" | "note" | "idea" | "expense" | "image";

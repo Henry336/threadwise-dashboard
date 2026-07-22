@@ -2,6 +2,24 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.8.0 - Find a time
+
+### Group coordination
+- Added a dedicated **Find a time** view for Telegram groups with active-poll navigation, manager creation controls, a touch-friendly availability grid, response progress, and ranked overlapping slots.
+- Added active availability polls to Group Overview and confirmed meetings to Group Work so scheduling stays connected to the rest of the group's coordination context.
+- Added per-member Calendar actions after finalization without surfacing personal integration state or event links to other members.
+
+### Telegram continuity
+- Added signed Mini App start-parameter routing that selects the opaque group workspace before opening the exact poll or create form.
+- Kept the Telegram surface compact: the dashboard drives the shared grid while the original group card is refreshed through the existing Render service.
+- Added live scheduling state to the dashboard snapshot contract so open browsers reconcile without manual refresh.
+
+### Responsive design and quality
+- Designed desktop and mobile scheduling as one progressive surface: readable overlap cards on desktop, 44px touch cells and horizontal day scrolling on mobile, and no hover-only controls.
+- Added contract and deep-link regression coverage for valid poll data, malformed windows, viewer-private response data, and invalid Telegram start parameters.
+- Made create-form dates follow the user's local calendar day rather than UTC and preserved poll deep links when the Telegram username fallback is needed.
+- Passed all 10 dashboard tests, lint, standalone TypeScript checks, and the production build; desktop and 500px browser checks caught and corrected a clipped mobile create action before release.
+
 ## v0.7.0 - Focus, Quiet Capture, and Ari
 
 ### Product hierarchy

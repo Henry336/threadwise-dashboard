@@ -3,6 +3,7 @@ import { z } from "zod";
 const text = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const isoDate = z.string().datetime({ offset: true });
+const dateOnly = z.string().regex(/^20\d{2}-\d{2}-\d{2}$/);
 const timezone = text(80).refine((value) => {
   try {
     new Intl.DateTimeFormat("en", { timeZone: value }).format();
@@ -96,6 +97,26 @@ const ExpenseSchema = z.object({
   createdAt: isoDate.optional(),
 });
 
+const AvailabilityPollSchema = z.object({
+  id: text(100), publicId: text(50), title: text(160),
+  status: z.enum(["OPEN", "FINALIZED", "CANCELED"]),
+  startDate: dateOnly, endDate: dateOnly, timezone,
+  durationMinutes: z.number().int().min(15).max(240),
+  dayStartMinutes: z.number().int().min(0).max(1_425),
+  dayEndMinutes: z.number().int().min(15).max(1_440),
+  slotMinutes: z.union([z.literal(15), z.literal(30), z.literal(60)]),
+  revision: z.number().int().positive(), createdByName: text(240),
+  createdAt: isoDate, updatedAt: isoDate, telegramMessageId: optionalText(100),
+  slots: z.array(isoDate).max(2_000),
+  bestSlots: z.array(z.object({ startAt: isoDate, endAt: isoDate, availableCount: z.number().int().min(0).max(100_000) })).max(20),
+  respondentCount: z.number().int().min(0).max(100_000), memberCount: z.number().int().min(0).max(100_000),
+  respondents: z.array(z.object({ telegramId: z.string().regex(/^[1-9]\d{0,19}$/), displayName: text(240) })).max(10_000),
+  pendingMembers: z.array(z.object({ telegramId: z.string().regex(/^[1-9]\d{0,19}$/), displayName: text(240), username: optionalText(64) })).max(10_000),
+  viewerResponse: z.object({ timezone, availableStarts: z.array(isoDate).max(2_000), wantsCalendar: z.boolean() }).optional(),
+  finalStartAt: isoDate.optional(), finalEndAt: isoDate.optional(), finalizedAt: isoDate.optional(),
+  viewerCalendar: z.object({ connected: z.boolean(), synced: z.boolean(), eventUrl: z.string().url().optional() }).optional(),
+});
+
 export const DashboardSnapshotSchema = z.object({
   workspace: z.object({
     id: z.union([z.literal("personal"), z.string().uuid()]),
@@ -167,6 +188,7 @@ export const DashboardSnapshotSchema = z.object({
       handoffsThisWeek: z.number().int().min(0).max(100_000),
     }),
   }).optional(),
+  scheduling: z.object({ polls: z.array(AvailabilityPollSchema).max(100) }).optional(),
 });
 
 export function parseDashboardSnapshot(input: unknown) {

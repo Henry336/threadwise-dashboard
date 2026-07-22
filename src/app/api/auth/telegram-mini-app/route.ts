@@ -4,6 +4,7 @@ import {
   TelegramMiniAppAuthenticationError,
   verifyTelegramMiniAppInitData,
 } from "@/lib/telegram-mini-app";
+import { miniAppRedirect } from "@/lib/telegram-start-param";
 
 const MAX_REQUEST_BYTES = 20_000;
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const user = verifyTelegramMiniAppInitData(body.initData, botId);
     const token = createSessionToken(user);
-    const response = json({ ok: true, redirectTo: "/dashboard" }, 200);
+    const response = json({ ok: true, redirectTo: miniAppRedirect(user.startParam) }, 200);
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

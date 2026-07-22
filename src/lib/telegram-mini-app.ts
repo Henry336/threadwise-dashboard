@@ -14,6 +14,7 @@ export type TelegramMiniAppUser = {
   fullName: string;
   username?: string;
   avatarUrl?: string;
+  startParam?: string;
 };
 
 export class TelegramMiniAppAuthenticationError extends Error {
@@ -71,12 +72,14 @@ export function verifyTelegramMiniAppInitData(
   const lastName = cleanText(user.last_name, 120);
   const username = cleanText(user.username, 64);
   const avatarUrl = safeHttpsUrl(user.photo_url);
+  const startParam = cleanText(singleValue(params, "start_param"), 64);
   return {
     telegramId,
     firstName,
     fullName: [firstName, lastName].filter(Boolean).join(" "),
     ...(username ? { username } : {}),
     ...(avatarUrl ? { avatarUrl } : {}),
+    ...(startParam ? { startParam } : {}),
   };
 }
 

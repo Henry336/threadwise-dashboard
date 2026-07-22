@@ -41,7 +41,8 @@ The intended production variant uses an asymmetric keypair: the private signing 
 - User text renders as plain JSX; no untrusted HTML is injected.
 - Personal resources resolve from the signed Telegram subject. Group resources additionally resolve through an opaque workspace id, recorded membership, and a live Telegram membership check.
 - Privileged group mutations re-check the current Telegram owner/admin role; ordinary members retain control of their own assignment response.
-- Expenses, Calendar, Excel, export, and account deletion remain personal-only surfaces.
+- Expenses, the frozen Excel surface, export, and account deletion remain personal-only. Group scheduling may invoke Calendar only as an explicit per-member copy of a finalized meeting; credentials, connection state, and event links remain personal.
+- Availability responses are keyed to the verified human Telegram id. Shared snapshots expose aggregates and identities but only return the signed-in viewer's raw selected cells.
 
 The API must never expose embeddings, raw provider payloads, OAuth state, access or refresh tokens, Telegram file IDs, receipt hashes, or assignee Telegram IDs. It may return the user-facing task, note, idea, image caption/OCR, expense, and settings fields needed by the product.
 
@@ -51,7 +52,9 @@ Mutations are accepted only through the same-origin Vercel BFF. Each Render rout
 
 ## Production surface
 
-The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, idea conversion, image delivery, search, shared settings, group collaboration, privacy export, and confirmed account deletion. Personal integration routes cover direct Calendar/Excel OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, Excel workbook initialization/opening/synchronization, and disconnect.
+The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, idea conversion, image delivery, search, shared settings, group collaboration, group availability polls, privacy export, and confirmed account deletion. Scheduling routes cover poll creation, the viewer's availability, manager finalization/reminders/closure, and the viewer's finalized Calendar event. Personal integration routes cover direct Calendar OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, and retained frozen Excel implementation.
+
+Telegram group messages cannot use ordinary `web_app` inline buttons. Find a time therefore uses the bot's Main Mini App and a bounded `startapp` parameter. After Telegram init-data verification, the server parses only the expected poll/create forms, selects the opaque workspace through the existing same-origin route, and falls back to the dashboard for malformed input.
 
 External providers are mirrors rather than authoritative stores. A task or expense is committed in Threadwise first; a failed provider operation is recoverable and cannot erase that record. OAuth completion returns to the Connections view with a bounded result code rather than provider error details.
 

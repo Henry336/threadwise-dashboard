@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BookOpen,
   CalendarClock,
+  CalendarDays,
   Check,
   ChevronRight,
   CircleUserRound,
@@ -26,7 +27,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import type { DashboardSnapshot, DashboardTask, DashboardTaskAssignee } from "@/lib/types";
+import type { AvailabilityPoll, DashboardSnapshot, DashboardTask, DashboardTaskAssignee } from "@/lib/types";
 
 type Collaboration = NonNullable<DashboardSnapshot["collaboration"]>;
 type Member = Collaboration["members"][number];
@@ -43,12 +44,14 @@ export function GroupOverview({
   onOpenTasks,
   onOpenPeople,
   onOpenActivity,
+  onOpenSchedule,
   onManageTask,
 }: {
   data: DashboardSnapshot;
   onOpenTasks: (scope: GroupTaskScope) => void;
   onOpenPeople: () => void;
   onOpenActivity: () => void;
+  onOpenSchedule: () => void;
   onManageTask: (task: DashboardTask) => void;
 }) {
   const collaboration = data.collaboration;
@@ -68,6 +71,7 @@ export function GroupOverview({
       || Boolean(task.dueAt && new Date(task.dueAt).getTime() < generatedAt)
     ))
     .slice(0, 5);
+  const activePoll = data.scheduling?.polls.find((poll) => poll.status === "OPEN");
 
   return <div className="tw-group-overview">
     <section className="tw-group-intro">
@@ -86,6 +90,11 @@ export function GroupOverview({
     <section className="tw-group-week tw-group-surface">
       <header><div><h3>This week</h3></div></header>
       <div><article><b>{summary.createdThisWeek}</b><span>tasks added</span></article><article><b>{summary.completedThisWeek}</b><span>completed</span></article><article><b>{summary.handoffsThisWeek}</b><span>handoffs</span></article></div>
+    </section>
+
+    <section className="tw-overview-schedule tw-group-surface">
+      <header><div><h3>Find a time</h3></div><button onClick={onOpenSchedule}>{activePoll ? "Open poll" : "View"} <ArrowRight size={15} /></button></header>
+      {activePoll ? <button className="tw-overview-poll" onClick={onOpenSchedule}><span><CalendarDays size={19} /></span><div><b>{activePoll.title}</b><small>{activePoll.respondentCount}/{activePoll.memberCount} responded</small></div><em>{activePoll.bestSlots[0]?.availableCount ? `${activePoll.bestSlots[0].availableCount} free at the best time` : "Waiting for availability"}</em><ChevronRight size={16} /></button> : <div className="tw-group-clear"><CalendarDays size={20} /><b>No active availability poll.</b></div>}
     </section>
 
     <section className="tw-group-work tw-group-surface">
@@ -143,6 +152,7 @@ export function GroupResources({
 
 export function GroupTasksView({
   tasks,
+  meetings,
   collaboration,
   scope,
   onScope,
@@ -150,11 +160,13 @@ export function GroupTasksView({
   onToggle,
   onEdit,
   onManage,
+  onOpenSchedule,
   onAdd,
   pagination,
   onLoadMore,
 }: {
   tasks: DashboardTask[];
+  meetings: AvailabilityPoll[];
   collaboration: Collaboration;
   scope: GroupTaskScope;
   onScope: (scope: GroupTaskScope) => void;
@@ -162,6 +174,7 @@ export function GroupTasksView({
   onToggle: (task: DashboardTask) => void;
   onEdit: (task: DashboardTask) => void;
   onManage: (task: DashboardTask) => void;
+  onOpenSchedule: () => void;
   onAdd: () => void;
   pagination: { hasMore: boolean; loading: boolean };
   onLoadMore: () => void;
@@ -183,6 +196,7 @@ export function GroupTasksView({
   const currentMember = memberScope ? collaboration.members.find((member) => member.telegramId === memberScope) : undefined;
   return <section className="tw-group-tasks">
     <div className="tw-group-task-tools"><div className="tw-group-scope-tabs">{scopes.map(([id, label]) => <button key={id} className={scope === id ? "active" : ""} onClick={() => onScope(id)}>{label}</button>)}{currentMember && <button className="active" onClick={() => onScope("all")}>{currentMember.displayName} <X size={13} /></button>}</div><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter shared tasks as you type" /></label></div>
+    {meetings.length > 0 && <div className="tw-work-meetings"><header><span><CalendarDays size={17} /> Confirmed meetings</span><button onClick={onOpenSchedule}>Find a time <ArrowRight size={14} /></button></header><div>{meetings.slice(0, 3).map((meeting) => <button key={meeting.id} onClick={onOpenSchedule}><span><b>{meeting.finalStartAt ? new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: meeting.timezone }).format(new Date(meeting.finalStartAt)) : "Confirmed"}</b><small>{meeting.timezone}</small></span><strong>{meeting.title}</strong><ChevronRight size={15} /></button>)}</div></div>}
     <div className="tw-group-task-list">{visible.map((task, index) => {
       const assignees = task.assignees ?? [];
       const blocked = assignees.find((item) => item.status === "BLOCKED");

@@ -8,7 +8,7 @@ import type { DashboardWorkspace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string; view?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string; view?: string; poll?: string; new?: string }> }) {
   const params = await searchParams;
   const session = await getSessionUser();
   const isDemo = params.demo === "1" || params.demo === "group";
@@ -65,5 +65,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     );
   }
   const availableWorkspaces = workspaces.length ? workspaces : [snapshot.workspace];
-  return <DashboardApp initialData={snapshot} workspaces={availableWorkspaces} isDemo={isDemo} initialView={params.view} />;
+  return <DashboardApp initialData={snapshot} workspaces={availableWorkspaces} isDemo={isDemo} initialView={params.view} initialPoll={params.poll} openScheduleCreate={params.new === "1"} />;
 }

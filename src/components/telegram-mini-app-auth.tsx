@@ -49,7 +49,7 @@ export function TelegramMiniAppAuth() {
           cache: "no-store",
         });
         const result = (await response.json()) as { redirectTo?: string };
-        if (!response.ok || result.redirectTo !== "/dashboard") throw new Error("Mini App authentication failed");
+        if (!response.ok || !result.redirectTo?.startsWith("/") || result.redirectTo.startsWith("//")) throw new Error("Mini App authentication failed");
         window.location.replace(result.redirectTo);
       } catch {
         setState("failed");

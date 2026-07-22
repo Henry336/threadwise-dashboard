@@ -262,6 +262,11 @@ export function getGroupDemoSnapshot(): DashboardSnapshot {
         : index === 3 ? [assignment("assignment-3", members[2], "BLOCKED", "Waiting for venue confirmation")]
           : [],
   }));
+  const pollDay = new Date();
+  pollDay.setUTCDate(pollDay.getUTCDate() + 1);
+  pollDay.setUTCHours(0, 0, 0, 0);
+  const pollDate = (offset: number) => new Date(pollDay.getTime() + offset * 86_400_000).toISOString().slice(0, 10);
+  const slots = Array.from({ length: 3 }, (_, day) => Array.from({ length: 20 }, (_, cell) => new Date(Date.UTC(pollDay.getUTCFullYear(), pollDay.getUTCMonth(), pollDay.getUTCDate() + day, 1 + Math.floor(cell / 2), cell % 2 * 30)).toISOString())).flat();
   return {
     ...personal,
     workspace: { id: "group-demo", kind: "GROUP", name: "Launch circle", role: "OWNER", memberCount: members.length },
@@ -279,5 +284,20 @@ export function getGroupDemoSnapshot(): DashboardSnapshot {
       ],
       summary: { overdue: 1, unassigned: 3, awaitingAcknowledgement: 1, blocked: 1, createdThisWeek: 6, completedThisWeek: 1, handoffsThisWeek: 1 },
     },
+    scheduling: { polls: [{
+      id: "poll-demo-1", publicId: "TIME-A1B2C3", title: "Final launch rehearsal", status: "OPEN",
+      startDate: pollDate(0), endDate: pollDate(2), timezone: "Asia/Singapore", durationMinutes: 60,
+      dayStartMinutes: 9 * 60, dayEndMinutes: 19 * 60, slotMinutes: 30, revision: 4,
+      createdByName: "Maya", createdAt: now, updatedAt: now, slots,
+      bestSlots: [
+        { startAt: slots[4]!, endAt: new Date(new Date(slots[4]!).getTime() + 3_600_000).toISOString(), availableCount: 3 },
+        { startAt: slots[25]!, endAt: new Date(new Date(slots[25]!).getTime() + 3_600_000).toISOString(), availableCount: 2 },
+      ],
+      respondentCount: 2, memberCount: 3,
+      respondents: [{ telegramId: "1001", displayName: "Maya" }, { telegramId: "1002", displayName: "Alex" }],
+      pendingMembers: [{ telegramId: "1003", displayName: "Priya", username: "priya" }],
+      viewerResponse: { timezone: "Asia/Singapore", availableStarts: slots.slice(2, 9), wantsCalendar: true },
+      viewerCalendar: { connected: true, synced: false },
+    }] },
   };
 }

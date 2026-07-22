@@ -119,4 +119,30 @@ describe("dashboard snapshot contract", () => {
     expect(parsed.tasks[0]?.assignees?.[0]).toMatchObject({ status: "BLOCKED", statusReason: "Waiting for figures" });
     expect(parsed.collaboration?.summary.blocked).toBe(1);
   });
+
+  it("accepts group scheduling while keeping every member's raw availability private", () => {
+    const parsed = parseDashboardSnapshot({
+      ...snapshot("03:00", "06:00"),
+      scheduling: { polls: [{
+        id: "poll-1", publicId: "TIME-A1B2C3", title: "Project rehearsal", status: "OPEN",
+        startDate: "2026-07-24", endDate: "2026-07-26", timezone: "Asia/Singapore",
+        durationMinutes: 60, dayStartMinutes: 480, dayEndMinutes: 1320, slotMinutes: 30, revision: 2,
+        createdByName: "Henry", createdAt: "2026-07-23T12:00:00.000Z", updatedAt: "2026-07-23T12:05:00.000Z",
+        slots: ["2026-07-24T01:00:00.000Z", "2026-07-24T01:30:00.000Z"],
+        bestSlots: [{ startAt: "2026-07-24T01:00:00.000Z", endAt: "2026-07-24T02:00:00.000Z", availableCount: 2 }],
+        respondentCount: 2, memberCount: 3,
+        respondents: [{ telegramId: "123456789", displayName: "Henry" }],
+        pendingMembers: [{ telegramId: "987654321", displayName: "Maya", username: "maya" }],
+        viewerResponse: { timezone: "Asia/Singapore", availableStarts: ["2026-07-24T01:00:00.000Z"], wantsCalendar: true },
+        viewerCalendar: { connected: true, synced: false },
+      }] },
+    });
+    expect(parsed.scheduling?.polls[0]).toMatchObject({ publicId: "TIME-A1B2C3", respondentCount: 2 });
+    expect(parsed.scheduling?.polls[0]).not.toHaveProperty("responses");
+  });
+
+  it("rejects malformed scheduling windows", () => {
+    const input = { ...snapshot("03:00", "06:00"), scheduling: { polls: [{ id: "poll-1", publicId: "TIME-A1B2C3", title: "Meeting", status: "OPEN", startDate: "tomorrow", endDate: "2026-07-26", timezone: "Asia/Singapore", durationMinutes: 60, dayStartMinutes: 480, dayEndMinutes: 1320, slotMinutes: 30, revision: 1, createdByName: "Henry", createdAt: "2026-07-23T12:00:00.000Z", updatedAt: "2026-07-23T12:00:00.000Z", slots: [], bestSlots: [], respondentCount: 0, memberCount: 1, respondents: [], pendingMembers: [] }] } };
+    expect(() => parseDashboardSnapshot(input)).toThrow();
+  });
 });

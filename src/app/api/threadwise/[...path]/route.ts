@@ -8,7 +8,7 @@ const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 const MAX_BODY_BYTES = 96_000;
 
 function isAllowedPath(path: string) {
-  return /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|integrations\/(?:calendar|excel)\/(?:connect|disconnect)|integrations\/calendar\/(?:sync|task)|integrations\/excel\/(?:sync|workbook)|privacy\/(?:export|account))$/.test(path);
+  return /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|scheduling\/polls(?:\/[A-Za-z0-9_-]+(?:\/(?:availability|finalize|remind|cancel|calendar))?)?|integrations\/(?:calendar|excel)\/(?:connect|disconnect)|integrations\/calendar\/(?:sync|task)|integrations\/excel\/(?:sync|workbook)|privacy\/(?:export|account))$/.test(path);
 }
 
 function methodAllowed(method: string, path: string) {
@@ -16,6 +16,10 @@ function methodAllowed(method: string, path: string) {
   if (path === "capture/preview") return method === "POST";
   if (path === "settings") return method === "GET" || method === "PATCH";
   if (/^(tasks|notes|ideas|expenses|images)$/.test(path)) return method === "GET" || method === "POST" && path !== "images";
+  if (path === "scheduling/polls") return method === "GET" || method === "POST";
+  if (/^scheduling\/polls\/[A-Za-z0-9_-]+$/.test(path)) return method === "GET";
+  if (/\/availability$/.test(path)) return method === "PATCH";
+  if (/^scheduling\/polls\/.+\/(?:finalize|remind|cancel|calendar)$/.test(path)) return method === "POST";
   if (/^integrations\//.test(path) || /\/(?:convert-to-task|analyze|collaboration)$/.test(path)) return method === "POST";
   if (path === "privacy/account") return method === "DELETE";
   if (/^(tasks|notes|ideas|expenses|images)\//.test(path)) return method === "PATCH" || method === "DELETE";

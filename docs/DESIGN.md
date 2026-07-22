@@ -21,6 +21,8 @@ The My Day layout is intentionally asymmetric. Cards earn size from relevance an
 
 ## Product hierarchy
 
+**Find a time** is a focused Coordinate surface: one compact status card in chat, one full availability grid in the Mini App, and no attempt to become a general calendar.
+
 - **Capture** — tasks, notes, ideas, and searchable images
 - **Coordinate** — reminders, assignees, and shared work
 - **Recall** — search, pins, archives, and the dashboard
@@ -49,6 +51,8 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 Users may change accent, theme, density, timezone, greeting, and default view. They do not receive arbitrary layout controls that would make support, accessibility, or information hierarchy unpredictable.
 
 ## Responsive behavior
+
+Availability grids preserve 44px cells and horizontal day scrolling on narrow screens instead of shrinking labels below readable size.
 
 - Desktop: persistent navigation and a four-column bento canvas
 - Tablet: collapsible navigation and two-to-three-column content

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { Ari } from "./ari";
+import { GroupSchedulingView } from "./group-scheduling";
 import { ActionMenu, useActionMenu } from "./action-menu";
 import type { ActionMenuAction, ActionMenuState } from "./action-menu";
 import {
@@ -40,7 +41,7 @@ import type {
   CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
 } from "@/lib/types";
 
-export type DashboardView = "today" | "tasks" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
+export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
 type EditorState = { kind: EditableKind; item?: DashboardTask | DashboardNote | DashboardIdea | DashboardExpense | DashboardImage; seed?: string };
 type PaginationState = Record<"tasks" | "notes" | "ideas" | "expenses" | "images", { page: number; hasMore: boolean; loading: boolean }>;
@@ -59,6 +60,7 @@ const PERSONAL_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] =
 const GROUP_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "today", label: "Overview", icon: Inbox },
   { id: "tasks", label: "Work", icon: ListChecks },
+  { id: "schedule", label: "Find a time", icon: CalendarDays },
   { id: "people", label: "People", icon: UsersRound },
   { id: "progress", label: "Progress", icon: ClipboardList },
   { id: "activity", label: "Activity", icon: Activity },
@@ -186,7 +188,7 @@ function useModalFocus<T extends HTMLElement, U extends HTMLElement>(
   }, [container, initial, onClose]);
 }
 
-async function api<T>(path: string, method = "GET", body?: unknown): Promise<T> {
+export async function api<T>(path: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(`/api/threadwise/${path}`, {
     method,
     credentials: "same-origin",
@@ -210,7 +212,7 @@ class ClientApiError extends Error {
   }
 }
 
-export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string }) {
+export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, openScheduleCreate }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; openScheduleCreate?: boolean }) {
   const [data, setData] = useState(initialData);
   const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView, initialData.workspace));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
@@ -644,8 +646,8 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
     : PERSONAL_NAV;
   const workspaceNav = navItems.filter((item) => item.id !== "search" && item.id !== "settings");
   const manageNav = navItems.filter((item) => item.id === "search" || item.id === "settings");
-  const groupOwnHeading = data.workspace.kind === "GROUP" && (["today", "people", "progress", "activity", "library"] as DashboardView[]).includes(activeView);
-  const showCaptureLaunch = !(["search", "settings", "people", "progress", "activity"] as DashboardView[]).includes(activeView)
+  const groupOwnHeading = data.workspace.kind === "GROUP" && (["today", "schedule", "people", "progress", "activity", "library"] as DashboardView[]).includes(activeView);
+  const showCaptureLaunch = !(["search", "settings", "schedule", "people", "progress", "activity"] as DashboardView[]).includes(activeView)
     && !(data.workspace.kind === "GROUP" && (["today", "tasks", "library"] as DashboardView[]).includes(activeView));
   const profileView: DashboardView = data.workspace.kind === "GROUP" ? (groupManager ? "settings" : "people") : "settings";
 
@@ -689,12 +691,13 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
           {showCaptureLaunch && <button className="tw-capture-launch" onClick={() => setCaptureOpen(true)}><span><Sparkles size={20} /></span><div><b>Capture in plain language</b><small>“Remind me at 1.30pm”, a note, or an idea</small></div><kbd>N</kbd><ArrowRight size={18} /></button>}
 
           {activeView === "today" && (data.workspace.kind === "GROUP"
-            ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onManageTask={setCollaborationTask} />
+            ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} />
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
           {activeView === "tasks" && (data.workspace.kind === "GROUP" && data.collaboration
-            ? <GroupTasksView tasks={data.tasks} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />
+            ? <GroupTasksView tasks={data.tasks} meetings={(data.scheduling?.polls ?? []).filter((poll) => poll.status === "FINALIZED")} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onOpenSchedule={() => navigate("schedule")} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />
             : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onCalendar={updateTaskCalendar} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
           {activeView === "people" && <GroupPeople data={data} onOpenTasks={openGroupTasks} />}
+          {activeView === "schedule" && data.workspace.kind === "GROUP" && <GroupSchedulingView polls={data.scheduling?.polls ?? []} timezone={data.user.timezone} generatedAt={data.generatedAt} manager={groupManager} isDemo={isDemo} initialPoll={initialPoll} openCreate={openScheduleCreate} onChanged={() => refreshSnapshot(true)} announce={announce} />}
           {activeView === "progress" && <GroupProgress data={data} onManageTask={setCollaborationTask} />}
           {activeView === "activity" && <GroupActivityView data={data} />}
           {activeView === "notes" && <PhaseTwoNotesView notes={data.notes} timezone={data.user.timezone} onEdit={(note) => setEditor({ kind: "note", item: note })} onPin={(note) => void toggleCollectionPin("note", note)} onDelete={(note) => removeEntity("note", note)} onBatchDelete={removeNotes} pagination={pagination.notes} onLoadMore={() => loadMore("notes")} />}
@@ -716,7 +719,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
         <button className={activeView === "tasks" ? "active" : ""} onClick={() => navigate("tasks")}><ListChecks size={20} /><span>{data.workspace.kind === "GROUP" ? "Work" : "Tasks"}</span></button>
         <button className="capture" onClick={() => setCaptureOpen(true)} aria-label="Capture something"><Plus size={25} /></button>
         {data.workspace.kind === "GROUP"
-          ? <button className={activeView === "people" ? "active" : ""} onClick={() => navigate("people")}><UsersRound size={20} /><span>People</span></button>
+          ? <button className={activeView === "schedule" ? "active" : ""} onClick={() => navigate("schedule")}><CalendarDays size={20} /><span>Find time</span></button>
           : <button className={["library", "notes", "ideas", "images"].includes(activeView) ? "active" : ""} onClick={() => navigate("library")}><BookOpen size={20} /><span>Library</span></button>}
         <button className={moreOpen ? "active" : ""} onClick={() => setMoreOpen(true)}><Menu size={20} /><span>More</span></button>
       </nav>
@@ -752,6 +755,7 @@ function PageHeading({ view, workspace, name, timezone, onAdd }: { view: Dashboa
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
     today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", workspace.kind === "GROUP" ? "Shared work, assignees, and reminders in one thread." : "Things to do, reminders when they matter."],
+    schedule: ["Find a time", "Agree on a time without leaving the group."],
     people: ["People", ""],
     progress: ["Progress", ""],
     activity: ["Activity", ""],
