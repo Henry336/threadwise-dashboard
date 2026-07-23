@@ -6,7 +6,7 @@ Threadwise uses one strand in two modes.
 
 The faceless threaded-path mark is the corporate symbol. A location-like loop becomes a knot and resolves as a check, expressing capture, connection, and completion without resembling a generic status dot.
 
-Use it for navigation, browser icons, product lockups, loading states, and formal material. It must remain flat and readable at favicon size.
+Use it for navigation, product lockups, loading states, and formal material. The approved dark Ari app icon is used for browser and Telegram avatars.
 
 ## Ari
 
@@ -17,6 +17,8 @@ Use Ari for:
 - onboarding and welcome moments;
 - calm empty states;
 - recoverable failures;
+- capture entry points and relevant settings guidance;
+- the empty Find a time experience, where Ari is literally arranging threads;
 - release or educational artwork.
 
 Do not use Ari beside every card, navigation item, save, or routine status.
@@ -31,12 +33,13 @@ Do not use Ari beside every card, navigation item, save, or routine status.
 
 ## Source assets
 
-- `public/brand/threadwise-mark.svg` — faceless product mark
-- `public/brand/ari-avatar-light.svg` — Ari on warm paper
-- `public/brand/ari-avatar-dark.svg` — Ari on deep navy
-- `public/brand/ari-full.svg` — transparent full illustration
-- `public/brand/ari-telegram.svg` — 512-unit Telegram source
-- `public/brand/ari-telegram-512.png` — Telegram-ready avatar
-- `src/app/icon.svg` — browser/app icon
+- `public/brand/ari-approved-sheet.png` — the approved source sheet and visual master
+- `public/brand/threadwise-mark-sheet.png` — exact faceless product-mark crop
+- `public/brand/ari-avatar-light-sheet.png` — exact light avatar crop
+- `public/brand/ari-avatar-dark-sheet.png` — exact dark app-icon crop
+- `public/brand/ari-full-sheet.png` — exact full Ari crop
+- `public/brand/ari-threading-sheet.png` — exact thread-arranging illustration crop
+- `public/brand/ari-telegram-512.png` — Telegram-ready dark avatar
+- `src/app/icon.png` — browser/app icon
 
-All production masters are deterministic SVG paths. The PNG is derived from the SVG source and should never become the master artwork.
+Production variants are deterministic crops from the approved sheet. Do not redraw, trace, or regenerate them: that would subtly change Ari's proportions and expression.

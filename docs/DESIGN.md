@@ -32,9 +32,9 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 ## Identity system
 
 - The faceless threaded-path mark represents Threadwise as a product. It belongs in navigation, favicons, and compact system chrome.
-- Ari is the same thread given a face and body. Ari appears only in onboarding, genuinely empty moments, and friendly recovery states.
-- Both marks use flat geometry, teal thread, warm paper, and deep navy. They avoid gradients, raster artifacts, and a permanently dark circular badge.
-- Dark surfaces use Ari's dark avatar; light surfaces use the light avatar or transparent full figure. The product mark uses teal plus the current text color so it adapts with the theme.
+- Ari is the same thread given a face and body. Ari appears in onboarding, empty moments, recovery states, capture entry points, and settings where the illustration provides useful orientation.
+- Every product and mascot variant comes directly from the approved Ari sheet. UI implementations must preserve that artwork instead of approximating it with new paths.
+- Light product chrome uses the approved faceless mark. Dark product chrome, browser icons, and Telegram avatars use the approved dark app icon.
 
 ## Interaction language
 

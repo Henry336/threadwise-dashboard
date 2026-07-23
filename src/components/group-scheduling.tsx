@@ -16,6 +16,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { Ari } from "@/components/ari";
 import type { AvailabilityPoll } from "@/lib/types";
 
 type Props = {
@@ -231,7 +232,7 @@ function CreatePollPanel({ timezone, anchorDate, busy, onClose, onCreate }: { ti
 }
 
 function ScheduleEmpty({ manager, onCreate }: { manager: boolean; onCreate: () => void }) {
-  return <div className="tw-schedule-empty"><span><CalendarDays size={28} /></span><h3>No availability polls yet.</h3><p>{manager ? "Create one when the group needs to agree on a time." : "A group admin can start the first poll."}</p>{manager && <button className="tw-primary" onClick={onCreate}><Plus size={16} /> New poll</button>}</div>;
+  return <div className="tw-schedule-empty"><Ari variant="threading" className="tw-schedule-ari" decorative /><h3>No availability polls yet.</h3><p>{manager ? "Create one when the group needs to agree on a time." : "A group admin can start the first poll."}</p>{manager && <button className="tw-primary" onClick={onCreate}><Plus size={16} /> New poll</button>}</div>;
 }
 
 function PollStatus({ status }: { status: AvailabilityPoll["status"] }) {

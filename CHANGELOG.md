@@ -2,6 +2,19 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.8.1 - Exact Ari Artwork and Reminder Controls
+
+### Friction addressed
+- Replaced the fixed due-nudge presets with a direct minute interval so a user can choose any whole-minute warning window, including `0` for due-time-only delivery.
+- Removed private assignee nudges from Personal settings because assignees are a group-workspace concept.
+- Corrected the dashboard's daily-cap input to accept the same range as the API instead of rejecting an existing value above 50.
+
+### Ari and identity
+- Replaced the hand-redrawn Ari approximations with deterministic crops from the approved character sheet, preserving the supplied geometry, gradients, proportions, and expressions exactly.
+- Used the approved faceless mark in light product chrome and the approved dark app icon on dark surfaces.
+- Made Ari a little more present in Quick Capture, Reminder settings, and the empty Find a time state while keeping ordinary records and actions free of mascot clutter.
+- Replaced the browser and Telegram-ready icons with the approved dark Ari artwork and retained the original source sheet in the brand directory for traceability.
+
 ## v0.8.0 - Find a time
 
 ### Group coordination
