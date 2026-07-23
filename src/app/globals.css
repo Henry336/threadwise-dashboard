@@ -804,6 +804,60 @@ kbd { font-family: var(--sans); }
   .tw-action-menu > span { padding: 8px 9px 10px; font-size: 10px; }.tw-action-menu button { min-height: 50px; padding-inline: 12px; border-radius: 12px; font-size: 14px; }
 }
 
+/* Ari's approved four-frame untangling artwork is used as one exact sprite. */
+.tw-route-loading {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--canvas);
+}
+.ari-untangle-loader {
+  width: min(220px, 68vw);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 680;
+  letter-spacing: -.01em;
+}
+.ari-untangle-loader.compact {
+  width: 118px;
+  gap: 8px;
+  font-size: 11px;
+}
+.ari-untangle-loader-frame {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  display: block;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 24px;
+  background: #fffaf1;
+  box-shadow: 0 16px 45px rgba(36, 30, 22, .07);
+}
+.ari-untangle-loader-frame img {
+  width: 400%;
+  height: 100%;
+  max-width: none;
+  display: block;
+  animation: ari-untangle-frames 2.8s steps(1, end) infinite;
+  will-change: transform;
+}
+@keyframes ari-untangle-frames {
+  0%, 22% { transform: translateX(0); }
+  25%, 47% { transform: translateX(-25%); }
+  50%, 72% { transform: translateX(-50%); }
+  75%, 100% { transform: translateX(-75%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ari-untangle-loader-frame img {
+    animation: none;
+    transform: translateX(-75%);
+  }
+}
+
 /* Find a time */
 .tw-overview-schedule { grid-column: span 6; }
 .tw-group-overview > .tw-group-activity-peek { grid-column: 1 / -1; }

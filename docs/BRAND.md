@@ -6,7 +6,7 @@ Threadwise uses one strand in two modes.
 
 The faceless threaded-path mark is the corporate symbol. A location-like loop becomes a knot and resolves as a check, expressing capture, connection, and completion without resembling a generic status dot.
 
-Use it for navigation, product lockups, loading states, and formal material. The approved dark Ari app icon is used for browser and Telegram avatars.
+Use it for navigation, product lockups, and formal material. The approved dark Ari app icon is used for browser and Telegram avatars.
 
 ## Ari
 
@@ -18,6 +18,7 @@ Use Ari for:
 - calm empty states;
 - recoverable failures;
 - capture entry points and relevant settings guidance;
+- meaningful waiting states, using the approved knot-to-finished-thread sequence;
 - the empty Find a time experience, where Ari is literally arranging threads;
 - release or educational artwork.
 
@@ -39,6 +40,7 @@ Do not use Ari beside every card, navigation item, save, or routine status.
 - `public/brand/ari-avatar-dark-sheet.png` — exact dark app-icon crop
 - `public/brand/ari-full-sheet.png` — exact full Ari crop
 - `public/brand/ari-threading-sheet.png` — exact thread-arranging illustration crop
+- `public/brand/ari-untangle-loading.png` — exact four-frame loading sequence; treat as a 4×1 sprite of 543×724 frames
 - `public/brand/ari-telegram-512.png` — Telegram-ready dark avatar
 - `src/app/icon.png` — browser/app icon
 

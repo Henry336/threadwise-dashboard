@@ -34,3 +34,20 @@ export function Ari({
     />
   );
 }
+
+export function AriUntangleLoader({
+  label = "Untangling your threads…",
+  compact = false,
+}: {
+  label?: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`ari-untangle-loader${compact ? " compact" : ""}`} role="status" aria-live="polite">
+      <span className="ari-untangle-loader-frame" aria-hidden="true">
+        <img src="/brand/ari-untangle-loading.png" alt="" />
+      </span>
+      <span>{label}</span>
+    </div>
+  );
+}

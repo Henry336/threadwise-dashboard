@@ -2,6 +2,21 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## v0.9.0 - Ari Untangles the Loading State
+
+### Friction addressed
+- Replaced generic route waiting with a loading moment that explains Threadwise's purpose visually: Ari turns a knot into one finished thread.
+- Used the user's approved artwork directly instead of redrawing, simplifying, or approximating it.
+
+### Exact animation
+- Added the original 2,172×724 source as four equal 543×724 frames and advances through them as a stepped sprite.
+- Added the loader to the dashboard route boundary with concise “Untangling your workspace…” copy.
+- Shows the completed fourth frame without motion when a visitor requests reduced animation.
+- Added asset-dimension and frame-position regression assertions so future optimization cannot silently crop, stretch, or replace the approved art.
+
+### Quality
+- Passed all 12 dashboard tests, lint, and the production build; a mobile Chromium visual check confirmed the approved 3:4 crop and later untangling frame without distortion.
+
 ## v0.8.1 - Exact Ari Artwork and Reminder Controls
 
 ### Friction addressed
