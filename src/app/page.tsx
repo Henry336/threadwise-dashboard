@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Check, Command, Layers3, LockKeyhole, Sparkles } from "lucide-react";
 import { TelegramMiniAppAuth } from "@/components/telegram-mini-app-auth";
 import { Ari } from "@/components/ari";
-import { ThreadwiseMark } from "@/components/threadwise-mark";
+import { TelegramGlyph, ThreadwiseMark } from "@/components/threadwise-mark";
 import { getSessionUser, isTelegramAuthConfigured } from "@/lib/auth";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ authError?: string }> }) {
@@ -16,7 +16,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
       <header className="landing-nav">
         <ThreadwiseMark />
         <div className="landing-nav-actions">
-            <span className="landing-status"><span className="landing-thread-cue" aria-hidden="true"><i /><i /></span> Works with Telegram</span>
+          <span className="landing-status"><TelegramGlyph /> Built for Telegram</span>
           <Link className="button button-quiet" href={session ? "/dashboard" : "/dashboard?demo=1"}>
             {session ? "Open dashboard" : "View the demo"}
           </Link>

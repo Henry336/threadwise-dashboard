@@ -2,14 +2,14 @@
 /* Authenticated image responses must stay on the browser's same-origin cookie path. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Archive, ArrowRight, Bell, BookOpen, CalendarDays, Check, CheckCircle2, ChevronDown,
   ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Cloud, Download, ExternalLink,
   FileText, Filter, Image as ImageIcon, Inbox, Lightbulb,
   ListChecks, LoaderCircle, LogOut, Menu, Moon, MoreHorizontal, Pencil,
   Pin, Plus, RefreshCw, Search, Settings, ShieldCheck, Sparkles, Sun, Trash2, Unplug,
-  Wifi, WifiOff, X, Zap,
+  UserRound, Wifi, WifiOff, X, Zap,
   Activity, ClipboardList, UsersRound,
 } from "lucide-react";
 import { ThreadwiseMark } from "./threadwise-mark";
@@ -647,8 +647,6 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
   const workspaceNav = navItems.filter((item) => item.id !== "search" && item.id !== "settings");
   const manageNav = navItems.filter((item) => item.id === "search" || item.id === "settings");
   const groupOwnHeading = data.workspace.kind === "GROUP" && (["today", "schedule", "people", "progress", "activity", "library"] as DashboardView[]).includes(activeView);
-  const showCaptureLaunch = !(["search", "settings", "schedule", "people", "progress", "activity"] as DashboardView[]).includes(activeView)
-    && !(data.workspace.kind === "GROUP" && (["today", "tasks", "library"] as DashboardView[]).includes(activeView));
   const profileView: DashboardView = data.workspace.kind === "GROUP" ? (groupManager ? "settings" : "people") : "settings";
 
   return (
@@ -664,9 +662,9 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
           {manageNav.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span></button>)}
         </nav>
         <div className="tw-sidebar-foot">
-          <button className="tw-telegram-state" data-state={syncState} onClick={() => void refreshSnapshot(true)} disabled={isDemo}>
+          <button className="tw-telegram-state" data-state={syncState} onClick={() => void refreshSnapshot(true)} disabled={isDemo} aria-live="polite">
             {syncState === "live" ? <Wifi size={16} /> : syncState === "offline" ? <WifiOff size={16} /> : <RefreshCw className="spin" size={16} />}
-            <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Telegram in sync" : syncState === "offline" ? "Sync offline" : "Reconnecting"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Updated ${formatRelativeSync(lastSyncedAt)}` : "Your saved view remains available"}</small></span>
+            <span><b>{isDemo ? "Demo workspace" : syncState === "live" ? "Synced with Telegram" : syncState === "offline" ? "Telegram sync is offline" : "Reconnecting to Telegram"}</b><small>{isDemo ? "Changes stay in this browser" : syncState === "live" ? `Last checked ${formatRelativeSync(lastSyncedAt)} · Refresh` : syncState === "offline" ? "Saved data is still available · Retry" : "Your saved data remains available"}</small></span>
           </button>
           <button onClick={() => navigate(profileView)} className="tw-profile"><span>{data.workspace.name[0]}</span><div><b>{data.workspace.name}</b><small>{data.workspace.kind === "GROUP" ? `${data.workspace.role.toLowerCase()} · shared` : `@${data.user.username ?? "threadwise"}`}</small></div><ChevronRight size={16} /></button>
         </div>
@@ -688,8 +686,6 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
 
         <div className="tw-content" key={activeView}>
           {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
-          {showCaptureLaunch && <button className="tw-capture-launch" onClick={() => setCaptureOpen(true)}><span><Sparkles size={20} /></span><div><b>Capture in plain language</b><small>“Remind me at 1.30pm”, a note, or an idea</small></div><kbd>N</kbd><ArrowRight size={18} /></button>}
-
           {activeView === "today" && (data.workspace.kind === "GROUP"
             ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} />
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
@@ -737,17 +733,120 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
 
 function WorkspaceSwitcher({ current, workspaces, disabled }: { current: DashboardWorkspace; workspaces: DashboardWorkspace[]; disabled?: boolean }) {
   const choices = workspaces.some((workspace) => workspace.id === current.id) ? workspaces : [current, ...workspaces];
-  return <label className="tw-workspace-switcher">
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(Math.max(0, choices.findIndex((workspace) => workspace.id === current.id)));
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const typeahead = useRef<{ value: string; timeout?: number }>({ value: "" });
+  const listboxId = useId();
+
+  const close = useCallback((returnFocus = false) => {
+    setOpen(false);
+    if (returnFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
+  }, []);
+
+  const selectWorkspace = useCallback((workspace: DashboardWorkspace) => {
+    close();
+    if (workspace.id === current.id) return;
+    window.location.assign(`/api/workspace/select?workspace=${encodeURIComponent(workspace.id)}&next=/dashboard`);
+  }, [close, current.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [close, open]);
+
+  useEffect(() => {
+    if (open) window.requestAnimationFrame(() => optionRefs.current[activeIndex]?.focus());
+  }, [activeIndex, open]);
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (!open && ["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+      event.preventDefault();
+      setActiveIndex(Math.max(0, choices.findIndex((workspace) => workspace.id === current.id)));
+      setOpen(true);
+      return;
+    }
+    if (!open) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close(true);
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const next = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? choices.length - 1
+          : (activeIndex + (event.key === "ArrowDown" ? 1 : -1) + choices.length) % choices.length;
+      setActiveIndex(next);
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectWorkspace(choices[activeIndex]!);
+      return;
+    }
+    if (event.key.length === 1 && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      window.clearTimeout(typeahead.current.timeout);
+      typeahead.current.value = `${typeahead.current.value}${event.key}`.toLowerCase();
+      const match = choices.findIndex((workspace) => `${workspace.kind} ${workspace.name}`.toLowerCase().startsWith(typeahead.current.value));
+      if (match >= 0) setActiveIndex(match);
+      typeahead.current.timeout = window.setTimeout(() => { typeahead.current.value = ""; }, 500);
+    }
+  };
+
+  return <div className="tw-workspace-switcher" ref={rootRef}>
     <span>{current.kind === "GROUP" ? "Shared group" : "Your workspace"}</span>
-    <select
-      value={current.id}
+    <button
+      ref={triggerRef}
+      type="button"
+      className="tw-workspace-trigger"
+      aria-label={`Switch workspace. Current workspace: ${current.name}`}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls={open ? listboxId : undefined}
       disabled={disabled}
-      aria-label="Switch Threadwise workspace"
-      onChange={(event) => window.location.assign(`/api/workspace/select?workspace=${encodeURIComponent(event.target.value)}&next=/dashboard`)}
+      onClick={() => setOpen((value) => !value)}
+      onKeyDown={onKeyDown}
     >
-      {choices.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.kind === "GROUP" ? "Group · " : "Personal · "}{workspace.name}</option>)}
-    </select>
-  </label>;
+      <span className="tw-workspace-trigger-icon" aria-hidden="true">{current.kind === "GROUP" ? <UsersRound size={16} /> : <UserRound size={16} />}</span>
+      <span><b>{current.name}</b><small>{current.kind === "GROUP" ? "Group workspace" : "Personal workspace"}</small></span>
+      <ChevronDown size={16} aria-hidden="true" />
+    </button>
+    {open && <>
+      <button className="tw-workspace-scrim" type="button" aria-label="Close workspace menu" onClick={() => close(true)} />
+      <div className="tw-workspace-menu" id={listboxId} role="listbox" aria-label="Threadwise workspaces" onKeyDown={onKeyDown}>
+        <header><div><b>Switch workspace</b><small>Choose where you want to work.</small></div><button type="button" onClick={() => close(true)} aria-label="Close workspace menu"><X size={17} /></button></header>
+        <div>
+          {choices.map((workspace, index) => {
+            const selected = workspace.id === current.id;
+            return <button
+              key={workspace.id}
+              ref={(element) => { optionRefs.current[index] = element; }}
+              type="button"
+              role="option"
+              aria-selected={selected}
+              className={activeIndex === index ? "active" : ""}
+              onPointerMove={() => setActiveIndex(index)}
+              onClick={() => selectWorkspace(workspace)}
+            >
+              <span aria-hidden="true">{workspace.kind === "GROUP" ? <UsersRound size={17} /> : <UserRound size={17} />}</span>
+              <span><b>{workspace.name}</b><small>{workspace.kind === "GROUP" ? "Group" : "Personal"}</small></span>
+              {selected && <Check size={17} aria-label="Current workspace" />}
+            </button>;
+          })}
+        </div>
+      </div>
+    </>}
+  </div>;
 }
 
 function PageHeading({ view, workspace, name, timezone, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; onAdd: () => void }) {
@@ -774,15 +873,24 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
   const recent = [...data.notes.map((item) => ({ ...item, kind: "note" as const })), ...data.ideas.map((item) => ({ ...item, kind: "idea" as const }))].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 4);
   const month = calendarKey(new Date(), data.user.timezone).slice(0, 7);
   const thisMonth = open.filter((task) => task.dueAt && calendarKey(task.dueAt, data.user.timezone).startsWith(month)).length;
+  const normalizeCopy = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+  const focusDescription = focusTask?.description && !(
+    normalizeCopy(focusTask.description) === normalizeCopy(focusTask.title)
+    || normalizeCopy(focusTask.description).startsWith(normalizeCopy(focusTask.title))
+    || normalizeCopy(focusTask.title).startsWith(normalizeCopy(focusTask.description))
+  ) ? focusTask.description : undefined;
   return <div className="tw-today-grid">
     <section className="tw-card tw-focus-card">
-      <div className="tw-card-head"><span><span className="tw-thread-cue" aria-hidden="true"><i /><i /></span> One thing at a time</span><button onClick={() => onNavigate("tasks")}>Open tasks <ArrowRight size={15} /></button></div>
-      {focusTask ? <div className="tw-focus-body"><div><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><h2>{focusTask.title}</h2>{focusTask.description && <p>{focusTask.description}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={15} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={15} />Reminder active</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={18} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={16} /> Edit</button></div></div> : <Empty icon={CheckCircle2} mascot title="You are all clear." copy="Nothing needs your attention right now." />}
-      <span className="tw-orbit" aria-hidden="true" />
+      <div className="tw-card-head"><span>Now</span><button onClick={() => onNavigate("tasks")}>All tasks <ArrowRight size={15} /></button></div>
+      {focusTask ? <div className="tw-focus-body"><div><div className="tw-focus-kicker"><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><small>{focusTask.publicId}</small></div><h2>{focusTask.title}</h2>{focusDescription && <p>{focusDescription}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={15} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={15} />Reminder active</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={18} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={16} /> Details</button></div></div> : <Empty icon={CheckCircle2} mascot title="You are all clear." copy="Nothing needs your attention right now." />}
     </section>
-    <aside className="tw-day-pulse"><div><span>Overdue</span><b>{overdue}</b><small>{overdue ? "Needs a decision" : "Nothing trailing"}</small></div><div><span>Today</span><b>{today}</b><small>On today’s thread</small></div><div><span>This month</span><b>{thisMonth}</b><small>Dated ahead</small></div></aside>
+    <nav className="tw-day-pulse" aria-label="Task overview">
+      <button onClick={() => onNavigate("tasks")} data-state={overdue ? "attention" : "clear"}><span><b>{overdue}</b><strong>Overdue</strong></span><small>{overdue ? "Review now" : "All clear"}</small><ArrowRight size={15} /></button>
+      <button onClick={() => onNavigate("tasks")}><span><b>{today}</b><strong>Today</strong></span><small>{today === 1 ? "One task due" : `${today} tasks due`}</small><ArrowRight size={15} /></button>
+      <button onClick={() => onNavigate("tasks")}><span><b>{thisMonth}</b><strong>This month</strong></span><small>Open tasks ahead</small><ArrowRight size={15} /></button>
+    </nav>
     <Threadline groups={groups} timezone={data.user.timezone} onToggle={onToggle} onEdit={onEdit} onOpenTasks={() => onNavigate("tasks")} />
-    <section className="tw-card tw-recent-cards"><div className="tw-section-head"><div><span>Recently captured</span><h3>Still warm</h3></div><button onClick={() => onNavigate("library")}>Open library <ArrowRight size={16} /></button></div><div>{recent.map((item, index) => <button key={item.id} style={{ "--recent-index": index } as React.CSSProperties} onClick={() => onNavigate(item.kind === "note" ? "notes" : "ideas")}><span className={item.kind}>{item.kind === "note" ? <FileText size={17} /> : <Lightbulb size={17} />}</span><small>{item.kind}</small><b>{item.title}</b><p>{item.kind === "note" ? item.summary : item.concept}</p><ArrowRight size={16} /></button>)}</div></section>
+    <section className="tw-card tw-recent-cards"><div className="tw-section-head"><div><span>Recently captured</span><h3>Notes and ideas</h3></div><button onClick={() => onNavigate("library")}>Open library <ArrowRight size={16} /></button></div><div>{recent.map((item, index) => <button key={item.id} style={{ "--recent-index": index } as React.CSSProperties} onClick={() => onNavigate(item.kind === "note" ? "notes" : "ideas")}><span className={item.kind}>{item.kind === "note" ? <FileText size={17} /> : <Lightbulb size={17} />}</span><div><small>{item.kind}</small><b>{item.title}</b><p>{item.kind === "note" ? item.summary : item.concept}</p></div><ArrowRight size={16} /></button>)}</div></section>
     <section className="tw-card tw-gallery-peek"><div className="tw-section-head"><div><span>Saved images</span><h3>Recent frames</h3></div><button onClick={() => onNavigate("images")}><ArrowRight size={17} /></button></div><div>{data.images.slice(0, 4).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={isDemo ? `/demo/${DEMO_IMAGES[index % DEMO_IMAGES.length]}` : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`} alt={image.caption ?? image.fileName ?? "Saved image"} /></button>)}{!data.images.length && <Empty icon={ImageIcon} title="No saved images yet." copy="Send an image to Threadwise in Telegram." />}</div></section>
   </div>;
 }
@@ -794,12 +902,12 @@ function threadlineBuckets(tasks: DashboardTask[], timezone: string): Threadline
   const month = todayKey.slice(0, 7);
   const todayNumber = Date.UTC(...todayKey.split("-").map(Number).map((value, index) => index === 1 ? value - 1 : value) as [number, number, number]);
   const groups: ThreadlineGroup[] = [
-    { id: "overdue", label: "Overdue", description: "Decide, reschedule, or clear", tasks: [] },
-    { id: "today", label: "Today", description: "The active thread", tasks: [] },
-    { id: "week", label: "Next 7 days", description: "Coming into view", tasks: [] },
-    { id: "month", label: "Later this month", description: "Planned, not urgent", tasks: [] },
+    { id: "overdue", label: "Overdue", description: "Needs a decision", tasks: [] },
+    { id: "today", label: "Today", description: "Due today", tasks: [] },
+    { id: "week", label: "Next 7 days", description: "Due this week", tasks: [] },
+    { id: "month", label: "Later this month", description: "Planned ahead", tasks: [] },
     { id: "later", label: "Later", description: "Beyond this month", tasks: [] },
-    { id: "someday", label: "Someday", description: "No date yet", tasks: [] },
+    { id: "someday", label: "Someday", description: "No due date", tasks: [] },
   ];
   for (const task of tasks) {
     if (!task.dueAt) { groups[5]!.tasks.push(task); continue; }
@@ -818,7 +926,7 @@ function threadlineBuckets(tasks: DashboardTask[], timezone: string): Threadline
 
 function Threadline({ groups, timezone, onToggle, onEdit, onOpenTasks }: { groups: ThreadlineGroup[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onOpenTasks: () => void }) {
   const visible = groups.filter((group) => group.tasks.length);
-  return <section className="tw-card tw-threadline"><div className="tw-section-head"><div><span>Your threadline</span><h3>From now to someday</h3><p>Tasks grouped by when they need your attention.</p></div><button onClick={onOpenTasks}>See every task <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task with or without a due date; it will land in the right place." />}</section>;
+  return <section className="tw-threadline"><div className="tw-section-head"><div><span>Plan</span><h3>Threadline</h3><p>Open tasks, arranged by when they need your attention.</p></div><button onClick={onOpenTasks}>All tasks <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task and it will land in the right place." />}</section>;
 }
 
 function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onCalendar, onArchive, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onCalendar: (task: DashboardTask, action: "sync" | "remove") => Promise<void>; onArchive: (task: DashboardTask) => Promise<boolean>; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {

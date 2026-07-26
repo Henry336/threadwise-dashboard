@@ -2,6 +2,26 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## Unreleased - Impeccable Dashboard Reconstruction
+
+### Friction discovered
+- The product mark changed between light and dark mode, weakening recognition, while the raster light mark looked soft and slightly off-centre at navigation size.
+- The landing-page “Works with Telegram” ornament did not read as Telegram or as a meaningful status.
+- The native workspace select inherited browser colours, became unreadable in dark mode, and offered none of the context or interaction quality of the surrounding interface.
+- Today repeated the same capture action, rendered long operational task titles as oversized editorial display text, and spent a large part of the viewport on generic statistic cards.
+- Threadline nested cards inside a card, and decorative gradients and orbits added polish without explaining the user's work.
+
+### Design decisions
+- Standardized product chrome on one optically centred inline vector in both themes; Ari remains the contextual mascot and app/avatar artwork.
+- Replaced the landing ornament with a recognizable Telegram glyph and direct “Built for Telegram” copy.
+- Rebuilt the workspace picker as an accessible, keyboard-navigable listbox with workspace type, selection state, dark-mode parity, and a mobile bottom-sheet presentation.
+- Reduced Today to one capture command, one readable focus task, one compact actionable day pulse, and one structural Threadline.
+- Reserved serif typography for greetings and collection-level moments; task titles and operational UI now use a readable sans-serif scale.
+- Removed decorative background effects and nested card treatment where hierarchy, dividers, and spacing communicate structure more clearly.
+
+### Quality target
+- The pass is evaluated against the Impeccable craft floor: identity consistency, hierarchy, responsive behavior, accessibility, meaningful interaction, theme parity, and the absence of template-like visual filler.
+
 ## v0.9.0 - Ari Untangles the Loading State
 
 ### Friction addressed

@@ -9,7 +9,7 @@ Threadwise is used to get thoughts out of the way. Its dashboard should return t
 3. **Recently captured** — notes and ideas that are still cognitively warm.
 4. **Recall context** — recently captured notes, ideas, and searchable images.
 
-The My Day layout is intentionally asymmetric. Cards earn size from relevance and content rather than being forced into equal statistic tiles.
+The My Day layout is intentionally asymmetric. Components earn size from relevance and content rather than being forced into equal statistic tiles.
 
 ## Visual language
 
@@ -17,7 +17,8 @@ The My Day layout is intentionally asymmetric. Cards earn size from relevance an
 - Editorial serif for personal, reflective moments; utilitarian sans-serif for action
 - One user-selected accent, with coral and green reserved for semantic warning/success
 - Rounded rectangles rather than glass panels; no shaders, auroras, custom cursors, or decorative analytics
-- A small animated-thread motif that explains chronology and connection
+- Thread geometry only when it communicates chronology, connection, or progress
+- One clear capture entry point per viewport; repeated controls do not become more discoverable by being duplicated
 
 ## Product hierarchy
 
@@ -31,10 +32,20 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 
 ## Identity system
 
-- The faceless threaded-path mark represents Threadwise as a product. It belongs in navigation, favicons, and compact system chrome.
+- The faceless threaded-path mark represents Threadwise as a product. It is one optically centered vector with identical geometry in light and dark themes; only its theme token changes.
 - Ari is the same thread given a face and body. Ari appears in onboarding, empty moments, recovery states, capture entry points, and settings where the illustration provides useful orientation.
-- Every product and mascot variant comes directly from the approved Ari sheet. UI implementations must preserve that artwork instead of approximating it with new paths.
-- Light product chrome uses the approved faceless mark. Dark product chrome, browser icons, and Telegram avatars use the approved dark app icon.
+- Mascot artwork comes directly from the approved Ari sheet. UI implementations preserve the supplied artwork instead of approximating Ari with new paths.
+- Browser icons and Telegram avatars may use the approved dark Ari app icon. Product chrome always uses the faceless vector mark in both themes.
+
+## Anti-slop rules
+
+- Editorial serif is reserved for greetings, collection titles, and genuinely reflective moments. Tasks, controls, counts, metadata, and operational status use the sans-serif system.
+- A card must group a meaningful object or action. Do not wrap every label, count, or empty state in another rounded container.
+- Avoid generic dashboard filler: decorative orbits, disconnected gradient shapes, equal-height statistic towers, invented analytics, and slogans where a direct label is clearer.
+- Asymmetry must follow information priority, not decoration. Today gives the active task the most space, then a compact actionable day pulse, then the chronological Threadline.
+- Empty space is allowed when it improves focus. Empty cards and unexplained blank grid spans are not.
+- Threadline is a working timeline, not a stack of cards. Dividers and time markers carry the structure.
+- Light and dark themes share geometry, typography, spacing, and hierarchy. A theme change must not swap the product identity.
 
 ## Interaction language
 
@@ -56,5 +67,5 @@ Availability grids preserve 44px cells and horizontal day scrolling on narrow sc
 
 - Desktop: persistent navigation and a four-column bento canvas
 - Tablet: collapsible navigation and two-to-three-column content
-- Mobile: compact header, single-column focus content, two-column metrics, and a five-destination bottom bar
+- Mobile: compact header, single-column focus content, a compact three-part day pulse, and a five-destination bottom bar
 - Minimum touch targets are 44px for primary actions; core actions never require hover

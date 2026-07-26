@@ -6,7 +6,9 @@ Threadwise uses one strand in two modes.
 
 The faceless threaded-path mark is the corporate symbol. A location-like loop becomes a knot and resolves as a check, expressing capture, connection, and completion without resembling a generic status dot.
 
-Use it for navigation, product lockups, and formal material. The approved dark Ari app icon is used for browser and Telegram avatars.
+Use it for navigation, product lockups, and formal material. The production mark is the optically centered inline vector in `src/components/threadwise-mark.tsx`. Its geometry is identical in light and dark themes; `currentColor` supplies the theme-appropriate teal.
+
+The approved dark Ari app icon is reserved for browser and Telegram avatars. It does not replace the corporate mark inside dark product chrome.
 
 ## Ari
 
@@ -34,8 +36,8 @@ Do not use Ari beside every card, navigation item, save, or routine status.
 
 ## Source assets
 
-- `public/brand/ari-approved-sheet.png` — the approved source sheet and visual master
-- `public/brand/threadwise-mark-sheet.png` — exact faceless product-mark crop
+- `src/components/threadwise-mark.tsx` — production corporate mark and lockup
+- `public/brand/ari-approved-sheet.png` — the approved Ari source sheet and visual master
 - `public/brand/ari-avatar-light-sheet.png` — exact light avatar crop
 - `public/brand/ari-avatar-dark-sheet.png` — exact dark app-icon crop
 - `public/brand/ari-full-sheet.png` — exact full Ari crop
@@ -44,4 +46,4 @@ Do not use Ari beside every card, navigation item, save, or routine status.
 - `public/brand/ari-telegram-512.png` — Telegram-ready dark avatar
 - `src/app/icon.png` — browser/app icon
 
-Production variants are deterministic crops from the approved sheet. Do not redraw, trace, or regenerate them: that would subtly change Ari's proportions and expression.
+Ari variants are deterministic crops from the approved sheet. Do not redraw, trace, or regenerate Ari: that would subtly change the mascot's proportions and expression. The faceless product mark is deliberately separate, geometric artwork designed to remain crisp at 16–32px.
