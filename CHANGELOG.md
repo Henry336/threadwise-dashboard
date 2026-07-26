@@ -10,6 +10,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - The native workspace select inherited browser colours, became unreadable in dark mode, and offered none of the context or interaction quality of the surrounding interface.
 - Today repeated the same capture action, rendered long operational task titles as oversized editorial display text, and spent a large part of the viewport on generic statistic cards.
 - Threadline nested cards inside a card, and decorative gradients and orbits added polish without explaining the user's work.
+- Group-mode QA found editorial typography still leaking into shared task cards and a native checkbox expanding into an unreadable white square in dark-mode group settings.
 
 ### Design decisions
 - Standardized product chrome on one optically centred inline vector in both themes; Ari remains the contextual mascot and app/avatar artwork.
@@ -18,6 +19,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Reduced Today to one capture command, one readable focus task, one compact actionable day pulse, and one structural Threadline.
 - Reserved serif typography for greetings and collection-level moments; task titles and operational UI now use a readable sans-serif scale.
 - Removed decorative background effects and nested card treatment where hierarchy, dividers, and spacing communicate structure more clearly.
+- Standardized personal and group task cards on the operational sans-serif scale and replaced the native nudges checkbox with a keyboard-focused, theme-safe switch.
 
 ### Quality target
 - The pass is evaluated against the Impeccable craft floor: identity consistency, hierarchy, responsive behavior, accessibility, meaningful interaction, theme parity, and the absence of template-like visual filler.

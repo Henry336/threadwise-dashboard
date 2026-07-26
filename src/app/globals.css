@@ -1147,3 +1147,65 @@ kbd { font-family: var(--sans); }
   .tw-today-grid > *,.tw-recent-cards > div:last-child > button,.tw-workspace-menu { animation: none !important; }
   .tw-workspace-trigger > svg,.tw-recent-cards button > svg { transition: none; }
 }
+
+/* Operational records stay legible; editorial serif is reserved for page-level moments. */
+.tw-task-copy h3,
+.tw-group-task-copy h3 {
+  font-family: var(--sans);
+  font-weight: 760;
+  line-height: 1.16;
+  letter-spacing: -.025em;
+}
+.tw-task-copy h3 { font-size: clamp(21px,1.7vw,26px); }
+.tw-group-task-copy h3 { font-size: clamp(20px,1.55vw,24px); }
+
+/* Theme-safe switch: the native checkbox became a white square in group dark mode. */
+.tw-switch input[type="checkbox"],
+.tw-group-settings .tw-switch input[type="checkbox"],
+.tw-settings-panel .tw-switch input[type="checkbox"] {
+  appearance: none;
+  width: 44px;
+  min-width: 44px;
+  height: 24px;
+  min-height: 24px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  cursor: pointer;
+  transition: background 160ms ease,border-color 160ms ease;
+}
+.tw-switch input[type="checkbox"]::after,
+.tw-group-settings .tw-switch input[type="checkbox"]::after,
+.tw-settings-panel .tw-switch input[type="checkbox"]::after {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--faint);
+  box-shadow: 0 1px 3px rgba(18,15,12,.18);
+  transition: transform 160ms ease,background 160ms ease;
+}
+.tw-switch input[type="checkbox"]:checked,
+.tw-group-settings .tw-switch input[type="checkbox"]:checked,
+.tw-settings-panel .tw-switch input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.tw-switch input[type="checkbox"]:checked::after,
+.tw-group-settings .tw-switch input[type="checkbox"]:checked::after,
+.tw-settings-panel .tw-switch input[type="checkbox"]:checked::after {
+  background: #fff;
+  transform: translateX(20px);
+}
+.tw-switch input[type="checkbox"]:focus-visible {
+  outline: 3px solid color-mix(in srgb,var(--accent) 28%,transparent);
+  outline-offset: 2px;
+}
+.tw-switch input[type="checkbox"]:disabled { cursor: not-allowed; opacity: .6; }
+
+@media (max-width: 640px) {
+  .tw-task-copy h3 { font-size: 22px; }
+  .tw-group-task-copy h3 { font-size: 21px; }
+}
