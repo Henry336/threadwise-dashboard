@@ -204,7 +204,7 @@ export function GroupTasksView({
       return <article key={task.id} className={task.status === "DONE" ? "done" : ""} style={{ "--group-index": index } as React.CSSProperties} onContextMenu={(event) => { event.preventDefault(); onManage(task); }}>
         <button className="tw-group-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={16} /></button>
         <button className="tw-group-task-copy" onClick={() => onEdit(task)}><span><em>{task.publicId}</em>{blocked ? <i data-state="blocked"><Unlink size={13} /> Blocked</i> : pending ? <i data-state="pending"><Clock3 size={13} /> Awaiting reply</i> : null}</span><h3>{task.title}</h3><p>{blocked?.statusReason || task.description || "No extra details yet."}</p><small>{task.dueAt ? new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(task.dueAt)) : "No due date"}</small></button>
-        <div className="tw-group-task-owners"><AssigneeStack assignees={assignees} limit={4} /><button onClick={() => onManage(task)}><MoreHorizontal size={18} /><span>Assignments</span></button></div>
+        <div className="tw-group-task-owners"><span className="tw-group-owner-stack"><AssigneeStack assignees={assignees} limit={4} />{task.teamOwnerLabel && <small>{task.teamOwnerLabel}</small>}</span><button onClick={() => onManage(task)}><MoreHorizontal size={18} /><span>Assignments</span></button></div>
         <div className="tw-group-task-actions"><button onClick={() => onEdit(task)}><Pencil size={14} /> Edit</button><button onClick={() => onManage(task)}><UsersRound size={14} /> Assignees</button></div>
       </article>;
     })}</div>

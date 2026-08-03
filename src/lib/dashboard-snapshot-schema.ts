@@ -50,6 +50,7 @@ const TaskSchema = z.object({
   recurrenceRule: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).nullish().transform((value) => value ?? undefined),
   recurring: z.boolean().optional(), pinned: z.boolean().optional(),
   reminderCount: z.number().int().min(0).max(100_000).optional(), assignee: optionalText(200),
+  teamOwnerLabel: optionalText(240),
   calendarEventId: optionalText(500), calendarEventUrl: z.string().url().optional(),
   calendarSyncedAt: isoDate.nullish().transform((value) => value ?? undefined),
   assignees: z.array(TaskAssigneeSchema).max(100).optional(),

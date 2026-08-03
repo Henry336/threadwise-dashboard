@@ -10,6 +10,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, assignee acknowledgements, handoffs, and a seven-day summary
+- A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
 - A date-grouped image gallery with OCR/caption search, selection, a keyboard-friendly lightbox, and note conversion

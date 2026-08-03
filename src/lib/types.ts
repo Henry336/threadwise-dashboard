@@ -47,9 +47,46 @@ export type DashboardTask = {
   calendarEventUrl?: string;
   calendarSyncedAt?: string;
   assignee?: string;
+  teamOwnerLabel?: string;
   assignees?: DashboardTaskAssignee[];
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type TaskImportAssignee = {
+  telegramId?: string;
+  username?: string;
+  displayName?: string;
+};
+
+export type TaskImportItem = {
+  id: string;
+  importId: string;
+  position: number;
+  title: string;
+  sourceText: string;
+  dueAt?: string | null;
+  assignees: TaskImportAssignee[];
+  teamOwnerLabel?: string | null;
+  initialStatus: "OPEN" | "DONE";
+  included: boolean;
+  warnings: string[];
+  status: "READY" | "IMPORTED" | "SKIPPED" | "FAILED";
+  errorMessage?: string | null;
+  taskId?: string | null;
+};
+
+export type TaskImportReview = {
+  id: string;
+  workspaceId: string;
+  requestedByTelegramId: string;
+  requestedByName: string;
+  status: "PENDING" | "IMPORTING" | "PARTIAL" | "IMPORTED" | "CANCELED" | "EXPIRED";
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+  workspace: { title: string; telegramChatId: string };
+  items: TaskImportItem[];
 };
 
 export type DashboardNote = {

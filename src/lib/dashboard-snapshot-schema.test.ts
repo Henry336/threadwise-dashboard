@@ -93,6 +93,7 @@ describe("dashboard snapshot contract", () => {
       ...snapshot("03:00", "06:00"),
       tasks: [{
         id: "task-1", publicId: "TASK-1", title: "Prepare launch notes", status: "OPEN",
+        teamOwnerLabel: "Internal communications",
         assignees: [{
           id: "assignee-1", telegramId: "123456789", displayName: "Henry",
           status: "BLOCKED", statusReason: "Waiting for figures",
@@ -117,6 +118,7 @@ describe("dashboard snapshot contract", () => {
     });
 
     expect(parsed.tasks[0]?.assignees?.[0]).toMatchObject({ status: "BLOCKED", statusReason: "Waiting for figures" });
+    expect(parsed.tasks[0]?.teamOwnerLabel).toBe("Internal communications");
     expect(parsed.collaboration?.summary.blocked).toBe(1);
   });
 

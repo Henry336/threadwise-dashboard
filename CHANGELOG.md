@@ -24,6 +24,19 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 ### Quality target
 - The pass is evaluated against the Impeccable craft floor: identity consistency, hierarchy, responsive behavior, accessibility, meaningful interaction, theme parity, and the absence of template-like visual filler.
 
+### Group TODO review
+- Added a focused review sheet for Telegram `TODO:` and `ACTION ITEMS:` imports without adding another permanent dashboard destination.
+- Made every parsed row editable before import: inclusion, title, known-member assignees, plain-language team owner, due time, and initial Open/Done state.
+- Kept controls role-aware. The original sender and currently verified group owners/admins may update or import; other group members see the same review read-only.
+- Added clear row warnings, partial-failure retry, idempotent completion state, keyboard focus containment, reduced-motion support, and a sticky mobile import action.
+- Refreshes Group Work immediately after import and displays retained team-owner labels beside ordinary assignees.
+- Hardened the review after a structured-flow audit: terminal imports are read-only, manual refresh is explicit, unmatched Telegram usernames can be removed, and warnings update after assignee/team/status corrections.
+- Increased inclusion, expansion, assignee, and unmatched-user controls to touch-safe sizes; added select focus visibility and a compact terminal footer for mobile.
+- Preserves the Tasks URL after a successful import instead of changing only the in-memory view.
+- Stabilized the review grid so permission, status, and error notices cannot move the scrollable task rows or sticky footer into the wrong track.
+- Limited completion and warning summaries to selected rows, removed repeated terminal status copy, and added a visible keyboard focus ring to inline task titles.
+- Passed dashboard lint, all 12 contract tests, and the production build after the coordinated API/proxy update.
+
 ## v0.9.0 - Ari Untangles the Loading State
 
 ### Friction addressed

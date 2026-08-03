@@ -24,6 +24,12 @@ The My Day layout is intentionally asymmetric. Components earn size from relevan
 
 **Find a time** is a focused Coordinate surface: one compact status card in chat, one full availability grid in the Mini App, and no attempt to become a general calendar.
 
+Group TODO import follows the same rule: one compact Telegram preview opens one task-shaped review sheet. It does not become a permanent navigation section. The sheet uses operational sans-serif type, explicit inclusion controls, row-level warnings, and one sticky import action so dense pasted lists remain understandable on mobile.
+
+The review distinguishes uncertain data from terminal state. Unmatched people are removable rather than hidden inside an error string; warnings clear when their cause is fixed; Importing, Imported, Canceled, and Expired reviews stop presenting editable fields. Refresh is user-initiated so a live update cannot overwrite a correction still being typed.
+
+The sheet keeps a fixed four-part layout—header, contextual status, scrollable rows, and footer—so optional permission or error notices cannot displace its primary work area. Summary counts describe included rows only, and terminal status is stated once before a single Close action.
+
 - **Capture** — tasks, notes, ideas, and searchable images
 - **Coordinate** — reminders, assignees, and shared work
 - **Recall** — search, pins, archives, and the dashboard
@@ -69,3 +75,4 @@ Availability grids preserve 44px cells and horizontal day scrolling on narrow sc
 - Tablet: collapsible navigation and two-to-three-column content
 - Mobile: compact header, single-column focus content, a compact three-part day pulse, and a five-destination bottom bar
 - Minimum touch targets are 44px for primary actions; core actions never require hover
+- Dense import rows retain 44px include, expand, assignee, and removal targets on mobile instead of shrinking controls to fit more rows

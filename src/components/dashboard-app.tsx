@@ -15,6 +15,7 @@ import {
 import { ThreadwiseMark } from "./threadwise-mark";
 import { Ari } from "./ari";
 import { GroupSchedulingView } from "./group-scheduling";
+import { TaskImportReviewSheet } from "./task-import-review";
 import { ActionMenu, useActionMenu } from "./action-menu";
 import type { ActionMenuAction, ActionMenuState } from "./action-menu";
 import {
@@ -152,7 +153,7 @@ function viewAllowed(value: DashboardView, workspace: DashboardWorkspace): boole
   return GROUP_NAV.some((item) => item.id === value) || ["notes", "ideas", "images"].includes(value);
 }
 function initialView(value: string | undefined, workspace: DashboardWorkspace): DashboardView {
-  const candidate = value === "standup" ? "progress" : value as DashboardView | undefined;
+  const candidate = value === "standup" ? "progress" : value === "work" ? "tasks" : value as DashboardView | undefined;
   return candidate && viewAllowed(candidate, workspace) ? candidate : "today";
 }
 function useModalFocus<T extends HTMLElement, U extends HTMLElement>(
@@ -212,7 +213,7 @@ class ClientApiError extends Error {
   }
 }
 
-export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, openScheduleCreate }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; openScheduleCreate?: boolean }) {
+export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, openScheduleCreate }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; openScheduleCreate?: boolean }) {
   const [data, setData] = useState(initialData);
   const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView, initialData.workspace));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
@@ -227,6 +228,7 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
   const [ideaBrief, setIdeaBrief] = useState<IdeaBriefState | null>(null);
   const [groupTaskScope, setGroupTaskScope] = useState<GroupTaskScope>("all");
   const [collaborationTask, setCollaborationTask] = useState<DashboardTask | null>(null);
+  const [taskImportId, setTaskImportId] = useState(initialTaskImport);
   const [syncState, setSyncState] = useState<"connecting" | "live" | "reconnecting" | "offline">(isDemo ? "live" : "connecting");
   const [lastSyncedAt, setLastSyncedAt] = useState(initialData.generatedAt);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -254,6 +256,12 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
     window.history.replaceState(null, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const closeTaskImport = useCallback(() => {
+    setTaskImportId(undefined);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("import");
+    window.history.replaceState(null, "", url);
+  }, []);
 
   const refreshSnapshot = useCallback(async (showError = false) => {
     if (isDemo || refreshInFlight.current) return;
@@ -726,6 +734,16 @@ export function DashboardApp({ initialData, workspaces, isDemo, initialView: req
       {moreOpen && <MobileMore activeView={activeView} items={navItems} onClose={() => setMoreOpen(false)} onNavigate={navigate} />}
       {ideaBrief && <PhaseTwoIdeaBriefDialog state={ideaBrief} onClose={() => setIdeaBrief(null)} onRefresh={() => void analyzeIdea(ideaBrief.idea, true)} />}
       {collaborationTask && data.collaboration && <TaskCollaborationSheet task={collaborationTask} collaboration={data.collaboration} manager={data.workspace.role !== "MEMBER"} busy={busy} onClose={() => setCollaborationTask(null)} onAction={(payload) => updateCollaboration(collaborationTask, payload)} />}
+      {taskImportId && data.workspace.kind === "GROUP" && data.collaboration && <TaskImportReviewSheet
+        importId={taskImportId}
+        timezone={data.user.timezone}
+        members={data.collaboration.members}
+        viewerTelegramId={data.collaboration.viewerTelegramId}
+        workspaceRole={data.workspace.role}
+        onClose={closeTaskImport}
+        onImported={async () => { await refreshSnapshot(true); navigate("tasks"); }}
+        announce={announce}
+      />}
       {toast && <div className="tw-toast" role="status"><CheckCircle2 size={16} />{toast}</div>}
     </div>
   );

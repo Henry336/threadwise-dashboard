@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "project": {
+    "name": "threadwise-dashboard",
+    "productType": "Telegram-native capture and coordination dashboard",
+    "stack": ["nextjs", "react", "tailwind-v4"]
+  },
+  "sources": {
+    "tokens": ["src/app/globals.css"],
+    "components": ["src/components"],
+    "assets": ["public/brand"],
+    "instructions": []
+  },
+  "design": {
+    "colorMode": "adaptive",
+    "colors": {
+      "--muted": { "value": "#bbb8b0", "source": "src/app/globals.css" },
+      "--accent": { "value": "#6f5bd3", "source": "src/app/globals.css" },
+      "--accent-soft": { "value": "color-mix(in srgb, var(--accent) 12%, transparent)", "source": "src/app/globals.css" }
+    },
+    "typography": {},
+    "spacing": {},
+    "radius": {
+      "--radius-lg": { "value": "24px", "source": "src/app/globals.css" },
+      "--radius-md": { "value": "17px", "source": "src/app/globals.css" },
+      "--radius-sm": { "value": "12px", "source": "src/app/globals.css" }
+    },
+    "shadows": { "--shadow": { "value": "0 18px 60px rgba(0, 0, 0, 0.24)", "source": "src/app/globals.css" } },
+    "motion": {},
+    "density": "comfortable"
+  },
+  "components": {
+    "installed": [],
+    "preferredPrimitives": ["existing Threadwise buttons, fields, sheets, cards, and status chips"],
+    "patterns": ["mobile-first review sheet", "editable task rows", "single primary action"]
+  },
+  "constraints": {
+    "must": [
+      "Reuse existing Threadwise tokens and interaction primitives",
+      "Keep all task-import controls usable at 360px width",
+      "Expose import warnings beside the row they affect"
+    ],
+    "avoid": [
+      "Introducing a second design system",
+      "Decorative gradients or generic AI dashboard cards",
+      "Hiding destructive or irreversible import state"
+    ]
+  },
+  "decisions": [
+    {
+      "date": "2026-08-03",
+      "decision": "Use one focused TODO review surface with editable rows, explicit inclusion controls, and a sticky Import action.",
+      "reason": "Batch parsing is useful only when uncertainty is visible and correctable before shared tasks are created; a single mobile-first surface avoids chat clutter and preserves Threadwise's existing visual language."
+    }
+  ],
+  "evidence": [
+    { "fact": "design.tokens", "source": "src/app/globals.css" },
+    { "fact": "project.stack:nextjs-react", "source": "package.json" },
+    { "fact": "project.assets", "source": "public/brand" }
+  ],
+  "generatedAt": "2026-08-03T04:25:00.000Z"
+}
