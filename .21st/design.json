@@ -51,6 +51,11 @@
       "date": "2026-08-03",
       "decision": "Use one focused TODO review surface with editable rows, explicit inclusion controls, and a sticky Import action.",
       "reason": "Batch parsing is useful only when uncertainty is visible and correctable before shared tasks are created; a single mobile-first surface avoids chat clutter and preserves Threadwise's existing visual language."
+    },
+    {
+      "date": "2026-08-03",
+      "decision": "Organize desktop TODO rows into title, metadata, and correction layers, and commit deadline edits only through an explicit Done action.",
+      "reason": "The original row mixed unrelated information and immediate API saves repeatedly dismissed the native date-time picker; staged editing preserves focus while one deliberate commit keeps shared state accurate."
     }
   ],
   "evidence": [

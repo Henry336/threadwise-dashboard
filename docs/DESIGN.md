@@ -30,6 +30,8 @@ The review distinguishes uncertain data from terminal state. Unmatched people ar
 
 The sheet keeps a fixed four-part layout—header, contextual status, scrollable rows, and footer—so optional permission or error notices cannot displace its primary work area. Summary counts describe included rows only, and terminal status is stated once before a single Close action.
 
+On desktop, each task reads in three deliberate layers: identity and editable title, operational metadata, then expanded correction fields. Deadline editing is transactional inside the row: the reviewer may finish navigating the native date and time controls before **Done** sends one update. The sheet uses the same opaque canvas/surface tokens in light and dark mode; the dimmed backdrop must never tint the working surface itself.
+
 - **Capture** — tasks, notes, ideas, and searchable images
 - **Coordinate** — reminders, assignees, and shared work
 - **Recall** — search, pins, archives, and the dashboard

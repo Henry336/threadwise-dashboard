@@ -25,6 +25,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - The pass is evaluated against the Impeccable craft floor: identity consistency, hierarchy, responsive behavior, accessibility, meaningful interaction, theme parity, and the absence of template-like visual filler.
 
 ### Group TODO review
+- Desktop testing exposed weak row hierarchy: task numbers, titles, assignment, deadlines, and expansion controls read as one loose line, while an immediate API save on every native date-time change repeatedly dismissed the picker. The sheet also referenced an undefined `--paper` token, making it translucent over its backdrop and undermining both light and dark themes.
 - Added a focused review sheet for Telegram `TODO:` and `ACTION ITEMS:` imports without adding another permanent dashboard destination.
 - Made every parsed row editable before import: inclusion, title, known-member assignees, plain-language team owner, due time, and initial Open/Done state.
 - Kept controls role-aware. The original sender and currently verified group owners/admins may update or import; other group members see the same review read-only.
@@ -35,6 +36,9 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Preserves the Tasks URL after a successful import instead of changing only the in-memory view.
 - Stabilized the review grid so permission, status, and error notices cannot move the scrollable task rows or sticky footer into the wrong track.
 - Limited completion and warning summaries to selected rows, removed repeated terminal status copy, and added a visible keyboard focus ring to inline task titles.
+- Rebuilt each review row around an explicit Task label, editable title, compact assignee/deadline/status metadata, and one clearly labelled details control; widened the desktop work surface while preserving the compact mobile accordion.
+- Made deadlines draft-first: date and time changes remain local until the reviewer presses **Done**, so native calendar and time controls are not interrupted by a server refresh. Clearing a deadline follows the same explicit commit step.
+- Restored an opaque adaptive sheet and footer with `--canvas`, corrected primary-action contrast in dark mode, added dark warning treatment, and retained token-driven geometry across both themes.
 - Passed dashboard lint, all 12 contract tests, and the production build after the coordinated API/proxy update.
 
 ## v0.9.0 - Ari Untangles the Loading State

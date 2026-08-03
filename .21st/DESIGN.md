@@ -21,3 +21,5 @@ Threadwise is a Telegram-native capture and coordination dashboard. The interfac
 ## Decision: TODO review
 
 Use one focused review surface with editable task rows, explicit include/exclude controls, and a sticky Import action. This keeps parser uncertainty visible and correctable before shared tasks are created, without adding chat clutter.
+
+On desktop, each row has three layers: task identity and editable title, operational metadata, then expanded correction fields. Deadline changes stay local until **Done** sends one update, preventing server refreshes from interrupting the native picker. The sheet is opaque and uses the same canvas/surface tokens in light and dark mode.

@@ -237,7 +237,16 @@ function ImportRow({
   const ownerLabel = ownerSummary(item);
   const dueLabel = item.dueAt ? new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(item.dueAt)) : "No due date";
   const localDue = useMemo(() => item.dueAt ? zonedInputDate(item.dueAt, timezone) : "", [item.dueAt, timezone]);
+  const [dueEdit, setDueEdit] = useState({ base: localDue, draft: localDue });
+  const dueDraft = dueEdit.base === localDue ? dueEdit.draft : localDue;
   const unmatched = item.assignees.filter((assignee) => !members.some((member) => sameAssignee(assignee, member)));
+
+  const saveDeadline = () => {
+    const dueAt = dueDraft ? zonedInputToIso(dueDraft, timezone) : null;
+    setDueEdit({ base: dueDraft, draft: dueDraft });
+    onLocal({ dueAt });
+    onSave({ dueAt });
+  };
 
   return <article className="tw-import-row" data-included={item.included} data-status={item.status}>
     <button
@@ -248,9 +257,16 @@ function ImportRow({
       onClick={() => { onLocal({ included: !item.included }); onSave({ included: !item.included }); }}
     >{item.included ? <Check size={15} /> : <Circle size={15} />}</button>
     <div className="tw-import-row-main">
-      <div className="tw-import-row-title"><span>{item.position}</span><input value={item.title} disabled={disabled || imported} onChange={(event) => onLocal({ title: event.target.value })} onBlur={() => onSave({ title: item.title })} aria-label={`Task ${item.position} title`} /></div>
+      <div className="tw-import-row-heading">
+        <label className="tw-import-row-title"><span>Task {String(item.position).padStart(2, "0")}</span><input value={item.title} disabled={disabled || imported} onChange={(event) => onLocal({ title: event.target.value })} onBlur={() => onSave({ title: item.title })} aria-label={`Task ${item.position} title`} /></label>
+        <button className="tw-import-row-expand" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-label={`${expanded ? "Hide" : "Review"} details for task ${item.position}`}>
+          <span>{expanded ? "Hide" : "Review"}</span><ChevronDown size={16} />
+        </button>
+      </div>
       <button className="tw-import-row-summary" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
-        <span>{ownerLabel || "Unassigned"}</span><i>·</i><span>{dueLabel}</span>{item.initialStatus === "DONE" && <><i>·</i><span>Done</span></>}<ChevronDown size={15} />
+        <span data-empty={!ownerLabel}><UsersRound size={13} />{ownerLabel || "Unassigned"}</span>
+        <span data-empty={!item.dueAt}><CalendarClock size={13} />{dueLabel}</span>
+        {item.initialStatus === "DONE" && <span data-status="done"><CheckCircle2 size={13} />Already done</span>}
       </button>
       {item.warnings.length > 0 && <div className="tw-import-warnings">{item.warnings.map((warning) => <span key={warning}><AlertTriangle size={12} /> {warning}</span>)}</div>}
       {item.errorMessage && <div className="tw-import-row-error"><AlertTriangle size={14} /> {item.errorMessage}</div>}
@@ -261,13 +277,17 @@ function ImportRow({
           return <button type="button" key={member.telegramId} className={active ? "active" : ""} disabled={disabled} onClick={() => onToggleMember(member)}>{active && <Check size={12} />}{member.displayName}</button>;
         })}</div></fieldset>
         {unmatched.length > 0 && <fieldset><legend><AlertTriangle size={14} /> Unmatched</legend><div className="tw-import-unmatched">{unmatched.map((assignee, index) => <button type="button" key={`${assignee.telegramId ?? assignee.username ?? assignee.displayName}-${index}`} disabled={disabled} onClick={() => onRemoveAssignee(assignee)} aria-label={`Remove ${assigneeLabel(assignee)}`}><span>{assigneeLabel(assignee)}</span><X size={13} /></button>)}</div></fieldset>}
-        <label><span>Team owner</span><input value={item.teamOwnerLabel ?? ""} disabled={disabled} placeholder="e.g. Internal comms" onChange={(event) => onLocal({ teamOwnerLabel: event.target.value })} onBlur={() => onSave({ teamOwnerLabel: item.teamOwnerLabel || null })} /></label>
-        <label><span><CalendarClock size={14} /> Due date · {timezone}</span><input type="datetime-local" value={localDue} disabled={disabled} onChange={(event) => {
-          const dueAt = event.target.value ? zonedInputToIso(event.target.value, timezone) : null;
-          onLocal({ dueAt });
-          onSave({ dueAt });
-        }} /></label>
-        <label><span>Status</span><select value={item.initialStatus} disabled={disabled} onChange={(event) => {
+        <label className="tw-import-field"><span>Team owner</span><input value={item.teamOwnerLabel ?? ""} disabled={disabled} placeholder="e.g. Internal comms" onChange={(event) => onLocal({ teamOwnerLabel: event.target.value })} onBlur={() => onSave({ teamOwnerLabel: item.teamOwnerLabel || null })} /></label>
+        <div className="tw-import-field tw-import-deadline">
+          <span><CalendarClock size={14} /> Deadline · {timezone}</span>
+          <div className="tw-import-deadline-control">
+            <input type="datetime-local" value={dueDraft} disabled={disabled} onChange={(event) => setDueEdit({ base: localDue, draft: event.target.value })} aria-label={`Deadline for task ${item.position}`} />
+            {dueDraft && <button type="button" className="tw-import-deadline-clear" disabled={disabled} onClick={() => setDueEdit({ base: localDue, draft: "" })}>Clear</button>}
+            <button type="button" className="tw-import-deadline-done" disabled={disabled || dueDraft === localDue} onClick={saveDeadline}><Check size={14} /> Done</button>
+          </div>
+          <small>Choose the complete date and time, then press Done.</small>
+        </div>
+        <label className="tw-import-field"><span>Status</span><select value={item.initialStatus} disabled={disabled} onChange={(event) => {
           const initialStatus = event.target.value as "OPEN" | "DONE";
           onLocal({ initialStatus });
           onSave({ initialStatus });
