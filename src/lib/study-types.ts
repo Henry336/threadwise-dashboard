@@ -1,0 +1,235 @@
+export type StudyTrafficLight = "GREEN" | "AMBER" | "RED" | "UNASSESSED";
+export type StudyItemStatus = "OPEN" | "IN_PROGRESS" | "PROCESSED" | "DONE" | "SKIPPED";
+export type StudyItemType = "LECTURE" | "TUTORIAL" | "LAB" | "ASSIGNMENT" | "PROJECT" | "REVISION" | "TIMED_PRACTICE" | "READING" | "ADMINISTRATIVE";
+export type StudyPriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+export type StudyResourceKind = "NOTE" | "IMAGE" | "LINK" | "FILE" | "QUESTION";
+
+export type StudyModule = {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  displayOrder: number;
+  color?: string | null;
+  workloadGroup?: string | null;
+  currentMastery: StudyTrafficLight;
+  masteryReason?: string | null;
+  canvasCourseId?: string | null;
+  canvasLastSeenAt?: string | null;
+  updatedAt: string;
+  summary?: {
+    status: StudyTrafficLight;
+    open: number;
+    overdue: number;
+    unprocessed: number;
+    plannedMinutes: number;
+    actualMinutes: number;
+    nearestDeadline?: string;
+    mistakesDue: number;
+    timedPracticeMissing: boolean;
+    consecutiveRed: boolean;
+  };
+};
+
+export type StudyItem = {
+  id: string;
+  publicId: string;
+  moduleId: string;
+  type: StudyItemType;
+  title: string;
+  notes?: string | null;
+  source: "MANUAL" | "CANVAS";
+  status: StudyItemStatus;
+  priority: StudyPriority;
+  dueAt?: string | null;
+  plannedMinutes?: number | null;
+  actualMinutes: number;
+  mastery: StudyTrafficLight;
+  masteryReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  week?: { number: number } | null;
+  module: { id: string; code: string; name: string; color?: string | null };
+  canvasAssignment?: {
+    id: string;
+    htmlUrl?: string | null;
+    status: "ACTIVE" | "SUBMITTED" | "MISSING";
+    submissionState?: string | null;
+    needsReview: boolean;
+    missingSince?: string | null;
+    lastSeenAt: string;
+  } | null;
+};
+
+export type StudyResource = {
+  id: string;
+  publicId: string;
+  moduleId: string;
+  kind: StudyResourceKind;
+  title: string;
+  body?: string | null;
+  url?: string | null;
+  tags: string[];
+  mediaKind?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  caption?: string | null;
+  ocrText?: string | null;
+  ocrConfidence?: number | null;
+  pinnedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  hasMoreBody?: boolean;
+  hasMoreOcr?: boolean;
+  module: { id: string; code: string; name: string; color?: string | null };
+};
+
+export type StudyMistake = {
+  id: string;
+  publicId: string;
+  moduleId: string;
+  itemId?: string | null;
+  source: string;
+  category: "CONCEPTUAL_MISUNDERSTANDING" | "WRONG_APPROACH" | "EXECUTION_CARELESS" | "TIME_MANAGEMENT";
+  cause: string;
+  prevention: string;
+  revisitAt?: string | null;
+  status: "OPEN" | "REATTEMPT_DUE" | "RESOLVED";
+  module: { id: string; code: string; name: string };
+  updatedAt: string;
+};
+
+export type StudySession = {
+  id: string;
+  moduleId: string;
+  itemId?: string | null;
+  startedAt: string;
+  endedAt?: string | null;
+  durationMinutes?: number | null;
+  method: string;
+  result?: string | null;
+  topicsMixed: string[];
+  attemptedScore?: number | null;
+  maximumScore?: number | null;
+  usedNotes?: boolean | null;
+  timed: boolean;
+  module: { code: string; name: string };
+  item?: { publicId: string; title: string } | null;
+};
+
+export type StudySnapshot = {
+  generatedAt: string;
+  workspace: {
+    id: string;
+    semesterName: string;
+    semesterStartDate?: string | null;
+    timezone: string;
+    activeModuleId?: string | null;
+    weeklyReviewDay: number;
+    weeklyReviewTime: string;
+    weeklyPreviewDay: number;
+    weeklyPreviewTime: string;
+    quietHoursStart?: string | null;
+    quietHoursEnd?: string | null;
+    maxRemindersPerDay: number;
+    timedPracticeStartWeek: number;
+    studyBlockRemindersEnabled: boolean;
+    canvasSyncEnabled: boolean;
+    activeOriginId?: string | null;
+    activeOriginUntil?: string | null;
+  };
+  weekNumber: number;
+  week?: { id: string; number: number; reviewCompleted: boolean; topPriorities: string[] };
+  overview: {
+    overallStatus: StudyTrafficLight;
+    amberWarning: boolean;
+    redWarning: boolean;
+    topPriorities: string[];
+    nextBlock?: { label: string; moduleCode?: string; startsAt: string };
+    openSession?: {
+      id: string;
+      moduleCode: string;
+      method: string;
+      startedAt: string;
+      item?: { id: string; publicId: string; title: string };
+    };
+    attention: {
+      generatedAt: string;
+      items: Array<{
+        id: string;
+        publicId: string;
+        title: string;
+        moduleCode: string;
+        score: number;
+        reasons: string[];
+        recommendedAction: string;
+        dueAt?: string;
+        plannedMinutes?: number;
+        priority: StudyPriority;
+      }>;
+      overdue: number;
+      dueToday: number;
+      dueThisWeek: number;
+      undated: number;
+      missingCanvas: number;
+      redModules: string[];
+    };
+  };
+  modules: StudyModule[];
+  items: StudyItem[];
+  resources: StudyResource[];
+  mistakes: StudyMistake[];
+  sessions: StudySession[];
+  reviews: Array<{
+    id: string;
+    wins: string[];
+    unresolvedTopics: string[];
+    nextWeekPriorities: string[];
+    summary?: string | null;
+    completedAt: string;
+    week: { number: number; startDate: string; endDate: string; overallStatus: StudyTrafficLight };
+  }>;
+  scheduleBlocks: Array<{
+    id: string;
+    moduleId?: string | null;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    label: string;
+    blockType: string;
+    active: boolean;
+    module?: { id: string; code: string; name: string } | null;
+    defaultOrigin?: { id: string; name: string } | null;
+  }>;
+  canvas: {
+    configured: boolean;
+    state?: {
+      status: "NEVER" | "RUNNING" | "READY" | "ERROR";
+      canvasUserName?: string | null;
+      lastAttemptAt?: string | null;
+      lastSuccessfulAt?: string | null;
+      nextSyncAt: string;
+      lastError?: string | null;
+      consecutiveFailures: number;
+      updatedAt: string;
+    } | null;
+    missingAssignments: Array<{
+      id: string;
+      title: string;
+      missingSince?: string | null;
+      module: { code: string; name: string };
+      item: { publicId: string; title: string; status: StudyItemStatus };
+    }>;
+  };
+  origins: Array<{
+    id: string;
+    name: string;
+    providerVenueId?: string | null;
+    providerStopId?: string | null;
+    isDefault: boolean;
+    active: boolean;
+  }>;
+};
+
+export type StudyView = "study-overview" | "study-modules" | "study-work" | "study-library" | "study-review" | "study-search" | "study-focus" | "study-settings";

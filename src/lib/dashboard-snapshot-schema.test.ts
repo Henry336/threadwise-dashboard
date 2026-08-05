@@ -48,6 +48,20 @@ describe("dashboard snapshot contract", () => {
     expect(() => parseDashboardSnapshot(input)).toThrow();
   });
 
+  it("preserves the sealed Study workspace discriminator", () => {
+    const parsed = parseDashboardSnapshot({
+      ...snapshot("03:00", "06:00"),
+      workspace: {
+        id: "6cd8f630-05f4-48c0-b7fb-ffacbc4ff1a2",
+        kind: "GROUP",
+        name: "Study",
+        role: "OWNER",
+        mode: "STUDY",
+      },
+    });
+    expect(parsed.workspace?.mode).toBe("STUDY");
+  });
+
   it("preserves a task snooze revision used by the live task controls", () => {
     const parsed = parseDashboardSnapshot({
       ...snapshot("03:00", "06:00"),

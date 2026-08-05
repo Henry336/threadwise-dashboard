@@ -125,6 +125,7 @@ export const DashboardSnapshotSchema = z.object({
     name: text(240),
     role: z.enum(["OWNER", "ADMIN", "MEMBER"]),
     memberCount: z.number().int().min(0).max(100_000).optional(),
+    mode: z.literal("STUDY").optional(),
   }).optional(),
   user: z.object({
     telegramId: z.string().regex(/^(?:[1-9]\d{0,19}|chat:-\d{1,20})$/), firstName: text(120), fullName: text(240),

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./study-dashboard.css";
 
 :root {
   --canvas: #f3f0e9;

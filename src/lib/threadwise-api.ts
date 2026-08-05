@@ -128,6 +128,7 @@ export async function getDashboardWorkspaces(user: SessionUser | null): Promise<
         name: value.name.slice(0, 240),
         role: value.role as DashboardWorkspace["role"],
         ...(typeof value.memberCount === "number" ? { memberCount: value.memberCount } : {}),
+        ...(value.mode === "STUDY" ? { mode: "STUDY" as const } : {}),
       }];
     }).slice(0, 100);
   } catch {

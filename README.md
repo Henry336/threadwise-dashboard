@@ -10,6 +10,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, assignee acknowledgements, handoffs, and a seven-day summary
+- A sealed, module-first Study workspace with Overview, Modules, Work, Library, Review, Search, Deep Work, and Settings for the one configured owner and actively bound Study group
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
@@ -37,6 +38,7 @@ Open `http://localhost:3000`. The demo works without credentials. Real accounts 
 ## Verification
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```
@@ -52,6 +54,8 @@ Browser → Vercel Next.js BFF → private Render /api/v1 → Threadwise service
 ```
 
 The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group workspaces resolve through opaque workspace ids and require recorded membership plus a live Telegram membership check before any shared data is returned. Privileged group mutations re-check the user's current Telegram owner/admin role, while members retain control of their own assignment response.
+
+Study Mode adds a stricter boundary. Its workspace is discoverable only when the signed Telegram principal is the configured Study owner, the selected opaque workspace resolves to the configured chat, the group membership check succeeds, and the active database binding matches that chat. The same gate is repeated by every Study API route and protected resource request; direct links and forged calls receive an opaque not-found response. Canvas and Telegram credentials remain server-only.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DESIGN.md](docs/DESIGN.md), and the canonical [Threadwise product journal](https://github.com/Henry336/threadwise/blob/main/docs/PRODUCT_JOURNAL.md).
 

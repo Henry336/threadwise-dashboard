@@ -2,6 +2,38 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
+## Unreleased - Private Study Workspace
+
+### Friction discovered
+- Phase 1 made academic capture reliable in Telegram, but deep-work review still required combining compact chat cards, Canvas status, module resources, mistakes, mastery, and weekly priorities by hand.
+- Reusing the personal or shared-group dashboard would expose irrelevant navigation and make Study Mode feel like a themed copy instead of a purpose-built academic workspace.
+- Merely hiding a navigation item would not protect a private feature from direct URLs, forged API requests, workspace switching, or protected file requests.
+
+### Product and access decisions
+- Added a third, module-first dashboard architecture instead of extending the personal or group shells.
+- Reveal Study Mode only to the exact configured Telegram owner while the exact configured Study group is selected and actively bound. Every page, API method, live event, and protected resource repeats the same fail-closed gate and returns an opaque not-found response on mismatch.
+- Kept PostgreSQL as the one source of truth. Telegram captures, Canvas changes, and dashboard edits reconcile through the existing authenticated API and scoped server-sent events.
+- Kept core Study behavior deterministic. Attention ranking, retrieval, editing, mastery, and synchronization require no AI service.
+
+### Capability
+- Added Overview, Modules, Work, Library, Review, live Search, Deep Work, and Settings views with a module-first desktop and mobile shell.
+- Added module/work/resource editing, completion and archival; full notes and links; pinned Telegram images/files with protected delivery; OCR recall; mastery and mistake controls; weekly planning/review; focus sessions; Canvas sync and missing-assignment decisions; saved origins; and recurring study blocks.
+- Selecting a module on the dashboard updates the active Telegram Study context, while scoped live events refresh open dashboard views after Telegram or Canvas changes.
+- Added dark-mode parity, keyboard focus, minimum touch targets, reduced-motion handling, accessible sheets, explicit synchronization state, and the approved Ari untangling loader.
+
+### Verification
+- Added contract tests for exact workspace visibility, personal and ordinary-group isolation, inactive bindings, direct Study URL denial, forged proxy paths, and endpoint method allowlists.
+- Passed all 29 dashboard tests, lint, standalone TypeScript checking, and an isolated production Next.js build. The Impeccable static scan is clean; desktop/mobile light/dark browser checks caught and corrected narrow heading/filter constraints before handoff.
+- No production deployment is included in this local implementation; live owner/group, Canvas, protected-image, and Telegram round-trip checks remain deployment gates.
+
+### Error-check and 38/40 craft hardening
+- Ran two independent Impeccable assessments: an unanchored design review and a separate detector/browser evidence pass. The baseline scored 24/40 and exposed flat navigation, undersized operational text, weak contrast, incomplete error states, non-functional shortcut copy, unsafe modal focus, and interruption-prone review/focus flows.
+- Adapted relevant 21st.dev patterns into Threadwise's own visual language: grouped desktop navigation, a four-action mobile dock with **More**, command-palette shortcuts, progressive settings panels, and a four-step evidence-led weekly review. No catalog component or generic template was copied wholesale.
+- Added a real startup recovery state, distinct success/error/offline feedback, completion Undo, retained Deep Work targets, post-session outcomes, autosaved review drafts, three explicit weekly priorities, dirty-close protection, focus trapping and restoration, Escape handling, and concise in-context keyboard help.
+- Removed hard-coded owner identity, made Ari theme-aware, strengthened Study-specific color and operational typography, raised functional text and touch targets, and kept the focus view visually quiet.
+- Fixed the final React 19 lint defects by moving state hydration out of synchronous effects and removing render-time ref access.
+- The post-fix Nielsen/Impeccable score is **38/40**. The static detector is clean for the Study component and stylesheet; TypeScript, lint, all 29 tests, and the isolated production build pass. The archived assessment lives under `.impeccable/critique/` for future trend comparisons.
+
 ## Unreleased - Impeccable Dashboard Reconstruction
 
 ### Friction discovered

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DashboardApp } from "@/components/dashboard-app";
 import { Ari } from "@/components/ari";
 import { getSelectedWorkspace, getSessionUser } from "@/lib/auth";
 import { DashboardDataContractError, ThreadwiseApiError, getDashboardSnapshot, getDashboardWorkspaces } from "@/lib/threadwise-api";
+import { canOpenStudyView } from "@/lib/study-access";
 import type { DashboardWorkspace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </main>
     );
   }
+  if (!canOpenStudyView(params.view, snapshot.workspace)) notFound();
   const availableWorkspaces = workspaces.length ? workspaces : [snapshot.workspace];
   return <DashboardApp initialData={snapshot} workspaces={availableWorkspaces} isDemo={isDemo} initialView={params.view} initialPoll={params.poll} initialTaskImport={params.import} openScheduleCreate={params.new === "1"} />;
 }

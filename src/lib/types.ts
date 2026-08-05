@@ -16,6 +16,7 @@ export type DashboardWorkspace = {
   name: string;
   role: "OWNER" | "ADMIN" | "MEMBER";
   memberCount?: number;
+  mode?: "STUDY";
 };
 
 export type DashboardTaskAssignee = {

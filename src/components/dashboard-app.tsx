@@ -15,6 +15,7 @@ import {
 import { ThreadwiseMark } from "./threadwise-mark";
 import { Ari } from "./ari";
 import { GroupSchedulingView } from "./group-scheduling";
+import { StudyDashboardApp } from "./study-dashboard";
 import { TaskImportReviewSheet } from "./task-import-review";
 import { ActionMenu, useActionMenu } from "./action-menu";
 import type { ActionMenuAction, ActionMenuState } from "./action-menu";
@@ -213,7 +214,16 @@ class ClientApiError extends Error {
   }
 }
 
-export function DashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, openScheduleCreate }: { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; openScheduleCreate?: boolean }) {
+type DashboardAppProps = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; openScheduleCreate?: boolean };
+
+export function DashboardApp(props: DashboardAppProps) {
+  if (props.initialData.workspace.mode === "STUDY") {
+    return <StudyDashboardApp initialData={props.initialData} workspaces={props.workspaces} initialView={props.initialView} />;
+  }
+  return <StandardDashboardApp {...props} />;
+}
+
+function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, openScheduleCreate }: DashboardAppProps) {
   const [data, setData] = useState(initialData);
   const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView, initialData.workspace));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
