@@ -17,6 +17,7 @@ import type {
   StudyItem, StudyItemType, StudyMistake, StudyModule,
   StudyResource, StudyResourceKind, StudySnapshot, StudyTrafficLight, StudyView,
 } from "@/lib/study-types";
+import { studyWeekLabel } from "@/lib/study-week";
 
 type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
@@ -251,7 +252,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
     <aside className={`study-sidebar ${mobileNav ? "open" : ""}`}>
       <div className="study-brand"><ThreadwiseMark /><button onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={19} /></button></div>
       <StudyWorkspaceSwitcher current={selectedWorkspace} workspaces={workspaces} open={workspaceMenu} setOpen={setWorkspaceMenu} />
-      <div className="study-context"><Ari variant={theme === "dark" ? "avatar-dark" : "avatar-light"} decorative /><div><span>Private Study</span><b>{study.workspace.semesterName}</b><small>Week {study.weekNumber || "—"}</small></div></div>
+      <div className="study-context"><Ari variant={theme === "dark" ? "avatar-dark" : "avatar-light"} decorative /><div><span>Private Study</span><b>{study.workspace.semesterName}</b><small>{studyWeekLabel(study)}</small></div></div>
       <nav aria-label="Study Mode">
         {NAV_SECTIONS.map((section) => <div className="study-nav-group" key={section.label}><p>{section.label}</p>{section.items.map(({ id, label, icon: Icon }) => <button key={id} className={view === id ? "active" : ""} aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}><Icon size={18} /><span>{label}</span>{id === "study-work" && <em>{openCount}</em>}</button>)}</div>)}
       </nav>
@@ -288,7 +289,7 @@ function Overview({ study, ownerName, onOpenModule, onNavigate, onEditItem, onCo
   const first = attention.items[0];
   const firstItem = first ? study.items.find((item) => item.id === first.id) : undefined;
   return <>
-    <section className="study-overview-hero"><div><span>Week {study.weekNumber || "—"}</span><h1>{greeting()}, {ownerName}.</h1><p>{attention.overdue ? `${attention.overdue} overdue item${attention.overdue === 1 ? "" : "s"} need a decision.` : attention.dueToday ? `${attention.dueToday} item${attention.dueToday === 1 ? "" : "s"} due today.` : "Your semester is in view."}</p></div><Ari variant="threading" decorative /></section>
+    <section className="study-overview-hero"><div><span>{studyWeekLabel(study)}</span><h1>{greeting()}, {ownerName}.</h1><p>{attention.overdue ? `${attention.overdue} overdue item${attention.overdue === 1 ? "" : "s"} need a decision.` : attention.dueToday ? `${attention.dueToday} item${attention.dueToday === 1 ? "" : "s"} due today.` : "Your semester is in view."}</p></div><Ari variant="threading" decorative /></section>
     <div className="study-overview-grid">
       <section className="study-next-card"><header><span>Next move</span><button onClick={() => onNavigate("study-work")}>All work <ArrowRight size={15} /></button></header>{first && firstItem ? <><div className="study-next-meta"><Mastery value={firstItem.module.id ? study.modules.find((module) => module.id === firstItem.module.id)?.currentMastery ?? "UNASSESSED" : "UNASSESSED"} /><b>{first.moduleCode}</b><span>{first.reasons[0]}</span></div><h2>{first.title}</h2><p>{first.recommendedAction}</p><footer>{first.dueAt && <span><CalendarDays size={16} />{formatDateTime(first.dueAt, study.workspace.timezone)}</span>}<div><button className="study-secondary" onClick={() => onEditItem(firstItem)}>Edit</button><button className="study-secondary" onClick={() => onFocus(firstItem)}><Play size={15} /> Focus</button><button className="study-primary" onClick={() => onComplete(firstItem)}><Check size={16} /> Complete</button></div></footer></> : <Empty title="Nothing needs attention." copy="The next Canvas sync or Telegram capture will appear here." />}</section>
       <aside className="study-pulse"><span>This week</span><div><b>{attention.dueToday}</b><small>due today</small></div><div><b>{attention.dueThisWeek}</b><small>due in 7 days</small></div><div><b>{attention.undated}</b><small>without a date</small></div><button onClick={() => onNavigate("study-review")}>Open review <ArrowRight size={15} /></button></aside>
@@ -630,7 +631,7 @@ function WeeklyReviewSheet({ study, busy, onClose, onSave }: { study: StudySnaps
     }).then((saved) => { if (saved) { window.localStorage.removeItem(storageKey); setDirty(false); } });
   };
 
-  return <StudyDialog kicker={`Week ${study.weekNumber}`} title="Weekly review" dirty={dirty} wide onClose={onClose}>{(requestClose) =>
+  return <StudyDialog kicker={studyWeekLabel(study)} title="Weekly review" dirty={dirty} wide onClose={onClose}>{(requestClose) =>
     <form className="study-review-wizard" onSubmit={submit}>
       <div className="study-review-progress" aria-label={`Step ${step + 1} of ${steps.length}: ${steps[step]}`}><div>{steps.map((label, index) => <button key={label} type="button" aria-current={index === step ? "step" : undefined} onClick={() => setStep(index)}><span>{index + 1}</span><b>{label}</b></button>)}</div><i style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div>
 

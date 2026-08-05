@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased - Private Study Workspace
 
+### Honest pre-semester and Calendar states
+- Replaced `Week —` during the period before semester start with `Pre-semester · Week 1 begins <date>`, derived from the configured Study timezone. Missing semester dates now say so explicitly rather than looking like a rendering failure.
+- Added a dedicated regression test for pre-semester, active-week, and missing-date presentation.
+- Changed the personal Connections surface to distinguish a usable Google Calendar authorization from a stale stored record. Expired or revoked access now presents `Reconnect required` and a direct reconnect action; the automatic-sync control is shown only for a working connection.
+- These changes close two trust gaps: a legitimate academic lifecycle state looked broken, and a saved OAuth record could look healthy even after Google no longer accepted it.
+
 ### Live class travel
 - Turned recurring schedule blocks into optional class-commute cards without adding another navigation section. Each block can now hold a campus destination, usual origin, and travel buffer.
 - Added progressive inline editing: route context remains a compact chip until the selected block expands, keeping the Schedule surface readable on desktop and mobile.
