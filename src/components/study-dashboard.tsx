@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Ari, AriUntangleLoader } from "./ari";
 import { ThreadwiseMark } from "./threadwise-mark";
+import { StudyTimetable } from "./study-timetable";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
 import type {
   StudyItem, StudyItemType, StudyMistake, StudyModule,
@@ -36,6 +37,7 @@ type Editor =
 const NAV_SECTIONS: Array<{ label: string; items: Array<{ id: StudyView; label: string; icon: typeof BookOpen }> }> = [
   { label: "Today", items: [
     { id: "study-overview", label: "Overview", icon: Target },
+    { id: "study-timetable", label: "Timetable", icon: CalendarDays },
     { id: "study-work", label: "Work", icon: ListChecks },
     { id: "study-focus", label: "Deep Work", icon: TimerReset },
   ] },
@@ -52,7 +54,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ id: StudyView; label: 
   ] },
 ];
 const NAV = NAV_SECTIONS.flatMap((section) => section.items);
-const MOBILE_NAV = NAV.filter((item) => ["study-overview", "study-work", "study-library", "study-focus"].includes(item.id));
+const MOBILE_NAV = NAV.filter((item) => ["study-overview", "study-timetable", "study-work", "study-focus"].includes(item.id));
 const ITEM_TYPES: StudyItemType[] = ["LECTURE", "TUTORIAL", "LAB", "ASSIGNMENT", "PROJECT", "REVISION", "TIMED_PRACTICE", "READING", "ADMINISTRATIVE"];
 const MASTERY: StudyTrafficLight[] = ["GREEN", "AMBER", "RED", "UNASSESSED"];
 
@@ -180,7 +182,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
 
   useEffect(() => {
     const shortcuts: Record<string, StudyView> = {
-      o: "study-overview", m: "study-modules", w: "study-work", l: "study-library",
+      o: "study-overview", t: "study-timetable", m: "study-modules", w: "study-work", l: "study-library",
       r: "study-review", s: "study-search", f: "study-focus", ",": "study-settings",
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -268,6 +270,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
       <div className="study-content" key={view}>
         {sync === "offline" && <section className="study-status-banner" role="alert"><AlertCircle size={18} /><div><b>Live sync is paused.</b><p>Your current view is preserved. Retry when the connection is ready.</p></div><button onClick={() => void refresh(false)}>Retry</button></section>}
         {view === "study-overview" && <Overview study={study} ownerName={ownerName} onOpenModule={openModule} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onComplete={(item) => void completeItem(item)} onFocus={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
+        {view === "study-timetable" && <StudyTimetable study={study} busy={busy} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Timetable updated.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Timetable updated.")} onDeleteBlock={(id) => mutate(`study/schedule/${id}`, "DELETE", undefined, "Schedule block removed.")} onEditItem={(item) => setEditor({ kind: "item", value: item })} onFocusItem={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
         {view === "study-modules" && <Modules study={study} onOpen={openModule} onEdit={(module) => setEditor({ kind: "module", value: module })} onAdd={() => setEditor({ kind: "module" })} />}
         {view === "study-work" && <Work study={study} moduleFilter={moduleFilter} onModuleFilter={setModuleFilter} onEdit={(item) => setEditor({ kind: "item", value: item })} onAdd={() => setEditor({ kind: "item" })} onComplete={(item) => void completeItem(item)} onArchive={(item) => confirmAction(`Archive ${item.publicId}?`, () => mutate(`study/items/${item.id}`, "DELETE", undefined, "Work item archived."))} />}
         {view === "study-library" && <LibraryView study={study} moduleFilter={moduleFilter} onModuleFilter={setModuleFilter} onAdd={(kind) => setEditor({ kind: "resource", resourceKind: kind })} onEdit={async (resource) => { const detail = await studyApi<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} onPin={(resource) => void mutate(`study/resources/${resource.id}`, "PATCH", { pinned: !resource.pinnedAt }, resource.pinnedAt ? "Unpinned." : "Pinned.")} onArchive={(resource) => confirmAction(`Archive “${resource.title}”?`, () => mutate(`study/resources/${resource.id}`, "DELETE", undefined, "Resource archived."))} />}
@@ -650,7 +653,7 @@ function WeeklyReviewSheet({ study, busy, onClose, onSave }: { study: StudySnaps
 
 function StudyGuideSheet({ onClose }: { onClose: () => void }) {
   return <StudyDialog kicker="Keyboard guide" title="Move quickly" onClose={onClose}>{(requestClose) =>
-    <div className="study-guide"><p>Study Mode keeps common actions one or two keys away whenever you are not typing.</p><dl><div><dt><kbd>⌘/Ctrl</kbd><kbd>K</kbd></dt><dd>Search Study Mode</dd></div><div><dt><kbd>G</kbd><kbd>O</kbd></dt><dd>Overview</dd></div><div><dt><kbd>G</kbd><kbd>W</kbd></dt><dd>Work</dd></div><div><dt><kbd>G</kbd><kbd>F</kbd></dt><dd>Deep Work</dd></div><div><dt><kbd>G</kbd><kbd>M</kbd></dt><dd>Modules</dd></div><div><dt><kbd>?</kbd></dt><dd>Open this guide</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Close the current layer</dd></div></dl><button type="button" className="study-primary" onClick={requestClose}>Got it</button></div>
+    <div className="study-guide"><p>Study Mode keeps common actions one or two keys away whenever you are not typing.</p><dl><div><dt><kbd>⌘/Ctrl</kbd><kbd>K</kbd></dt><dd>Search Study Mode</dd></div><div><dt><kbd>G</kbd><kbd>O</kbd></dt><dd>Overview</dd></div><div><dt><kbd>G</kbd><kbd>T</kbd></dt><dd>Timetable</dd></div><div><dt><kbd>G</kbd><kbd>W</kbd></dt><dd>Work</dd></div><div><dt><kbd>G</kbd><kbd>F</kbd></dt><dd>Deep Work</dd></div><div><dt><kbd>G</kbd><kbd>M</kbd></dt><dd>Modules</dd></div><div><dt><kbd>?</kbd></dt><dd>Open this guide</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Close the current layer</dd></div></dl><button type="button" className="study-primary" onClick={requestClose}>Got it</button></div>
   }</StudyDialog>;
 }
 function StudyWorkspaceSwitcher({ current, workspaces, open, setOpen }: { current: DashboardWorkspace; workspaces: DashboardWorkspace[]; open: boolean; setOpen: (value: boolean) => void }) {

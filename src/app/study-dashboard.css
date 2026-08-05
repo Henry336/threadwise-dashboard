@@ -998,6 +998,159 @@
 .study-toast > button { min-height: 36px; padding: 0 9px; display: inline-flex; align-items: center; gap: 5px; border-radius: 7px; background: var(--study-blue-soft); color: var(--study-blue); font-size: 11px; font-weight: 780; }
 .study-toast > .study-toast-close { width: 36px; padding: 0; justify-content: center; background: transparent; color: var(--muted); }
 
+/* Timetable --------------------------------------------------------------
+   Recurring commitments live on the clock. Deadlines remain in a separate
+   lane so the interface never invents a start time for due work. */
+.study-timetable-page { gap: 22px; }
+.study-timetable-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 7px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.study-timetable-head > div { max-width: 760px; }
+.study-timetable-head span,
+.study-timetable-summary small,
+.study-timetable-next > span,
+.study-due-lane header span,
+.study-timetable-dialog header span,
+.study-agenda-due > span {
+  color: var(--study-blue);
+  font-size: 10px;
+  font-weight: 830;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.study-timetable-head h1 { margin: 8px 0 5px; font-family: var(--serif); font-size: clamp(45px, 5vw, 72px); font-weight: 430; line-height: .98; letter-spacing: -.045em; }
+.study-timetable-head p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+.study-timetable-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, .7fr)) minmax(210px, 1.35fr);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.study-timetable-summary > div { min-height: 78px; padding: 15px 17px; display: flex; align-items: center; gap: 12px; border-right: 1px solid var(--line); }
+.study-timetable-summary > div:last-child { border-right: 0; }
+.study-timetable-summary svg { flex: 0 0 auto; color: var(--study-blue); }
+.study-timetable-summary div > span { display: grid; gap: 3px; }
+.study-timetable-summary b { color: var(--ink); font-family: var(--serif); font-size: 24px; font-weight: 480; line-height: 1; }
+.study-timetable-summary small { color: var(--faint); letter-spacing: 0; text-transform: none; }
+.study-timetable-summary .study-timetable-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; column-gap: 12px; background: var(--study-blue-soft); }
+.study-timetable-next > span { grid-column: 1 / -1; }
+.study-timetable-next b { overflow: hidden; font-family: var(--sans); font-size: 14px; font-weight: 790; text-overflow: ellipsis; white-space: nowrap; }
+.study-timetable-next small { align-self: end; white-space: nowrap; }
+
+.study-timetable-toolbar { min-height: 55px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; }
+.study-week-stepper,
+.study-view-toggle { display: inline-flex; justify-self: start; padding: 3px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); }
+.study-week-stepper button,
+.study-view-toggle button { min-height: 37px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 740; }
+.study-week-stepper button:first-child,
+.study-week-stepper button:last-child { width: 39px; padding: 0; }
+.study-week-stepper button:hover,
+.study-view-toggle button:hover { color: var(--ink); background: var(--surface-soft); }
+.study-view-toggle { justify-self: end; }
+.study-view-toggle button.active { background: var(--study-blue); color: white; }
+.study-week-title { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.study-week-title b { font-family: var(--serif); font-size: 20px; font-weight: 480; }
+.study-week-title span { color: var(--faint); font-size: 11px; }
+
+.study-day-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+.study-day-strip button { position: relative; min-height: 64px; display: grid; place-items: center; align-content: center; gap: 2px; border-right: 1px solid var(--line); background: transparent; color: var(--faint); }
+.study-day-strip button:last-child { border-right: 0; }
+.study-day-strip button:hover { background: var(--surface-soft); color: var(--ink); }
+.study-day-strip button.active { background: var(--study-blue-soft); color: var(--study-blue); }
+.study-day-strip button.today::after { content: ""; position: absolute; inset: 0 auto auto 0; width: 100%; height: 3px; background: var(--study-blue); }
+.study-day-strip span { font-size: 10px; font-weight: 820; letter-spacing: .08em; text-transform: uppercase; }
+.study-day-strip b { font-family: var(--serif); font-size: 22px; font-weight: 500; }
+.study-day-strip i { position: absolute; bottom: 7px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+
+.study-timetable-surface { overflow: hidden; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 16px 45px color-mix(in srgb, var(--ink) 5%, transparent); }
+.study-due-lane { min-height: 93px; display: grid; grid-template-columns: 84px minmax(0, 1fr); border-bottom: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface-soft) 66%, var(--surface)); }
+.study-due-lane > header { padding: 15px 9px; display: grid; align-content: start; gap: 5px; border-right: 1px solid var(--line); }
+.study-due-lane header small { color: var(--faint); font-size: 9px; line-height: 1.35; }
+.study-due-lane > div { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.study-due-lane > div > div { min-width: 0; padding: 7px 5px; display: grid; align-content: start; gap: 4px; border-right: 1px solid var(--line); }
+.study-due-lane > div > div:last-child { border-right: 0; }
+.study-due-lane button { width: 100%; min-width: 0; padding: 6px 7px 7px; display: grid; gap: 2px; border: 1px solid color-mix(in srgb, var(--module-color) 28%, var(--line)); border-radius: 5px; background: var(--surface); color: var(--ink); text-align: left; }
+.study-due-lane button:hover { background: var(--study-blue-soft); }
+.study-due-lane button span { color: var(--module-color); font-size: 8px; font-weight: 830; text-transform: uppercase; }
+.study-due-lane button b { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.study-due-lane button.more { border: 0; background: transparent; color: var(--study-blue); font-size: 9px; font-weight: 760; }
+
+.study-week-grid { min-height: var(--grid-height); display: grid; grid-template-columns: 84px minmax(0, 1fr); }
+.study-time-rail { position: relative; height: var(--grid-height); border-right: 1px solid var(--line-strong); background: var(--surface); }
+.study-time-rail span { position: absolute; right: 10px; transform: translateY(-50%); color: var(--faint); font-size: 9px; font-variant-numeric: tabular-nums; }
+.study-week-columns { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.study-week-day { position: relative; height: var(--grid-height); min-width: 0; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 97%, var(--canvas)); }
+.study-week-day:last-child { border-right: 0; }
+.study-week-day.today { background: color-mix(in srgb, var(--study-blue) 3.5%, var(--surface)); }
+.study-week-day > i { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
+.study-schedule-block { position: absolute; z-index: 2; top: var(--block-top); left: 5px; right: 5px; height: var(--block-height); min-height: 42px; overflow: hidden; padding: 7px 8px; display: grid; align-content: start; gap: 2px; border: 1px solid color-mix(in srgb, var(--module-color) 42%, var(--line)); border-radius: 7px; background: color-mix(in srgb, var(--module-color) 10%, var(--surface)); color: var(--ink); text-align: left; box-shadow: 0 5px 12px color-mix(in srgb, var(--ink) 5%, transparent); transition: transform 140ms ease, box-shadow 140ms ease; }
+.study-schedule-block:hover { z-index: 3; transform: translateY(-1px); box-shadow: 0 9px 20px color-mix(in srgb, var(--ink) 11%, transparent); }
+.study-schedule-block > span { color: var(--module-color); font-size: 8px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.study-schedule-block > b { overflow: hidden; font-size: 10px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.study-schedule-block > small { color: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.study-schedule-block > em { overflow: hidden; display: flex; align-items: center; gap: 3px; color: var(--faint); font-size: 8px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.study-now-line { position: absolute; z-index: 4; left: 0; right: 0; height: 2px; background: var(--study-amber); pointer-events: none; }
+.study-now-line::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--study-amber); }
+.study-now-line b { position: absolute; top: -16px; left: 4px; color: var(--study-amber); font-size: 8px; }
+
+.study-day-agenda { display: none; }
+.study-timetable-surface.day-mode .study-due-lane,
+.study-timetable-surface.day-mode .study-week-grid { display: none; }
+.study-timetable-surface.day-mode .study-day-agenda { display: block; }
+.study-day-agenda > header { min-height: 74px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.study-day-agenda > header span { color: var(--study-blue); font-size: 10px; font-weight: 820; letter-spacing: .09em; text-transform: uppercase; }
+.study-day-agenda > header h2 { margin: 3px 0 0; font-family: var(--serif); font-size: 27px; font-weight: 470; }
+.study-day-agenda > header button { min-height: 39px; padding: 0 13px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 750; }
+.study-agenda-block { min-height: 92px; padding: 13px 18px; display: grid; grid-template-columns: 90px minmax(0, 1fr) 40px; align-items: center; gap: 14px; border-bottom: 1px solid color-mix(in srgb, var(--module-color) 24%, var(--line)); }
+.study-agenda-block time { display: grid; gap: 4px; font-size: 12px; font-weight: 780; font-variant-numeric: tabular-nums; }
+.study-agenda-block time span { color: var(--faint); font-size: 10px; font-weight: 550; }
+.study-agenda-block > div { min-width: 0; }
+.study-agenda-block > div > span { color: var(--module-color); font-size: 9px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.study-agenda-block h3 { margin: 4px 0; overflow: hidden; font-family: var(--serif); font-size: 22px; font-weight: 470; text-overflow: ellipsis; white-space: nowrap; }
+.study-agenda-block p { margin: 0; display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
+.study-agenda-block > button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); }
+.study-agenda-due { padding: 17px 18px 20px; display: grid; gap: 8px; background: var(--surface-soft); }
+.study-agenda-due > article { min-height: 68px; display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: stretch; border: 1px solid color-mix(in srgb, var(--module-color) 30%, var(--line)); background: var(--surface); }
+.study-agenda-due article > button:first-child { min-width: 0; padding: 10px 13px; display: grid; gap: 4px; background: transparent; color: var(--ink); text-align: left; }
+.study-agenda-due small { color: var(--module-color); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.study-agenda-due b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.study-agenda-due article > button:last-child { display: grid; place-items: center; border-left: 1px solid var(--line); background: transparent; color: var(--study-blue); }
+.study-agenda-empty { min-height: 280px; display: grid; place-items: center; align-content: center; gap: 8px; color: var(--faint); text-align: center; }
+.study-agenda-empty svg { color: var(--study-blue); }
+.study-agenda-empty b { color: var(--ink); font-family: var(--serif); font-size: 24px; font-weight: 480; }
+.study-agenda-empty p { margin: 0; font-size: 12px; }
+
+.study-timetable-overlay { position: fixed; z-index: 100; inset: 0; padding: 28px; display: grid; place-items: center; background: color-mix(in srgb, var(--ink) 47%, transparent); backdrop-filter: blur(7px); }
+.study-timetable-dialog { width: min(740px, 100%); max-height: calc(100vh - 56px); overflow: auto; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 28px 90px color-mix(in srgb, #000 28%, transparent); animation: study-enter 180ms ease both; }
+.study-timetable-dialog > header { min-height: 86px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.study-timetable-dialog h2 { margin: 4px 0 0; font-family: var(--serif); font-size: 31px; font-weight: 470; }
+.study-timetable-dialog > header > button { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--muted); }
+.study-timetable-dialog form { padding: 20px 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.study-timetable-dialog label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 730; }
+.study-timetable-dialog input,
+.study-timetable-dialog select { width: 100%; min-height: 46px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-strong); color: var(--ink); }
+.study-timetable-dialog .wide,
+.study-timetable-dialog footer { grid-column: 1 / -1; }
+.study-timetable-weeks { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 9px; }
+.study-timetable-weeks > span { padding-bottom: 14px; color: var(--faint); font-size: 11px; }
+.study-timetable-travel { padding: 15px; display: grid; grid-template-columns: 1.3fr 1fr .65fr; gap: 12px; border: 1px solid color-mix(in srgb, var(--study-blue) 25%, var(--line)); background: var(--study-blue-soft); }
+.study-timetable-travel > span { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; color: var(--study-blue); font-size: 11px; font-weight: 800; }
+.study-timetable-dialog footer { padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.study-timetable-dialog footer > div { display: flex; gap: 8px; }
+.study-danger { min-height: 43px; padding: 0 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid color-mix(in srgb, #c25745 35%, var(--line)); border-radius: 8px; background: transparent; color: #b34837; font-size: 11px; font-weight: 760; }
+
 .study-mobile-dock { display: none; }
 
 /* Bring operational copy above the 11px anti-pattern floor while retaining
@@ -1068,6 +1221,10 @@
   .study-settings-panel > section { min-height: 0; }
   .study-focus-outcome { align-items: stretch; flex-direction: column; }
   .study-focus-outcome > div:last-child { flex-wrap: wrap; }
+  .study-timetable-summary { grid-template-columns: repeat(3, 1fr); }
+  .study-timetable-summary .study-timetable-next { grid-column: 1 / -1; }
+  .study-timetable-summary > div:nth-child(3) { border-right: 0; }
+  .study-timetable-summary .study-timetable-next { border-top: 1px solid var(--line); }
 }
 
 @media (max-width: 860px) {
@@ -1089,6 +1246,15 @@
   .study-mobile-dock button.active { background: var(--study-blue-soft); color: var(--study-blue); }
   .study-mobile-dock button[aria-current="page"] span { color: var(--ink); }
   .focus-active .study-main { padding-bottom: 0; }
+  .study-timetable-head { align-items: stretch; }
+  .study-timetable-head h1 { font-size: clamp(42px, 10vw, 62px); }
+  .study-timetable-toolbar { grid-template-columns: 1fr auto; }
+  .study-week-title { grid-column: 1 / -1; grid-row: 1; }
+  .study-week-stepper { grid-column: 1; grid-row: 2; }
+  .study-view-toggle { grid-column: 2; grid-row: 2; }
+  .study-timetable-surface .study-due-lane,
+  .study-timetable-surface .study-week-grid { display: none; }
+  .study-timetable-surface .study-day-agenda { display: block; }
 }
 
 @media (max-width: 620px) {
@@ -1113,4 +1279,37 @@
   .study-focus-outcome button { width: 100%; }
   .study-boot-error { padding: 27px 20px; }
   .study-boot-error > div { width: 100%; flex-direction: column; }
+  .study-timetable-page { gap: 15px; }
+  .study-timetable-head { padding: 0 0 17px; display: grid; }
+  .study-timetable-head p { font-size: 12px; }
+  .study-timetable-head > button { width: 100%; }
+  .study-timetable-summary { grid-template-columns: repeat(3, 1fr); }
+  .study-timetable-summary > div { min-height: 68px; padding: 10px 8px; justify-content: center; border-right: 1px solid var(--line); }
+  .study-timetable-summary > div > svg { display: none; }
+  .study-timetable-summary b { font-size: 20px; }
+  .study-timetable-summary small { font-size: 8px; }
+  .study-timetable-summary .study-timetable-next { min-height: 62px; padding: 10px 14px; justify-content: stretch; }
+  .study-timetable-toolbar { gap: 10px; }
+  .study-day-strip { margin-inline: -1px; }
+  .study-day-strip button { min-height: 58px; }
+  .study-day-strip span { font-size: 8px; }
+  .study-day-strip b { font-size: 19px; }
+  .study-view-toggle { display: none; }
+  .study-week-stepper { grid-column: 1 / -1; width: 100%; }
+  .study-week-stepper button:nth-child(2) { flex: 1; }
+  .study-agenda-block { min-height: 84px; padding: 11px 12px; grid-template-columns: 74px minmax(0, 1fr) 40px; gap: 9px; }
+  .study-agenda-block h3 { font-size: 19px; }
+  .study-day-agenda > header { padding: 12px; }
+  .study-agenda-due { padding: 14px 12px 17px; }
+  .study-timetable-overlay { padding: 0; place-items: end center; }
+  .study-timetable-dialog { width: 100%; max-height: min(91vh, 820px); border-radius: 18px 18px 0 0; }
+  .study-timetable-dialog > header { min-height: 75px; padding: 14px 16px; }
+  .study-timetable-dialog h2 { font-size: 26px; }
+  .study-timetable-dialog form { padding: 16px; grid-template-columns: 1fr; }
+  .study-timetable-dialog .wide,
+  .study-timetable-dialog footer { grid-column: auto; }
+  .study-timetable-travel { grid-template-columns: 1fr; }
+  .study-timetable-dialog footer { align-items: stretch; flex-direction: column-reverse; }
+  .study-timetable-dialog footer > div { display: grid; grid-template-columns: 1fr 1fr; }
+  .study-timetable-dialog footer button { width: 100%; }
 }

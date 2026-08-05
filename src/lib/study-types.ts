@@ -198,6 +198,8 @@ export type StudySnapshot = {
     endTime: string;
     label: string;
     blockType: string;
+    startWeek?: number | null;
+    endWeek?: number | null;
     venueId?: string | null;
     venueName?: string | null;
     destinationStopId?: string | null;
@@ -238,4 +240,4 @@ export type StudySnapshot = {
   }>;
 };
 
-export type StudyView = "study-overview" | "study-modules" | "study-work" | "study-library" | "study-review" | "study-search" | "study-focus" | "study-settings";
+export type StudyView = "study-overview" | "study-timetable" | "study-modules" | "study-work" | "study-library" | "study-review" | "study-search" | "study-focus" | "study-settings";

@@ -32,7 +32,13 @@
   "components": {
     "installed": [],
     "preferredPrimitives": ["existing Threadwise buttons, fields, sheets, cards, and status chips"],
-    "patterns": ["mobile-first review sheet", "editable task rows", "single primary action"]
+    "patterns": [
+      "mobile-first review sheet",
+      "editable task rows",
+      "single primary action",
+      "desktop weekly timetable with a separate deadline lane",
+      "mobile day agenda with explicit schedule editing"
+    ]
   },
   "constraints": {
     "must": [
@@ -56,6 +62,11 @@
       "date": "2026-08-03",
       "decision": "Organize desktop TODO rows into title, metadata, and correction layers, and commit deadline edits only through an explicit Done action.",
       "reason": "The original row mixed unrelated information and immediate API saves repeatedly dismissed the native date-time picker; staged editing preserves focus while one deliberate commit keeps shared state accurate."
+    },
+    {
+      "date": "2026-08-05",
+      "decision": "Give private Study a first-class timetable: recurring schedule blocks use a weekly clock grid, while assignment deadlines remain in a separate Work due lane and mobile defaults to a day agenda.",
+      "reason": "Study data was already present but settings and chat cards did not reveal the shape of a week. Separating scheduled time from due time keeps the visualization truthful, and the day agenda avoids shrinking seven columns into an unusable mobile layout."
     }
   ],
   "evidence": [
@@ -63,5 +74,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-03T04:25:00.000Z"
+  "generatedAt": "2026-08-05T15:00:00.000Z"
 }
