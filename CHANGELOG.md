@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased - Private Study Workspace
 
+### Live class travel
+- Turned recurring schedule blocks into optional class-commute cards without adding another navigation section. Each block can now hold a campus destination, usual origin, and travel buffer.
+- Added progressive inline editing: route context remains a compact chip until the selected block expands, keeping the Schedule surface readable on desktop and mobile.
+- Added create-time destination controls, edit/disable actions, dark-mode-compatible styling, and proxy authorization for the new scoped PATCH endpoint.
+- The change exists because saved origins alone did not connect to a class schedule, forcing users back into Telegram natural-language route queries and leaving proactive departure reminders impossible to configure.
+
 ### Friction discovered
 - Phase 1 made academic capture reliable in Telegram, but deep-work review still required combining compact chat cards, Canvas status, module resources, mistakes, mastery, and weekly priorities by hand.
 - Reusing the personal or shared-group dashboard would expose irrelevant navigation and make Study Mode feel like a themed copy instead of a purpose-built academic workspace.

@@ -198,6 +198,12 @@ export type StudySnapshot = {
     endTime: string;
     label: string;
     blockType: string;
+    venueId?: string | null;
+    venueName?: string | null;
+    destinationStopId?: string | null;
+    defaultOriginId?: string | null;
+    travelBufferMinutes: number;
+    reminderLeadMinutes: number;
     active: boolean;
     module?: { id: string; code: string; name: string } | null;
     defaultOrigin?: { id: string; name: string } | null;

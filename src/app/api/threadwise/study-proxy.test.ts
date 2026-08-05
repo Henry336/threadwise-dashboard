@@ -11,6 +11,7 @@ describe("Study API proxy allowlist", () => {
     ["GET", "study/resources/resource-1/content"],
     ["POST", "study/canvas/sync"],
     ["PATCH", "study/settings"],
+    ["PATCH", "study/schedule/block-1"],
   ])("allows %s %s", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);

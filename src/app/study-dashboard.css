@@ -600,6 +600,14 @@
 .study-inline-form,
 .study-block-form { display: grid !important; grid-template-columns: minmax(130px, .7fr) minmax(180px, 1.3fr) auto; align-items: end; gap: 8px; margin-top: 13px; }
 .study-block-form { grid-template-columns: .6fr .8fr .7fr .7fr 1.3fr auto; }
+.study-block-list article.editing { padding: 15px; background: var(--surface-soft); border: 1px solid var(--line-strong); }
+.study-block-icon { width: 36px; height: 36px; display: grid; place-items: center; color: var(--study-blue); background: var(--study-blue-soft); border-radius: 10px; }
+.study-travel-chip { width: fit-content; margin-top: 5px; padding: 5px 8px; display: inline-flex; align-items: center; gap: 5px; color: var(--study-blue); background: var(--study-blue-soft); border-radius: 999px; font-size: 11px; font-weight: 700; }
+.study-block-configure { color: var(--study-blue); }
+.study-travel-editor { grid-column: 1 / -1; margin-top: 4px; padding-top: 14px; display: grid !important; grid-template-columns: 1.3fr 1fr .55fr auto; gap: 10px; align-items: end; border-top: 1px solid var(--line); }
+.study-travel-editor > div { display: flex; gap: 7px; justify-content: flex-end; }
+.study-travel-editor .danger { color: var(--danger); }
+.study-optional { color: var(--faint); font-weight: 500; }
 
 .study-sheet-overlay {
   position: fixed;
@@ -1091,7 +1099,12 @@
   .study-settings-panel > section > header .study-secondary { width: 100%; }
   .study-settings-panel .study-form-row,
   .study-origin-form,
-  .study-labelled-form { grid-template-columns: 1fr; }
+  .study-labelled-form,
+  .study-travel-editor { grid-template-columns: 1fr; }
+  .study-block-list article { grid-template-columns: 38px minmax(0, 1fr) auto; }
+  .study-block-list article > button:last-of-type { grid-column: 3; }
+  .study-block-configure { grid-column: 2 / -1; width: 100%; }
+  .study-travel-editor > div { display: grid; grid-template-columns: 1fr; }
   .study-review-progress { overflow-x: auto; }
   .study-review-progress > div { min-width: 560px; }
   .study-review-step .study-review-form-modules { grid-template-columns: 1fr; }

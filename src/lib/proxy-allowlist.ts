@@ -23,7 +23,7 @@ export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (path === "study/origins") return method === "POST";
   if (/^study\/origins\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH" || method === "DELETE";
   if (path === "study/schedule") return method === "POST";
-  if (/^study\/schedule\/[A-Za-z0-9_-]+$/.test(path)) return method === "DELETE";
+  if (/^study\/schedule\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH" || method === "DELETE";
   if (path === "snapshot" || path === "workspaces" || path === "events" || path === "search" || path === "privacy/export" || /\/content$/.test(path)) return method === "GET";
   if (path === "capture/preview") return method === "POST";
   if (/^task-imports\/[A-Za-z0-9_-]+$/.test(path)) return method === "GET";
