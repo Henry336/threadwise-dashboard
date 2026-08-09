@@ -214,7 +214,7 @@ class ClientApiError extends Error {
   }
 }
 
-type DashboardAppProps = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; openScheduleCreate?: boolean };
+type DashboardAppProps = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; initialItem?: string; initialItemKind?: string; openScheduleCreate?: boolean };
 
 export function DashboardApp(props: DashboardAppProps) {
   if (props.initialData.workspace.mode === "STUDY") {
@@ -223,7 +223,7 @@ export function DashboardApp(props: DashboardAppProps) {
   return <StandardDashboardApp {...props} />;
 }
 
-function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, openScheduleCreate }: DashboardAppProps) {
+function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, initialItem, initialItemKind, openScheduleCreate }: DashboardAppProps) {
   const [data, setData] = useState(initialData);
   const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView, initialData.workspace));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
@@ -251,6 +251,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
   const refreshInFlight = useRef(false);
+  const initialTargetHandled = useRef(false);
 
   const announce = (message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -300,6 +301,29 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
+  useEffect(() => {
+    if (initialTargetHandled.current || !initialItem || !initialItemKind) return;
+    initialTargetHandled.current = true;
+    if (initialItemKind === "task") {
+      const task = data.tasks.find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase());
+      if (!task) return;
+      setActiveView("tasks");
+      if (data.workspace.kind === "GROUP") setCollaborationTask(task);
+      else setEditor({ kind: "task", item: task });
+      return;
+    }
+    if (initialItemKind === "note") {
+      const note = data.notes.find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase());
+      if (note) { setActiveView("notes"); setEditor({ kind: "note", item: note }); }
+      return;
+    }
+    if (initialItemKind === "idea") {
+      const idea = data.ideas.find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase());
+      if (idea) { setActiveView("ideas"); setEditor({ kind: "idea", item: idea }); }
+      return;
+    }
+    if (initialItemKind === "image") setActiveView("images");
+  }, [data, initialItem, initialItemKind]);
   useEffect(() => {
     const url = new URL(window.location.href);
     const provider = url.searchParams.get("integration");
@@ -644,7 +668,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       await api(`tasks/${task.id}/collaboration`, "POST", payload);
       await refreshSnapshot();
       setCollaborationTask(null);
-      announce(payload.action === "handoff" ? "Handoff shared with the group." : "Assignment updated.");
+      announce(payload.action === "claim" ? "Task claimed." : "Assignment updated.");
       return true;
     } catch (error) {
       announce(error instanceof Error ? error.message : "Could not update that assignment.");
@@ -708,7 +732,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
             ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} />
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
           {activeView === "tasks" && (data.workspace.kind === "GROUP" && data.collaboration
-            ? <GroupTasksView tasks={data.tasks} meetings={(data.scheduling?.polls ?? []).filter((poll) => poll.status === "FINALIZED")} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onOpenSchedule={() => navigate("schedule")} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />
+            ? <GroupTasksView tasks={data.tasks} meetings={(data.scheduling?.polls ?? []).filter((poll) => poll.status === "FINALIZED")} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onOpenSchedule={() => navigate("schedule")} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} manager={groupManager} />
             : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onCalendar={updateTaskCalendar} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
           {activeView === "people" && <GroupPeople data={data} onOpenTasks={openGroupTasks} />}
           {activeView === "schedule" && data.workspace.kind === "GROUP" && <GroupSchedulingView polls={data.scheduling?.polls ?? []} timezone={data.user.timezone} generatedAt={data.generatedAt} manager={groupManager} isDemo={isDemo} initialPoll={initialPoll} openCreate={openScheduleCreate} onChanged={() => refreshSnapshot(true)} announce={announce} />}

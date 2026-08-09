@@ -2,7 +2,15 @@
 
 This file is updated as each agreed Threadwise revamp phase is implemented and verified.
 
-## Unreleased - Private Study Workspace
+## Unreleased
+
+### Progressive group-work interaction
+- Added exact item targeting from Telegram deep links: the dashboard selects the authorized workspace, opens the requested view, and opens the intended task, note, idea, or image without another search.
+- Removed acceptance, decline, blocked, and member handoff controls from shared work. Assignments take effect immediately; unassigned members may claim work, while only the creator or a verified current Telegram administrator may assign or reassign it.
+- Reduced shared task cards and collaboration sheets to role-appropriate actions. Assignees complete or snooze, unrelated members view, and creator/admin management remains available without granting direct-mutation bypasses.
+- Simplified group progress and attention summaries around assigned, unassigned, open, overdue, and completed work while retaining historical activity records.
+
+## Private Study Workspace
 
 ### Honest pre-semester and Calendar states
 - Replaced `Week —` during the period before semester start with `Pre-semester · Week 1 begins <date>`, derived from the configured Study timezone. Missing semester dates now say so explicitly rather than looking like a rendering failure.

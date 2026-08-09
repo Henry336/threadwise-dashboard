@@ -9,7 +9,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - A responsive public landing page and personalized dashboard
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
-- Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, assignee acknowledgements, handoffs, and a seven-day summary
+- Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, immediate assignments, unassigned claiming, creator/admin reassignment, and a seven-day summary
 - A sealed, module-first Study workspace with Overview, Modules, Work, Library, Review, Search, Deep Work, and Settings for the one configured owner and actively bound Study group
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work

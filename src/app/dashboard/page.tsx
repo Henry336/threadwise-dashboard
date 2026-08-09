@@ -9,7 +9,7 @@ import type { DashboardWorkspace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string; view?: string; poll?: string; import?: string; new?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string; view?: string; poll?: string; import?: string; new?: string; item?: string; kind?: string }> }) {
   const params = await searchParams;
   const session = await getSessionUser();
   const isDemo = params.demo === "1" || params.demo === "group";
@@ -67,5 +67,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   }
   if (!canOpenStudyView(params.view, snapshot.workspace)) notFound();
   const availableWorkspaces = workspaces.length ? workspaces : [snapshot.workspace];
-  return <DashboardApp initialData={snapshot} workspaces={availableWorkspaces} isDemo={isDemo} initialView={params.view} initialPoll={params.poll} initialTaskImport={params.import} openScheduleCreate={params.new === "1"} />;
+  return <DashboardApp initialData={snapshot} workspaces={availableWorkspaces} isDemo={isDemo} initialView={params.view} initialPoll={params.poll} initialTaskImport={params.import} initialItem={params.item} initialItemKind={params.kind} openScheduleCreate={params.new === "1"} />;
 }
