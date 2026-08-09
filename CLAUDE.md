@@ -51,11 +51,17 @@ Browser → Vercel Next.js BFF → private Render /api/v1 → Threadwise service
 - Study Mode is stricter and fails closed: signed principal must be the configured Study owner,
   the opaque workspace must resolve to the configured chat, membership check must pass, and the
   DB binding must match. Forged calls get an opaque not-found. Canvas/Telegram creds are server-only.
+- Shared-work assignments take effect immediately. Members may claim unassigned work; assignees
+  may complete or snooze; only the creator or a verified current Telegram owner/admin may assign
+  or reassign. Legacy accept/decline/block/handoff records remain readable but are not active mutations.
+- Telegram deep links must select the authorized workspace and open the exact record or review.
+  Preserve the one-message/one-decision hierarchy instead of rebuilding button walls on the web.
 - Never put DB credentials in a `NEXT_PUBLIC_*` variable.
 
 ## Continuity
 
-Code is clean and pushed to GitHub, so any AI in any environment can continue from a clone.
+The repository is the durable handoff, but do not assume a worktree is clean or pushed. Verify the
+current branch, status, and remote before changing or publishing anything.
 Secrets are **not** in git (`.env*` gitignored; `.env.example` documents them). Back these up
 in a password manager — they cannot be recovered from the repo:
 `AUTH_SECRET`, the Telegram OIDC client credentials, and the Ed25519 `DASHBOARD_API_PRIVATE_KEY`
@@ -69,6 +75,13 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-10 (Codex):** Reconciled current product, architecture, interaction, and contributor
+  documentation with dashboard v0.9.0 and backend v0.32.0. Documented exact deep-link continuation,
+  immediate group assignments, progressive action hierarchy, the private Study Timetable, and
+  Beacon's intentional absence from the web product. Historical changelog entries remain historical.
+- **2026-08-09 (Codex):** Refactored shared-work interaction hierarchy. Telegram/dashboard links now
+  target exact records; assignment acceptance, decline, blocked, and member handoff controls were
+  removed from active UI; unassigned claiming and creator/admin reassignment remain.
 - **2026-08-06 (Claude):** Created this canonical `CLAUDE.md` + `AGENTS.md` pointer as part of a
   continuity pass across both Threadwise repos. Documented the trust boundary and the secrets to
   back up (`AUTH_SECRET`, Telegram OIDC creds, `DASHBOARD_API_PRIVATE_KEY`). No code changes.

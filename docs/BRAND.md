@@ -1,5 +1,7 @@
 # Threadwise identity
 
+Reviewed against dashboard v0.9.0: **2026-08-10**
+
 Threadwise uses one strand in two modes.
 
 ## Product mark

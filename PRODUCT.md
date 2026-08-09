@@ -2,6 +2,10 @@
 
 <!-- impeccable:product-schema 1 -->
 
+Current dashboard release: **v0.9.0**
+
+Product definition verified: **2026-08-10**
+
 ## Platform
 
 web
@@ -21,7 +25,7 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
 ## Operating Context
 
 - Telegram is the primary capture and reminder surface.
-- The dashboard is used for scanning, editing, search, group coordination, and focused review.
+- The dashboard is used for scanning, editing, search, group coordination, and focused review. Compact Telegram messages expose one immediate decision and link directly to the exact dashboard record for secondary work.
 - Group access is derived from signed Telegram identity, an opaque selected workspace id, and live Telegram membership verification.
 - Study Mode uses read-only Canvas synchronization, deterministic attention ranking, module-scoped work and resources, weekly planning/review, and focused study sessions.
 - PostgreSQL is the shared source of truth for Telegram and dashboard interactions.
@@ -29,10 +33,11 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
 ## Capabilities and Constraints
 
 - Personal workspaces expose tasks, notes, ideas, searchable images, search, settings, and Google Calendar as a secondary integration.
-- Shared workspaces expose assigned work, people, progress, activity, resources, and availability coordination.
+- Shared workspaces expose assigned work, people, progress, activity, resources, and availability coordination. Assignments take effect immediately: members may claim unassigned work, assignees may complete or snooze their work, and only the creator or a verified current Telegram administrator may assign or reassign it.
 - The Study dashboard appears only when the configured owner selects the exact configured Study group. Unauthorized Study routes and API requests return 404 without revealing the feature.
-- Study Mode includes Overview, Modules, Work, Library, Review, Search, Deep Work, and Settings; Canvas remains read-only and local completion never submits coursework.
+- Study Mode includes Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. The timetable combines recurring module timings with planned study tasks and class-travel context; Canvas remains read-only and local completion never submits coursework.
 - Expenses and Excel are frozen experiments and remain absent from active user-facing navigation.
+- Beacon is a separate Telegram bot process with no web dashboard. Moderation policy and actions intentionally remain in permission-aware Telegram private chats.
 - Clear commands and most natural-language capture are deterministic; AI is an optional enhancement, not a dependency for core workflows or Study Mode.
 - Browser code never receives database credentials, Telegram bot tokens, Canvas tokens, OAuth refresh tokens, or dashboard service-signing keys.
 
@@ -54,6 +59,7 @@ The product is named Threadwise and uses the line “Threadwise turns Telegram m
 3. Information hierarchy should reflect attention, not fill a dashboard grid.
 4. Telegram and web should edit one shared source of truth.
 5. Specialized modes earn their place through a clear Telegram-native job and strict access boundaries.
+6. Progressive disclosure is a safety and accessibility rule: show the decision needed now, then reveal detail in context.
 
 ## Accessibility & Inclusion
 

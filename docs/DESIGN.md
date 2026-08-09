@@ -1,5 +1,9 @@
 # Design direction: the quiet operations desk
 
+Current dashboard release: **v0.9.0**
+
+Design guidance verified: **2026-08-10**
+
 Threadwise is used to get thoughts out of the way. Its dashboard should return that information without becoming another source of noise.
 
 ## Core hierarchy
@@ -26,6 +30,8 @@ The My Day layout is intentionally asymmetric. Components earn size from relevan
 
 Group TODO import follows the same rule: one compact Telegram preview opens one task-shaped review sheet. It does not become a permanent navigation section. The sheet uses operational sans-serif type, explicit inclusion controls, row-level warnings, and one sticky import action so dense pasted lists remain understandable on mobile.
 
+Shared-work actions follow **one message, one decision**. Telegram shows no more than three immediate actions across two rows; the dashboard link is the continuation for detailed editing. Assignments take effect immediately, unassigned work may be claimed, assignees complete or snooze, and only the creator or a verified current Telegram administrator may assign or reassign. Do not reintroduce acceptance, decline, blocked, or member-handoff controls as active workflow.
+
 The review distinguishes uncertain data from terminal state. Unmatched people are removable rather than hidden inside an error string; warnings clear when their cause is fixed; Importing, Imported, Canceled, and Expired reviews stop presenting editable fields. Refresh is user-initiated so a live update cannot overwrite a correction still being typed.
 
 The sheet keeps a fixed four-part layout—header, contextual status, scrollable rows, and footer—so optional permission or error notices cannot displace its primary work area. Summary counts describe included rows only, and terminal status is stated once before a single Close action.
@@ -37,6 +43,8 @@ On desktop, each task reads in three deliberate layers: identity and editable ti
 - **Recall** — search, pins, archives, and the dashboard
 
 Calendar remains a secondary task integration. Frozen experiments do not appear in navigation, capture, search, onboarding, or empty states.
+
+The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey.
 
 ## Identity system
 
@@ -61,6 +69,7 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 - `Ctrl/Cmd + K` opens global search; visible actions remain available to touch users
 - `N` focuses capture; `G D`, `G T`, `G N`, and `G I` move between views
 - Essential task completion is always visible; secondary actions can be quieter
+- Exact Telegram deep links select the authorized workspace and open the intended record or review; never send a user to a generic dashboard home when the context is known
 - The shell resolves from soft blur to sharp focus, followed by a 35–50ms content stagger and a restrained 6–8px rise
 - Buttons compress to 0.98 on press; route, sheet, skeleton, gallery, and lightbox motion preserve spatial continuity
 - Hover and press transitions stay within 150–220ms, with transform-heavy motion disabled when reduced motion is requested

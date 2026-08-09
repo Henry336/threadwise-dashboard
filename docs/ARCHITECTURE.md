@@ -1,5 +1,9 @@
 # Dashboard architecture
 
+Updated: 2026-08-10
+
+Current dashboard release: v0.9.0; paired backend release: v0.32.0
+
 ## Boundary
 
 The dashboard is a separate Next.js application hosted on Vercel. It acts as a backend-for-frontend and talks to a versioned API hosted by the existing Threadwise Render service.
@@ -40,7 +44,7 @@ The intended production variant uses an asymmetric keypair: the private signing 
 - Request bodies never accept `userId`.
 - User text renders as plain JSX; no untrusted HTML is injected.
 - Personal resources resolve from the signed Telegram subject. Group resources additionally resolve through an opaque workspace id, recorded membership, and a live Telegram membership check.
-- Privileged group mutations re-check the current Telegram owner/admin role; ordinary members retain control of their own assignment response.
+- Assignment is immediate. An active member may claim currently unassigned work and an assignee may complete or snooze their own work; assignment or reassignment requires the task creator or a freshly verified Telegram owner/admin. Accept, decline, block, and member handoff are rejected as obsolete mutations.
 - A pending group TODO review may be controlled by its original sender. Any other controller must pass a fresh Telegram owner/admin check; ordinary members receive the review read-only.
 - Expenses, the frozen Excel surface, export, and account deletion remain personal-only. Group scheduling may invoke Calendar only as an explicit per-member copy of a finalized meeting; credentials, connection state, and event links remain personal.
 - Availability responses are keyed to the verified human Telegram id. Shared snapshots expose aggregates and identities but only return the signed-in viewer's raw selected cells.
@@ -51,11 +55,17 @@ Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF →
 
 Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.
 
+## Private Study projection
+
+Study Mode is discoverable only when the signed Telegram principal is the configured Study owner, the opaque workspace resolves to the configured Study chat, current Telegram membership succeeds, and the active database binding agrees. Every Study snapshot, search, protected-file request, and mutation repeats the backend gate; unauthorized direct routes receive the same opaque not-found response as a missing workspace.
+
+The Study shell exposes Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable builds week/day views from recurring class or study blocks plus planned work, renders assignment deadlines in a distinct lane, and supports module-week ranges and optional class-travel configuration. Travel origins are managed in Settings and class blocks may store a destination, normal origin, and travel buffer. All surfaces mutate the same PostgreSQL records used by Telegram; server-sent events request reconciliation rather than maintaining a second browser-owned copy.
+
 ## Production surface
 
 The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, group TODO review/edit/import/cancel, idea conversion, image delivery, search, shared settings, group collaboration, group availability polls, privacy export, and confirmed account deletion. Scheduling routes cover poll creation, the viewer's availability, manager finalization/reminders/closure, and the viewer's finalized Calendar event. Personal integration routes cover direct Calendar OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, and retained frozen Excel implementation.
 
-Telegram batch-review links first select the opaque group workspace through the existing same-origin route, then open `/dashboard?view=tasks&import=<id>`. The browser proxy accepts only bounded task-import paths and methods. The sheet edits durable preview rows rather than synthesizing client-only tasks; successful import refreshes the canonical snapshot, so Telegram and the dashboard continue to query the same task records.
+Telegram exact-item and batch-review links first select the opaque authorized workspace, then open the intended task, note, idea, image, or `/dashboard?view=tasks&import=<id>` review instead of a generic landing page. The browser proxy accepts only bounded item/review paths and methods. The TODO sheet edits durable preview rows rather than synthesizing client-only tasks; successful import refreshes the canonical snapshot, so Telegram and the dashboard continue to query the same task records.
 
 Telegram group messages cannot use ordinary `web_app` inline buttons. Find a time therefore uses the bot's Main Mini App and a bounded `startapp` parameter. After Telegram init-data verification, the server parses only the expected poll/create forms, selects the opaque workspace through the existing same-origin route, and falls back to the dashboard for malformed input.
 

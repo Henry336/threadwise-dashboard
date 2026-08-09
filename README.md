@@ -1,5 +1,9 @@
 # Threadwise Dashboard
 
+Current dashboard release: **v0.9.0**
+
+Documentation verified against both Threadwise repositories: **2026-08-10**
+
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
 The application is intentionally a separate Next.js frontend and backend-for-frontend. Browsers never receive a Supabase connection string, service-role key, Telegram bot token, or provider refresh token.
@@ -10,7 +14,8 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, immediate assignments, unassigned claiming, creator/admin reassignment, and a seven-day summary
-- A sealed, module-first Study workspace with Overview, Modules, Work, Library, Review, Search, Deep Work, and Settings for the one configured owner and actively bound Study group
+- A sealed, module-first Study workspace with Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings for the one configured owner and actively bound Study group
+- A responsive Study Timetable that combines recurring module blocks, planned work, assignment deadlines, and optional class-travel configuration without pretending every deadline is a scheduled study block
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
@@ -53,7 +58,7 @@ Browser → Vercel Next.js BFF → private Render /api/v1 → Threadwise service
               └── Telegram Mini App or OIDC session
 ```
 
-The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group workspaces resolve through opaque workspace ids and require recorded membership plus a live Telegram membership check before any shared data is returned. Privileged group mutations re-check the user's current Telegram owner/admin role, while members retain control of their own assignment response.
+The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group workspaces resolve through opaque workspace ids and require recorded membership plus a live Telegram membership check before any shared data is returned. Assignment takes effect immediately: an active member may claim unassigned work, assignees may complete or snooze their work, and only the task creator or a freshly verified Telegram owner/admin may assign or reassign an existing task. Accept, decline, block, and member handoff are no longer active mutations.
 
 Study Mode adds a stricter boundary. Its workspace is discoverable only when the signed Telegram principal is the configured Study owner, the selected opaque workspace resolves to the configured chat, the group membership check succeeds, and the active database binding matches that chat. The same gate is repeated by every Study API route and protected resource request; direct links and forged calls receive an opaque not-found response. Canvas and Telegram credentials remain server-only.
 

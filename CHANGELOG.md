@@ -4,6 +4,11 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Documentation reconciliation
+- Reconciled the README, product definition, architecture, design guidance, 21st context, and contributor handoff with dashboard v0.9.0 and backend v0.32.0.
+- Documented the current progressive Telegram-to-dashboard hierarchy, exact record deep links, immediate group-assignment rules, private Study Timetable, and Beacon's deliberate Telegram-only boundary.
+- Preserved earlier release notes as historical evidence rather than rewriting the decisions and validation snapshots that were true when those versions shipped.
+
 ### Progressive group-work interaction
 - Added exact item targeting from Telegram deep links: the dashboard selects the authorized workspace, opens the requested view, and opens the intended task, note, idea, or image without another search.
 - Removed acceptance, decline, blocked, and member handoff controls from shared work. Assignments take effect immediately; unassigned members may claim work, while only the creator or a verified current Telegram administrator may assign or reassign it.
