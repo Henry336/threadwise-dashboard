@@ -42,6 +42,7 @@ import type {
   DashboardSnapshot, DashboardTask, EntityKind, IdeaStatus, IntegrationStatus, SearchResult,
   CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
 } from "@/lib/types";
+import { dailyOverviewLine } from "@/lib/dashboard-copy";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -727,7 +728,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         </header>
 
         <div className="tw-content" key={activeView}>
-          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
+          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
           {activeView === "today" && (data.workspace.kind === "GROUP"
             ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} />
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
@@ -901,22 +902,23 @@ function WorkspaceSwitcher({ current, workspaces, disabled }: { current: Dashboa
   </div>;
 }
 
-function PageHeading({ view, workspace, name, timezone, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; onAdd: () => void }) {
-  const hour = Number(new Intl.DateTimeFormat("en-SG", { hour: "2-digit", hour12: false, timeZone: timezone }).format(new Date()));
+function PageHeading({ view, workspace, name, timezone, generatedAt, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; generatedAt: string; onAdd: () => void }) {
+  const now = new Date(generatedAt);
+  const hour = Number(new Intl.DateTimeFormat("en-SG", { hour: "2-digit", hour12: false, timeZone: timezone }).format(now));
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
-    today: workspace.kind === "GROUP" ? [workspace.name, "One live shared view of what the group is carrying."] : [`${greeting}, ${name}.`, "One calm view of what matters now."], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", workspace.kind === "GROUP" ? "Shared work, assignees, and reminders in one thread." : "Things to do, reminders when they matter."],
-    schedule: ["Find a time", "Agree on a time without leaving the group."],
+    today: workspace.kind === "GROUP" ? [workspace.name, ""] : [`${greeting}, ${name}.`, dailyOverviewLine(now, timezone)], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", ""],
+    schedule: ["Find a time", ""],
     people: ["People", ""],
     progress: ["Progress", ""],
     activity: ["Activity", ""],
-    library: [workspace.kind === "GROUP" ? "Resources" : "Library", workspace.kind === "GROUP" ? "Shared notes, ideas, and visual references in one place." : "Notes, ideas, and images—kept together."], notes: [workspace.kind === "GROUP" ? "Shared notes" : "Notes", "Useful things worth keeping."],
-    ideas: [workspace.kind === "GROUP" ? "Shared ideas" : "Ideas", "Small sparks, ready when you are."], images: [workspace.kind === "GROUP" ? "Shared images" : "Images", "Every saved frame, easy to find again."],
-    expenses: ["Expenses", "A clear view of what moved."], search: ["Search everything", "Tasks, notes, ideas, and images."],
-    settings: workspace.kind === "GROUP" ? ["Manage group", "Shared defaults and role-gated controls."] : ["Settings", "Make Threadwise work the way you do."],
+    library: [workspace.kind === "GROUP" ? "Resources" : "Library", ""], notes: [workspace.kind === "GROUP" ? "Shared notes" : "Notes", ""],
+    ideas: [workspace.kind === "GROUP" ? "Shared ideas" : "Ideas", ""], images: [workspace.kind === "GROUP" ? "Shared images" : "Images", ""],
+    expenses: ["Expenses", ""], search: ["Search tasks, notes, ideas, and images", ""],
+    settings: workspace.kind === "GROUP" ? ["Manage group", ""] : ["Settings", ""],
   };
   const canAdd = ["tasks", "notes", "ideas"].includes(view);
-  return <div className="tw-heading"><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(new Date())}</p><h1>{copy[view][0]}</h1><span>{copy[view][1]}</span></div>{canAdd && <button className="tw-primary" onClick={onAdd}><Plus size={17} /> Add {view.slice(0, -1)}</button>}</div>;
+  return <div className={`tw-heading ${view === "search" ? "tw-heading-search" : ""}`}><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(now)}</p><h1>{copy[view][0]}</h1>{copy[view][1] && <span>{copy[view][1]}</span>}</div>{canAdd && <button className="tw-primary" onClick={onAdd}><Plus size={17} /> Add {view.slice(0, -1)}</button>}</div>;
 }
 
 function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEdit, isDemo }: { data: DashboardSnapshot; focusTask?: DashboardTask; overdue: number; today: number; onToggle: (task: DashboardTask) => void; onNavigate: (view: DashboardView) => void; onEdit: (task: DashboardTask) => void; isDemo: boolean }) {
@@ -978,7 +980,7 @@ function threadlineBuckets(tasks: DashboardTask[], timezone: string): Threadline
 
 function Threadline({ groups, timezone, onToggle, onEdit, onOpenTasks }: { groups: ThreadlineGroup[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onOpenTasks: () => void }) {
   const visible = groups.filter((group) => group.tasks.length);
-  return <section className="tw-threadline"><div className="tw-section-head"><div><span>Plan</span><h3>Threadline</h3><p>Open tasks, arranged by when they need your attention.</p></div><button onClick={onOpenTasks}>All tasks <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task and it will land in the right place." />}</section>;
+  return <section className="tw-threadline"><div className="tw-section-head"><div><span>Plan</span><h3>Threadline</h3></div><button onClick={onOpenTasks}>All tasks <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task and it will land in the right place." />}</section>;
 }
 
 function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onCalendar, onArchive, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onCalendar: (task: DashboardTask, action: "sync" | "remove") => Promise<void>; onArchive: (task: DashboardTask) => Promise<boolean>; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {
@@ -1115,7 +1117,7 @@ function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: D
   const shown = kind === "all" ? allShown : allShown.filter((result) => result.kind === kind);
   const filters: Array<"all" | SearchResult["kind"]> = ["all", "task", "note", "idea", "image", ...(allowExpenses ? ["expense" as const] : [])];
   return <section className="tw-search-view tw-search-live">
-    <div className="tw-search-live-box"><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search while you type…" />{loading ? <LoaderCircle className="spin" size={18} /> : query ? <span>{shown.length} {shown.length === 1 ? "match" : "matches"}</span> : <kbd>LIVE</kbd>}</div>
+    <div className="tw-search-live-box"><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search while you type…" />{loading ? <LoaderCircle className="spin" size={18} /> : query ? <span>{shown.length} {shown.length === 1 ? "match" : "matches"}</span> : null}</div>
     <div className="tw-search-filters" aria-label="Filter search results">{filters.map((filter) => <button key={filter} className={kind === filter ? "active" : ""} onClick={() => setKind(filter)}>{filter === "all" ? "Everything" : `${filter}s`}</button>)}</div>
     <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Search size={28} /><h2>Start typing to search.</h2></div>}</div>
   </section>;

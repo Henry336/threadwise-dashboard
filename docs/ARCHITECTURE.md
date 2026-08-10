@@ -78,6 +78,10 @@ the same authenticated Study mutation routes and reconcile from the canonical sn
 
 ## Production surface
 
+### Installed app shell
+
+The dashboard exposes a Next.js web app manifest and Ari launcher assets so supported browsers can install it as a standalone window. The service worker is deliberately a shell-only recovery layer: it caches immutable framework assets, brand art, PWA icons, and the generic `/offline` route. It does not cache authenticated navigations, `/dashboard`, `/api/*`, or user records. Losing the network therefore produces an honest recovery screen instead of a stale or shared copy of private work.
+
 The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, group TODO review/edit/import/cancel, idea conversion, image delivery, search, shared settings, group collaboration, group availability polls, privacy export, and confirmed account deletion. Scheduling routes cover poll creation, the viewer's availability, manager finalization/reminders/closure, and the viewer's finalized Calendar event. Personal integration routes cover direct Calendar OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, and retained frozen Excel implementation.
 
 Telegram exact-item and batch-review links first select the opaque authorized workspace, then open the intended task, note, idea, image, or `/dashboard?view=tasks&import=<id>` review instead of a generic landing page. The browser proxy accepts only bounded item/review paths and methods. The TODO sheet edits durable preview rows rather than synthesizing client-only tasks; successful import refreshes the canonical snapshot, so Telegram and the dashboard continue to query the same task records.

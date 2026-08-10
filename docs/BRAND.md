@@ -12,6 +12,8 @@ Use it for navigation, product lockups, and formal material. The production mark
 
 The approved dark Ari app icon is reserved for browser and Telegram avatars. It does not replace the corporate mark inside dark product chrome.
 
+Installed-app icons derive from that approved Ari artwork. Launcher crops stay optically centered, and the maskable variant uses a neutral safe zone so mobile launchers do not clip Ari's face or thread.
+
 ## Ari
 
 Ari is the same strand made friendly: the loop becomes a head, the knot becomes a small body, and the tail still resolves as a check. Ari is not a chatty assistant persona. Ari is a quiet sign that Threadwise is ready, empty, or helping someone recover.
@@ -44,8 +46,10 @@ Do not use Ari beside every card, navigation item, save, or routine status.
 - `public/brand/ari-avatar-dark-sheet.png` — exact dark app-icon crop
 - `public/brand/ari-full-sheet.png` — exact full Ari crop
 - `public/brand/ari-threading-sheet.png` — exact thread-arranging illustration crop
-- `public/brand/ari-untangle-loading.png` — exact four-frame loading sequence; treat as a 4×1 sprite of 543×724 frames
+- `public/brand/ari-untangle-loading.png` — original four-frame Ari loading source
+- `public/brand/ari-untangle-loading-v2.webp` — production eight-frame loading sequence; treat as an 8×1 sprite of registered 543×724 frames and play it forward then backward
 - `public/brand/ari-telegram-512.png` — Telegram-ready dark avatar
 - `src/app/icon.png` — browser/app icon
+- `public/pwa/` — 192px, 512px, maskable, and Apple-touch launcher exports derived from the approved app icon
 
-Ari variants are deterministic crops from the approved sheet. Do not redraw, trace, or regenerate Ari: that would subtly change the mascot's proportions and expression. The faceless product mark is deliberately separate, geometric artwork designed to remain crisp at 16–32px.
+Ari variants are deterministic crops from the approved sheet. The loading sequence is the sole approved motion derivative: its frames preserve Ari's visual language and share one fixed registration anchor. Do not independently redraw or regenerate other Ari variants. The faceless product mark is deliberately separate, geometric artwork designed to remain crisp at 16–32px.

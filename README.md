@@ -11,6 +11,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 ## What is here
 
 - A responsive public landing page and personalized dashboard
+- An installable PWA shell for desktop taskbars and mobile home screens, with Ari launcher icons and a generic offline recovery page
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, immediate assignments, unassigned claiming, creator/admin reassignment, and a seven-day summary
@@ -62,6 +63,8 @@ Browser → Vercel Next.js BFF → private Render /api/v1 → Threadwise service
 ```
 
 The dashboard identifies a user from Telegram's verified numeric `id` claim. Render derives the canonical Threadwise `userId`; resource requests never accept a browser-supplied `userId`. Group workspaces resolve through opaque workspace ids and require recorded membership plus a live Telegram membership check before any shared data is returned. Assignment takes effect immediately: an active member may claim unassigned work, assignees may complete or snooze their work, and only the task creator or a freshly verified Telegram owner/admin may assign or reassign an existing task. Accept, decline, block, and member handoff are no longer active mutations.
+
+The installable shell does not turn Threadwise into an offline data store. Its service worker caches only versioned application and brand assets plus the generic offline page; authenticated navigation and `/api/*` responses remain network-only.
 
 Study Mode adds a stricter boundary. Its workspace is discoverable only when the signed Telegram principal is the configured Study owner, the selected opaque workspace resolves to the configured chat, the group membership check succeeds, and the active database binding matches that chat. The same gate is repeated by every Study API route and protected resource request; direct links and forged calls receive an opaque not-found response. Canvas and Telegram credentials remain server-only.
 

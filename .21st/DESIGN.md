@@ -32,3 +32,7 @@ Use one focused review surface with editable task rows, explicit include/exclude
 On desktop, each row has three layers: task identity and editable title, operational metadata, then expanded correction fields. Deadline changes stay local until **Done** sends one update, preventing server refreshes from interrupting the native picker. The sheet is opaque and uses the same canvas/surface tokens in light and dark mode.
 
 Telegram review links must select the authorized workspace and open the exact review or record. The dashboard is a continuation of the chat decision, not a generic destination.
+
+## Decision: direct operational copy
+
+Use one direct title on collection and settings pages. Do not add a subtitle that restates an obvious page name. Search names tasks, notes, ideas, and images in the heading itself. Reserve one short, deterministic daily line for the personal Overview greeting, where a small amount of personality supports orientation without competing with work.

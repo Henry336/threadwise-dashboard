@@ -79,11 +79,15 @@ retryable failure, permanent expiry, and expired-session states must each have a
 - The faceless threaded-path mark represents Threadwise as a product. It is one optically centered vector with identical geometry in light and dark themes; only its theme token changes.
 - Ari is the same thread given a face and body. Ari appears in onboarding, empty moments, recovery states, capture entry points, and settings where the illustration provides useful orientation.
 - Mascot artwork comes directly from the approved Ari sheet. UI implementations preserve the supplied artwork instead of approximating Ari with new paths.
+- Ari's loading motion uses eight registered frames on one fixed 3:4 stage. Playback runs forward and backward so the loop never jumps from its finished state to its opening knot; reduced motion holds on the completed frame.
 - Browser icons and Telegram avatars may use the approved dark Ari app icon. Product chrome always uses the faceless vector mark in both themes.
 
 ## Anti-slop rules
 
 - Editorial serif is reserved for greetings, collection titles, and genuinely reflective moments. Tasks, controls, counts, metadata, and operational status use the sans-serif system.
+- Operational pages state the page name once. Do not add a subtitle that merely rephrases Tasks, Notes, Ideas, Images, Settings, or another self-evident destination.
+- Search names the searchable entities in one heading; result counts and loading state carry live status without a decorative `LIVE` badge.
+- Personal Overview may carry one short daily line. It must be deterministic for the workspace day, concise, and secondary to the user's actual work.
 - A card must group a meaningful object or action. Do not wrap every label, count, or empty state in another rounded container.
 - Avoid generic dashboard filler: decorative orbits, disconnected gradient shapes, equal-height statistic towers, invented analytics, and slogans where a direct label is clearer.
 - Asymmetry must follow information priority, not decoration. Today gives the active task the most space, then a compact actionable day pulse, then the chronological Threadline.

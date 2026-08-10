@@ -4,6 +4,16 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Installable dashboard and direct interface copy
+- Added a standards-based installable dashboard shell with Ari launcher and maskable icons, standalone display metadata, and a generic offline recovery page.
+- Kept the service worker privacy-safe: it caches versioned static assets only and never stores dashboard navigation responses, API responses, tasks, notes, images, or other private workspace data.
+- Removed self-evident subtitles from personal, shared-group, Study, and demo collection pages. Search now names its scope once, and the personal Overview uses one deterministic daily line instead of permanent filler copy.
+
+### Registered Ari loading motion
+- Rebuilt the Study and dashboard loading artwork as eight consistently registered 543×724 frames, keeping Ari's head, body scale, baseline, and visual center fixed while only the untangling action changes. The production WebP is 144 KB, smaller than the original four-frame PNG despite doubling the frame count.
+- Replaced the four large pose jumps with a forward-and-reverse 15-step playback path. The finished pose now returns through the same intermediate states instead of snapping directly back to the knot.
+- Kept the finished frame static for reduced-motion users and preserved the existing loading-card dimensions across desktop and mobile.
+
 ### Study timetable context and inspection
 - Kept wheel input contained inside the Horizontal timetable at both time-axis boundaries, preventing the surrounding page from jumping. Frozen day labels now open the same focused day agenda as Vertical mode.
 - Removed the repeated edge shadows from the frozen Deadlines cells; the existing divider now provides a clean, continuous boundary without semicircular artifacts.

@@ -75,6 +75,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-11 (Codex):** Added the installable PWA shell with approved Ari launcher assets and a
+  privacy-safe static-only service worker. Removed redundant explanatory copy across personal,
+  group, Study, and demo views; personal Overview now receives one deterministic daily line.
+
 - **2026-08-11 (Codex):** Contained vertical wheel input inside the Horizontal Timetable even at
   the left/right boundaries, preventing page jumps. Frozen day labels are now keyboard-accessible
   controls that open the same day agenda used by Vertical mode.

@@ -45,7 +45,7 @@ export function AriUntangleLoader({
   return (
     <div className={`ari-untangle-loader${compact ? " compact" : ""}`} role="status" aria-live="polite">
       <span className="ari-untangle-loader-frame" aria-hidden="true">
-        <img src="/brand/ari-untangle-loading.png" alt="" />
+        <img src="/brand/ari-untangle-loading-v2.webp" alt="" />
       </span>
       <span>{label}</span>
     </div>

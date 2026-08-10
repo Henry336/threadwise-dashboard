@@ -78,6 +78,11 @@
       "date": "2026-08-10",
       "decision": "Give Horizontal Study Timetable one weekday axis and a two-item per-day deadline rail; reserve the week-level Work due shelf for Vertical mode.",
       "reason": "Repeating weekdays across the top and left made the horizontal view look like two calendars overlaid. A bounded adjacent due rail preserves deadline access, communicates its distinction from scheduled time, and moves only genuine overflow into the existing day agenda."
+    },
+    {
+      "date": "2026-08-11",
+      "decision": "Use one direct title and no self-evident subtitle on operational pages; reserve one stable daily line for the personal Overview greeting.",
+      "reason": "Repeated explanations made simple collections feel generated and increased visual noise. Direct labels preserve hierarchy, while one deterministic Overview line gives the home surface personality without creating layout churn."
     }
   ],
   "evidence": [
