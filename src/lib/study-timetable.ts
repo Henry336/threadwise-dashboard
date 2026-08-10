@@ -14,6 +14,11 @@ export type TimetableDay = {
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+export function timetableDuePreview<T>(items: T[], limit = 2): { visible: T[]; remaining: number } {
+  const safeLimit = Math.max(0, Math.trunc(limit));
+  return { visible: items.slice(0, safeLimit), remaining: Math.max(0, items.length - safeLimit) };
+}
+
 export function dateKeyInZone(value: string | Date, timezone: string): string {
   const date = value instanceof Date ? value : new Date(value);
   const parts = new Intl.DateTimeFormat("en-CA", {

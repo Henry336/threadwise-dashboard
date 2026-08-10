@@ -75,6 +75,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-10 (Codex):** Completed the coordinated Study reliability pass. Horizontal Timetable
+  now has one weekday axis and a two-item per-row Due rail; vertical mode keeps the week shelf.
+  Inactive/Canvas-discovered modules have explicit Restore or Activate controls and remain absent
+  from active semester projections supplied by the backend.
 - **2026-08-10 (Codex):** Repaired the Study Timetable's structural alignment by giving the
   weekday strip the same 84px time rail as the deadline and clock grids. Added NUSMods-style
   Vertical and Horizontal week orientations over one schedule model; weekday controls now open

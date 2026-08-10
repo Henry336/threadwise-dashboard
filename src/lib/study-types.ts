@@ -16,6 +16,7 @@ export type StudyModule = {
   masteryReason?: string | null;
   canvasCourseId?: string | null;
   canvasLastSeenAt?: string | null;
+  userArchivedAt?: string | null;
   updatedAt: string;
   summary?: {
     status: StudyTrafficLight;
@@ -177,6 +178,7 @@ export type StudySnapshot = {
     };
   };
   modules: StudyModule[];
+  inactiveModules: StudyModule[];
   items: StudyItem[];
   resources: StudyResource[];
   mistakes: StudyMistake[];

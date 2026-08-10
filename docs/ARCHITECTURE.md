@@ -61,6 +61,11 @@ Study Mode is discoverable only when the signed Telegram principal is the config
 
 The Study shell exposes Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable builds week/day views from recurring class or study blocks plus planned work, renders assignment deadlines in a distinct lane, and supports module-week ranges and optional class-travel configuration. Travel origins are managed in Settings and class blocks may store a destination, normal origin, and travel buffer. All surfaces mutate the same PostgreSQL records used by Telegram; server-sent events request reconciliation rather than maintaining a second browser-owned copy.
 
+The snapshot separates active `modules` from `inactiveModules`. Operational arrays contain only
+active-module data; the latter exists solely for owner Restore/Activate controls. Horizontal week
+mode renders weekdays once as row labels, a bounded Due rail, and then the time track. Vertical mode
+keeps the shared Work due shelf. Both views remain projections over the same schedule and item rows.
+
 ## Production surface
 
 The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, group TODO review/edit/import/cancel, idea conversion, image delivery, search, shared settings, group collaboration, group availability polls, privacy export, and confirmed account deletion. Scheduling routes cover poll creation, the viewer's availability, manager finalization/reminders/closure, and the viewer's finalized Calendar event. Personal integration routes cover direct Calendar OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, and retained frozen Excel implementation.

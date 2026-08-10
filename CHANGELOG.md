@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Study reliability and horizontal deadline rail
+- Removed the duplicate top weekday/deadline shelf from Horizontal Timetable mode. Weekdays now appear once as non-interactive row labels, followed by a compact per-day Due rail and the hourly schedule.
+- Kept at most two deadlines visible per horizontal day and moved overflow into the existing day agenda, preserving scanability without hiding access to the full list.
+- Added an Inactive module section with explicit Restore or Activate actions. Owner archives remain visually distinct from newly discovered Canvas courses waiting for review.
+- Updated the Study snapshot contract so archived modules and their work, resources, mistakes, sessions, schedule blocks, search results, reminders, and travel projections stay outside active semester views.
+
 ### Study timetable alignment and day navigation
 - Aligned the weekday strip, deadline lane, and hourly schedule to one shared 84px time rail plus seven equal day columns. The earlier strip omitted the rail, shifting every weekday heading left of its actual timetable column.
 - Made weekday selection purposeful: choosing a date now opens that date's detailed day agenda instead of silently changing hidden state while the weekly grid remained unchanged.

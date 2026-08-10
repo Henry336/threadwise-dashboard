@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { academicWeekForDate, buildTimetableDays, initialTimetableWeek } from "./study-timetable";
+import { academicWeekForDate, buildTimetableDays, initialTimetableWeek, timetableDuePreview } from "./study-timetable";
 import type { StudySnapshot } from "./study-types";
 
 function snapshot(): StudySnapshot {
@@ -12,7 +12,7 @@ function snapshot(): StudySnapshot {
     },
     weekNumber: 0,
     overview: { overallStatus: "UNASSESSED", amberWarning: false, redWarning: false, topPriorities: [], attention: { generatedAt: "", items: [], overdue: 0, dueToday: 0, dueThisWeek: 0, undated: 0, missingCanvas: 0, redModules: [] } },
-    modules: [], resources: [], mistakes: [], sessions: [], reviews: [], origins: [],
+    modules: [], inactiveModules: [], resources: [], mistakes: [], sessions: [], reviews: [], origins: [],
     items: [{
       id: "item", publicId: "STUDY-1", moduleId: "module", type: "ASSIGNMENT", title: "Tutorial 1", source: "MANUAL", status: "OPEN", priority: "NORMAL",
       dueAt: "2026-08-12T10:00:00.000Z", plannedMinutes: 45, actualMinutes: 0, mastery: "UNASSESSED", createdAt: "", updatedAt: "",
@@ -41,5 +41,9 @@ describe("study timetable", () => {
   it("calculates pre-semester and teaching weeks", () => {
     expect(academicWeekForDate("2026-08-05", "2026-08-10")).toBe(0);
     expect(academicWeekForDate("2026-08-17", "2026-08-10")).toBe(2);
+  });
+
+  it("limits horizontal due previews and reports the hidden remainder", () => {
+    expect(timetableDuePreview(["a", "b", "c", "d"])).toEqual({ visible: ["a", "b"], remaining: 2 });
   });
 });

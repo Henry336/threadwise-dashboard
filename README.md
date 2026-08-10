@@ -16,6 +16,8 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, immediate assignments, unassigned claiming, creator/admin reassignment, and a seven-day summary
 - A sealed, module-first Study workspace with Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings for the one configured owner and actively bound Study group
 - A responsive Study Timetable that combines recurring module blocks, planned work, assignment deadlines, and optional class-travel configuration without pretending every deadline is a scheduled study block
+- One truthful weekday axis per Timetable orientation: Vertical keeps a week deadline shelf, while Horizontal puts a two-item Due rail beside each day and sends overflow to the day agenda
+- Explicit inactive-module review and restore controls; Canvas refreshes never decide which courses belong in the active semester
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates

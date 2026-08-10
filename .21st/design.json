@@ -37,6 +37,7 @@
       "editable task rows",
       "single primary action",
       "dual-orientation desktop weekly timetable with a separate deadline lane",
+      "horizontal timetable rows with one weekday label, bounded due rail, then time track",
       "mobile day agenda with explicit schedule editing"
     ]
   },
@@ -72,6 +73,11 @@
       "date": "2026-08-10",
       "decision": "Let desktop Study users switch the weekly timetable between vertical and horizontal orientations while retaining the same schedule data, deadline shelf, editor, and day agenda.",
       "reason": "Days-as-columns is best for scanning a conventional week, but days-as-rows makes long teaching days and time gaps easier to compare. Orientation is a view preference, not a second scheduling model, and remains hidden on mobile where a day agenda is clearer."
+    },
+    {
+      "date": "2026-08-10",
+      "decision": "Give Horizontal Study Timetable one weekday axis and a two-item per-day deadline rail; reserve the week-level Work due shelf for Vertical mode.",
+      "reason": "Repeating weekdays across the top and left made the horizontal view look like two calendars overlaid. A bounded adjacent due rail preserves deadline access, communicates its distinction from scheduled time, and moves only genuine overflow into the existing day agenda."
     }
   ],
   "evidence": [

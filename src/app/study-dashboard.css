@@ -394,6 +394,19 @@
 .study-module-grid footer { padding-top: 14px; display: flex; justify-content: space-between; gap: 8px; }
 .study-module-grid footer button { min-height: 42px; display: inline-flex; align-items: center; gap: 6px; background: transparent; font-size: 11px; font-weight: 720; }
 
+.study-inactive-modules { margin-top: 34px; border-top: 1px solid var(--line-strong); }
+.study-inactive-modules > header { padding: 22px 0 15px; display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+.study-inactive-modules > header span { color: var(--faint); font-size: 10px; font-weight: 830; letter-spacing: .1em; text-transform: uppercase; }
+.study-inactive-modules > header h2 { margin: 4px 0 0; font-family: var(--serif); font-size: 28px; font-weight: 470; }
+.study-inactive-modules > header p { margin: 0; color: var(--muted); font-size: 12px; }
+.study-inactive-modules > div { border: 1px solid var(--line-strong); background: var(--surface); }
+.study-inactive-modules article { min-height: 76px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--line); }
+.study-inactive-modules article:last-child { border-bottom: 0; }
+.study-inactive-modules article > div { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 10px; }
+.study-inactive-modules article b { color: var(--study-blue); font-size: 12px; }
+.study-inactive-modules article span { overflow: hidden; font-size: 13px; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+.study-inactive-modules article small { grid-column: 1 / -1; color: var(--faint); font-size: 11px; }
+
 .study-toolbar { margin: 24px 0 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .study-toolbar > select,
 .study-toolbar > label,
@@ -1114,19 +1127,25 @@
 .study-now-line b { position: absolute; top: -16px; left: 4px; color: var(--study-amber); font-size: 8px; }
 
 .study-horizontal-grid { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; background: var(--surface); }
-.study-horizontal-scroll { width: calc(84px + var(--timeline-width)); min-width: 100%; }
-.study-horizontal-time-axis { position: sticky; z-index: 6; top: 0; min-height: 43px; display: grid; grid-template-columns: 84px var(--timeline-width); border-bottom: 1px solid var(--line-strong); background: var(--surface); }
+.study-horizontal-scroll { --due-column-width: 168px; width: calc(84px + var(--due-column-width) + var(--timeline-width)); min-width: 100%; }
+.study-horizontal-time-axis { position: sticky; z-index: 6; top: 0; min-height: 43px; display: grid; grid-template-columns: 84px var(--due-column-width) var(--timeline-width); border-bottom: 1px solid var(--line-strong); background: var(--surface); }
 .study-horizontal-time-axis > span { display: grid; place-items: center; border-right: 1px solid var(--line-strong); color: var(--faint); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .study-horizontal-time-axis > div { position: relative; width: var(--timeline-width); }
 .study-horizontal-time-axis time { position: absolute; bottom: 10px; transform: translateX(-50%); color: var(--faint); font-size: 9px; font-variant-numeric: tabular-nums; }
 .study-horizontal-time-axis time:first-child { transform: translateX(4px); }
-.study-horizontal-day { min-height: 82px; display: grid; grid-template-columns: 84px var(--timeline-width); border-bottom: 1px solid var(--line); }
+.study-horizontal-day { min-height: 82px; display: grid; grid-template-columns: 84px var(--due-column-width) var(--timeline-width); border-bottom: 1px solid var(--line); }
 .study-horizontal-day:last-child { border-bottom: 0; }
 .study-horizontal-day-label { min-height: 82px; display: grid; place-items: center; align-content: center; gap: 2px; border-right: 1px solid var(--line-strong); background: var(--surface); color: var(--faint); }
-.study-horizontal-day-label:hover { background: var(--surface-soft); color: var(--ink); }
 .study-horizontal-day.today .study-horizontal-day-label { color: var(--study-blue); background: var(--study-blue-soft); }
 .study-horizontal-day-label span { font-size: 9px; font-weight: 830; letter-spacing: .08em; text-transform: uppercase; }
 .study-horizontal-day-label b { font-family: var(--serif); font-size: 21px; font-weight: 500; }
+.study-horizontal-due { min-height: 82px; padding: 6px; display: grid; align-content: center; gap: 4px; border-right: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface-soft) 66%, var(--surface)); }
+.study-horizontal-due > button { min-width: 0; padding: 5px 7px; display: grid; gap: 1px; border: 1px solid color-mix(in srgb, var(--module-color) 28%, var(--line)); border-radius: 5px; background: var(--surface); color: var(--ink); text-align: left; }
+.study-horizontal-due > button:hover { background: var(--study-blue-soft); }
+.study-horizontal-due > button span { color: var(--module-color); font-size: 8px; font-weight: 830; letter-spacing: .05em; text-transform: uppercase; }
+.study-horizontal-due > button b { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.study-horizontal-due > button.more { border: 0; background: transparent; color: var(--study-blue); font-size: 9px; font-weight: 760; }
+.study-horizontal-due-empty { color: var(--faint); font-family: var(--serif); font-size: 16px; text-align: center; }
 .study-horizontal-track { position: relative; width: var(--timeline-width); min-height: 82px; background: color-mix(in srgb, var(--surface) 97%, var(--canvas)); }
 .study-horizontal-day.today .study-horizontal-track { background: color-mix(in srgb, var(--study-blue) 3.5%, var(--surface)); }
 .study-horizontal-track > i { position: absolute; inset: 0 auto 0; width: 1px; background: var(--line); }
@@ -1299,6 +1318,9 @@
 }
 
 @media (max-width: 620px) {
+  .study-inactive-modules > header { align-items: start; flex-direction: column; gap: 7px; }
+  .study-inactive-modules article { align-items: stretch; flex-direction: column; }
+  .study-inactive-modules article > button { width: 100%; }
   .study-status-banner { grid-template-columns: 22px minmax(0, 1fr); }
   .study-status-banner button { grid-column: 2; justify-self: start; }
   .study-settings-panel > section { padding: 18px 15px; }

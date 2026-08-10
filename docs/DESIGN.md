@@ -46,6 +46,13 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 
 The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey. Desktop week view can place days in columns with time running downward or place days in rows with time running left-to-right; both orientations edit the same blocks. Mobile keeps the day agenda instead of compressing either weekly grid.
 
+Horizontal Timetable uses one weekday axis only: a non-interactive day label, a narrow per-day Due
+rail, then the hourly track. The Due rail shows at most two deadlines and one explicit overflow
+action. Vertical mode retains the week-level Work due shelf. This prevents the same weekday from
+appearing on both axes and keeps deadlines adjacent to, but semantically separate from, scheduled
+time. Module selection is never an implicit capture destination; inactive modules live in one quiet
+restore/review section rather than leaking into semester work.
+
 ## Identity system
 
 - The faceless threaded-path mark represents Threadwise as a product. It is one optically centered vector with identical geometry in light and dark themes; only its theme token changes.
