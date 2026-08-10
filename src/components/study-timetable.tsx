@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight,
   Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, X,
@@ -9,7 +9,8 @@ import type { StudyItem, StudySnapshot } from "@/lib/study-types";
 import {
   academicWeekForDate, addDays, buildTimetableDays, clockMinutes, currentMinutesInZone, dateKeyInZone,
   formatClock, formatWeekRange, FULL_DAY_END_MINUTE, FULL_DAY_START_MINUTE, initialTimetableWeek,
-  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableDuePreview, timetableIndicatorOffset,
+  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableBlockDensity, timetableBlockLanes, timetableDuePreview,
+  timetableHorizontalBlockWidth, timetableIndicatorOffset, timetablePanelReducer,
 } from "@/lib/study-timetable";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
@@ -37,7 +38,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   });
   const [mode, setMode] = useState<"week" | "day">("week");
   const [orientation, setOrientation] = useState<WeekOrientation>("vertical");
-  const [editor, setEditor] = useState<{ block?: ScheduleBlock; day: number } | null>(null);
+  const [panel, dispatchPanel] = useReducer(timetablePanelReducer, { mode: "closed" });
   const verticalScrollRef = useRef<HTMLElement>(null);
   const horizontalScrollRef = useRef<HTMLElement>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
@@ -57,6 +58,9 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const preferredMinute = preferredTimetableMinute(blocksInView.map(({ block }) => block.startTime), nowMinutes, showingCurrentWeek);
   const verticalExtent = (gridEnd - gridStart) * VERTICAL_MINUTE_SCALE;
   const verticalNowOffset = timetableIndicatorOffset(nowMinutes - gridStart, VERTICAL_MINUTE_SCALE, verticalExtent);
+  const panelBlock = panel.mode === "details" || panel.mode === "edit"
+    ? study.scheduleBlocks.find((block) => block.id === panel.blockId)
+    : undefined;
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -81,7 +85,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   return <section className="study-page study-timetable-page">
     <header className="study-timetable-head">
       <div><span>Study Mode</span><h1>Timetable</h1></div>
-      <button className="study-primary" onClick={() => setEditor({ day: activeDay.weekday })}><Plus size={16} /> Add block</button>
+      <button className="study-primary" onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={16} /> Add block</button>
     </header>
 
     <div className="study-timetable-summary" aria-label="Timetable summary">
@@ -116,8 +120,8 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     </nav>
 
     <div className={`study-timetable-surface ${mode === "day" ? "day-mode" : "week-mode"} ${orientation}-orientation`}>
-      {orientation === "vertical" && <section className="study-due-lane" aria-label="Work due this week">
-        <header><span>Work due</span><small>Deadlines, not class time</small></header>
+      {orientation === "vertical" && <section className="study-due-lane" aria-label="Deadlines this week">
+        <header><span>Deadlines</span></header>
         <div>{days.map((day) => <div key={day.key}><span className="study-due-day-label">{day.shortLabel} {day.dateLabel.split(" ")[0]}</span>{day.dueItems.slice(0, 2).map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}{day.dueItems.length > 2 && <button className="more" onClick={() => { setSelectedDay(day.key); setMode("day"); }}>+{day.dueItems.length - 2} more</button>}</div>)}</div>
       </section>}
 
@@ -131,7 +135,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
               "--block-top": `${(bounds.start - gridStart) * VERTICAL_MINUTE_SCALE}px`,
               "--block-height": `${Math.max(42, (bounds.end - bounds.start) * VERTICAL_MINUTE_SCALE - 4)}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
-            } as CSSProperties} onClick={() => setEditor({ block, day: block.dayOfWeek })}>
+            } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })}>
               <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
             </button>; })}
           </div>)}
@@ -150,32 +154,51 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         showingCurrentWeek={showingCurrentWeek}
         onOpenDueOverflow={(key) => { setSelectedDay(key); setMode("day"); }}
         onEditItem={onEditItem}
-        onEditBlock={(block) => setEditor({ block, day: block.dayOfWeek })}
+        onOpenBlock={(block) => dispatchPanel({ type: "open-details", blockId: block.id })}
       />}
 
       <section className="study-day-agenda" aria-label={`${activeDay.longLabel} agenda`}>
-        <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => setEditor({ day: activeDay.weekday })}><Plus size={15} /> Add block</button></header>
+        <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={15} /> Add block</button></header>
         {activeDay.blocks.length === 0 && activeDay.dueItems.length === 0 ? <div className="study-agenda-empty"><CalendarDays size={23} /><b>Nothing scheduled.</b><p>Keep the space open or add a study block.</p></div> : <>
           {activeDay.blocks.map((block) => <article className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties}>
-            <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div><button onClick={() => setEditor({ block, day: block.dayOfWeek })} aria-label={`Edit ${block.label}`}><Pencil size={16} /></button>
+            <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div><button onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })} aria-label={`View ${block.label}`}><ChevronRight size={17} /></button>
           </article>)}
-          {activeDay.dueItems.length > 0 && <div className="study-agenda-due"><span>Work due</span>{activeDay.dueItems.map((item) => <article key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties}><button onClick={() => onEditItem(item)}><small>{item.module.code} · {item.plannedMinutes ? `${item.plannedMinutes} min` : "unestimated"}</small><b>{item.title}</b></button><button onClick={() => onFocusItem(item)} aria-label={`Focus on ${item.title}`}><Focus size={16} /></button></article>)}</div>}
+          {activeDay.dueItems.length > 0 && <div className="study-agenda-due"><span>Deadlines</span>{activeDay.dueItems.map((item) => <article key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties}><button onClick={() => onEditItem(item)}><small>{item.module.code} · {item.plannedMinutes ? `${item.plannedMinutes} min` : "unestimated"}</small><b>{item.title}</b></button><button onClick={() => onFocusItem(item)} aria-label={`Focus on ${item.title}`}><Focus size={16} /></button></article>)}</div>}
         </>}
       </section>
     </div>
 
-    {editor && <TimetableEditor key={editor.block?.id ?? `new-${editor.day}`} study={study} block={editor.block} defaultDay={editor.day} busy={busy} onClose={() => setEditor(null)} onDelete={async (block) => {
-      if (!window.confirm(`Remove ${block.label}?`)) return;
-      const saved = await onDeleteBlock(block.id);
-      if (saved !== undefined) setEditor(null);
-    }} onSave={async (body) => {
-      const saved = editor.block ? await onUpdateBlock(editor.block.id, body) : await onAddBlock(body);
-      if (saved !== undefined) setEditor(null);
-    }} />}
+    {panel.mode === "details" && panelBlock && <TimetableBlockDetails
+      key={`details-${panelBlock.id}`}
+      block={panelBlock}
+      busy={busy}
+      onClose={() => dispatchPanel({ type: "close" })}
+      onEdit={() => dispatchPanel({ type: "edit" })}
+      onDelete={async () => {
+        const confirmed = window.confirm(`Remove ${panelBlock.label} from every scheduled week? This recurring block will be removed.`);
+        if (!confirmed) return;
+        const saved = await onDeleteBlock(panelBlock.id);
+        if (saved !== undefined) dispatchPanel({ type: "close" });
+      }}
+    />}
+    {(panel.mode === "create" || (panel.mode === "edit" && panelBlock)) && <TimetableEditor
+      key={panel.mode === "create" ? `new-${panel.day}` : `edit-${panelBlock?.id}`}
+      study={study}
+      block={panel.mode === "edit" ? panelBlock : undefined}
+      defaultDay={panel.mode === "create" ? panel.day : panelBlock?.dayOfWeek ?? activeDay.weekday}
+      busy={busy}
+      onClose={() => dispatchPanel({ type: "close" })}
+      onSave={async (body) => {
+        const saved = panel.mode === "edit" && panelBlock
+          ? await onUpdateBlock(panelBlock.id, body)
+          : await onAddBlock(body);
+        if (saved !== undefined) dispatchPanel({ type: "close" });
+      }}
+    />}
   </section>;
 }
 
-function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDueOverflow, onEditItem, onEditBlock }: {
+function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDueOverflow, onEditItem, onOpenBlock }: {
   study: StudySnapshot;
   days: ReturnType<typeof buildTimetableDays>;
   hours: number[];
@@ -187,23 +210,25 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
   showingCurrentWeek: boolean;
   onOpenDueOverflow: (key: string) => void;
   onEditItem: (item: StudyItem) => void;
-  onEditBlock: (block: ScheduleBlock) => void;
+  onOpenBlock: (block: ScheduleBlock) => void;
 }) {
   const timelineWidth = (gridEnd - gridStart) * HORIZONTAL_MINUTE_SCALE + 48;
   const horizontalNowOffset = timetableIndicatorOffset(nowMinutes - gridStart, HORIZONTAL_MINUTE_SCALE, timelineWidth - 48, 20);
   return <section ref={scrollRef} className="study-horizontal-grid" aria-label={`Horizontal timetable for ${weekLabel}`} style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}>
     <div className="study-horizontal-scroll">
       <div className="study-horizontal-time-axis">
-        <span aria-hidden="true">Day</span>
-        <span aria-hidden="true">Due</span>
+        <span className="study-horizontal-axis-day" aria-hidden="true">Day</span>
+        <span className="study-horizontal-axis-deadlines" aria-hidden="true">Deadlines</span>
         <div>{hours.map((hour) => <time key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</time>)}{showingCurrentWeek && <strong className="study-horizontal-now-label" style={{ left: `${horizontalNowOffset}px` }}>Now</strong>}</div>
       </div>
       <div className="study-horizontal-days">
         {days.map((day) => {
           const due = timetableDuePreview(day.dueItems);
-          return <div className={`study-horizontal-day ${day.isToday ? "today" : ""}`} key={day.key}>
-          <div className="study-horizontal-day-label" aria-label={`${day.longLabel}, ${day.dateLabel}`}><span>{day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></div>
-          <div className="study-horizontal-due" aria-label={`Work due ${day.longLabel}`}>
+          const layout = timetableBlockLanes(day.blocks);
+          const rowHeight = Math.max(82, layout.laneCount * 68 + 10);
+          return <div className={`study-horizontal-day ${day.isToday ? "today" : ""}`} key={day.key} style={{ "--row-height": `${rowHeight}px` } as CSSProperties}>
+          <div className="study-horizontal-day-label" aria-label={`${day.longLabel}, ${day.dateLabel}`} aria-current={day.isToday ? "date" : undefined}><span>{day.isToday ? `Today · ${day.shortLabel}` : day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></div>
+          <div className="study-horizontal-due" aria-label={`Deadlines for ${day.longLabel}`}>
             {due.visible.map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}
             {due.visible.length === 0 && <span className="study-horizontal-due-empty">{"\u2014"}</span>}
             {due.remaining > 0 && <button className="more" onClick={() => onOpenDueOverflow(day.key)}>+{due.remaining} more</button>}
@@ -211,12 +236,13 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
           <div className="study-horizontal-track">
             {hours.map((hour) => <i key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }} />)}
             {day.isToday && nowMinutes >= gridStart && nowMinutes < gridEnd && <span className="study-horizontal-now" style={{ left: `${horizontalNowOffset}px` }} />}
-            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); return <button key={block.id} className="study-horizontal-block" style={{
+            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); const width = timetableHorizontalBlockWidth(block.startTime, block.endTime, HORIZONTAL_MINUTE_SCALE); const density = timetableBlockDensity(width); const label = scheduleBlockAccessibleLabel(block); return <button key={block.id} className={`study-horizontal-block density-${density}`} style={{
               "--block-left": `${(bounds.start - gridStart) * HORIZONTAL_MINUTE_SCALE + 3}px`,
-              "--block-width": `${Math.max(44, (bounds.end - bounds.start) * HORIZONTAL_MINUTE_SCALE - 6)}px`,
+              "--block-width": `${width}px`,
+              "--block-top": `${5 + (layout.lanes.get(block.id) ?? 0) * 68}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
-            } as CSSProperties} onClick={() => onEditBlock(block)}>
-              <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
+            } as CSSProperties} onClick={() => onOpenBlock(block)} aria-label={label} title={label}>
+              {density === "narrow" ? <strong>{shortBlockLabel(block)}</strong> : <><span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b>{density === "full" && <><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}</>}</>}
             </button>; })}
           </div>
         </div>;
@@ -226,14 +252,79 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
   </section>;
 }
 
-function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave, onDelete }: {
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function shortBlockLabel(block: ScheduleBlock): string {
+  if (block.module?.code) return block.module.code.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase();
+  const labels: Record<string, string> = { class: "CL", lecture: "LEC", tutorial: "TUT", lab: "LAB", study: "ST", other: "•" };
+  return labels[block.blockType.toLowerCase()] ?? block.blockType.slice(0, 3).toUpperCase();
+}
+
+function scheduleBlockAccessibleLabel(block: ScheduleBlock): string {
+  return [block.module?.code, block.label, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName]
+    .filter(Boolean).join(" · ");
+}
+
+function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean, onClose: () => void) {
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) { event.preventDefault(); onClose(); return; }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled])")];
+      if (!focusable.length) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => { window.removeEventListener("keydown", handleKeyDown); previous?.focus(); };
+  }, [busy, dialogRef, onClose]);
+}
+
+function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
+  block: ScheduleBlock;
+  busy: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(dialogRef, busy, onClose);
+  const weeks = block.startWeek == null && block.endWeek == null
+    ? "Every week"
+    : block.startWeek === block.endWeek
+      ? `Week ${block.startWeek}`
+      : `Weeks ${block.startWeek ?? 1}–${block.endWeek ?? "end"}`;
+  const travelConfigured = Boolean(block.venueName || block.defaultOrigin?.name || block.defaultOriginId);
+
+  return <div className="study-timetable-overlay detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+    <section ref={dialogRef} className="study-timetable-detail" role="dialog" aria-modal="true" aria-labelledby="timetable-details-title" tabIndex={-1}>
+      <header><div><span>Timetable block</span><h2 id="timetable-details-title">{block.label}</h2></div><button onClick={onClose} disabled={busy} aria-label="Close block details"><X size={20} /></button></header>
+      <div className="study-timetable-detail-body">
+        <dl>
+          {block.module && <div><dt>Module</dt><dd>{block.module.code} · {block.module.name}</dd></div>}
+          <div><dt>Type</dt><dd>{block.blockType.replace(/_/g, " ")}</dd></div>
+          <div><dt>Time</dt><dd>{DAY_NAMES[block.dayOfWeek - 1]} · {formatClock(block.startTime)}–{formatClock(block.endTime)}</dd></div>
+          <div><dt>Repeats</dt><dd>{weeks}</dd></div>
+          {block.venueName && <div><dt>Venue</dt><dd>{block.venueName}</dd></div>}
+        </dl>
+        {travelConfigured && <section className="study-timetable-detail-travel"><span><MapPin size={16} /> Travel reminder</span><p>{block.defaultOrigin?.name ? `From ${block.defaultOrigin.name}` : "Uses your current or default origin"}</p><small>{block.travelBufferMinutes} min buffer · {block.reminderLeadMinutes} min reminder lead</small></section>}
+      </div>
+      <footer><button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete()}><Trash2 size={16} /> Delete</button><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Close</button><button type="button" className="study-primary" disabled={busy} onClick={onEdit}><Pencil size={16} /> Edit</button></div></footer>
+    </section>
+  </div>;
+}
+
+function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
   study: StudySnapshot;
   block?: ScheduleBlock;
   defaultDay: number;
   busy: boolean;
   onClose: () => void;
   onSave: (body: unknown) => Promise<void>;
-  onDelete: (block: ScheduleBlock) => Promise<void>;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const [moduleId, setModuleId] = useState(block?.moduleId ?? "");
@@ -248,22 +339,7 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave, onDe
   const [originId, setOriginId] = useState(block?.defaultOriginId ?? "");
   const [buffer, setBuffer] = useState(block?.travelBufferMinutes ?? 15);
 
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>("input, select, button")?.focus();
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) { event.preventDefault(); onClose(); return; }
-      if (event.key !== "Tab" || !dialogRef.current) return;
-      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled])")];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", close);
-    return () => { window.removeEventListener("keydown", close); previous?.focus(); };
-  }, [busy, onClose]);
+  useDialogFocus(dialogRef, busy, onClose);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -294,7 +370,7 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave, onDe
         <label>Ends<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
         <div className="study-timetable-weeks"><label>From week<input type="number" min={1} max={80} value={startWeek} onChange={(event) => setStartWeek(event.target.value)} placeholder="1" /></label><span>to</span><label>Until week<input type="number" min={1} max={80} value={endWeek} onChange={(event) => setEndWeek(event.target.value)} placeholder="13" /></label></div>
         <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><label>Destination<input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="COM3" /></label><label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current/default origin</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label><label>Travel buffer<input type="number" min={0} max={90} value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label></div>
-        <footer>{block ? <button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete(block)}><Trash2 size={15} /> Remove</button> : <span />}<div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : "Save block"}</button></div></footer>
+        <footer><span /><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : block ? "Save changes" : "Save block"}</button></div></footer>
       </form>
     </section>
   </div>;

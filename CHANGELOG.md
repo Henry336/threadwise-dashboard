@@ -4,6 +4,13 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Study timetable context and inspection
+- Kept Day and Deadlines visible while Horizontal week mode scrolls through the 24-hour time axis, with opaque frozen panes, a pinned time ruler, and a quiet boundary between context and schedule.
+- Made today unmistakable without confusing it with the current time: teal marks the current-day label and row, while orange remains reserved for the live NOW line.
+- Changed timetable block selection from immediate editing to a read-only detail sheet with explicit Edit, Delete, and Close actions. New blocks still open directly in the form.
+- Added width-aware horizontal cards so short blocks render as intentional capsules, medium blocks show a compact identity, and wide blocks reveal time and venue without fragmented labels.
+- Added focused tests for density thresholds, exact duration widths, overlap lanes, midnight bounds, and detail-to-edit panel transitions.
+
 ### Full-day Study timetable and in-app image viewing
 - Expanded both desktop timetable orientations to a 00:00–24:00 model with fixed-height scrolling, relevant-time auto-positioning, midnight-safe block bounds, and current-time labels reserved outside event content.
 - Kept mobile on the focused day agenda rather than compressing a 24-hour weekly grid into an unreadable viewport.
@@ -12,7 +19,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Kept direct page copy and a clean Impeccable scan across the changed Study timetable, library, and stylesheet targets.
 
 ### Study reliability and horizontal deadline rail
-- Removed the duplicate top weekday/deadline shelf from Horizontal Timetable mode. Weekdays now appear once as non-interactive row labels, followed by a compact per-day Due rail and the hourly schedule.
+- Removed the duplicate top weekday/deadline shelf from Horizontal Timetable mode. Weekdays now appear once as non-interactive row labels, followed by a compact per-day Deadlines rail and the hourly schedule.
 - Kept at most two deadlines visible per horizontal day and moved overflow into the existing day agenda, preserving scanability without hiding access to the full list.
 - Added an Inactive module section with explicit Restore or Activate actions. Owner archives remain visually distinct from newly discovered Canvas courses waiting for review.
 - Updated the Study snapshot contract so archived modules and their work, resources, mistakes, sessions, schedule blocks, search results, reminders, and travel projections stay outside active semester views.

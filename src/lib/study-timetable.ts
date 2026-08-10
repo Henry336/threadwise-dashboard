@@ -17,6 +17,57 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const FULL_DAY_START_MINUTE = 0;
 export const FULL_DAY_END_MINUTE = 24 * 60;
 
+export type TimetableBlockDensity = "narrow" | "compact" | "full";
+
+export type TimetablePanelState =
+  | { mode: "closed" }
+  | { mode: "details"; blockId: string }
+  | { mode: "edit"; blockId: string }
+  | { mode: "create"; day: number };
+
+export type TimetablePanelAction =
+  | { type: "open-details"; blockId: string }
+  | { type: "edit" }
+  | { type: "create"; day: number }
+  | { type: "close" };
+
+export function timetablePanelReducer(state: TimetablePanelState, action: TimetablePanelAction): TimetablePanelState {
+  if (action.type === "open-details") return { mode: "details", blockId: action.blockId };
+  if (action.type === "create") return { mode: "create", day: action.day };
+  if (action.type === "edit" && state.mode === "details") return { mode: "edit", blockId: state.blockId };
+  if (action.type === "close") return { mode: "closed" };
+  return state;
+}
+
+export function timetableBlockDensity(width: number): TimetableBlockDensity {
+  if (width < 68) return "narrow";
+  if (width < 132) return "compact";
+  return "full";
+}
+
+export function timetableHorizontalBlockWidth(startTime: string, endTime: string, scale: number, gap = 6): number {
+  const bounds = timetableBlockBounds(startTime, endTime);
+  return Math.max(1, (bounds.end - bounds.start) * scale - gap);
+}
+
+export function timetableBlockLanes<T extends { id: string; startTime: string; endTime: string }>(blocks: T[]): {
+  laneCount: number;
+  lanes: Map<string, number>;
+} {
+  const laneEnds: number[] = [];
+  const lanes = new Map<string, number>();
+  [...blocks]
+    .sort((left, right) => timetableBlockBounds(left.startTime, left.endTime).start - timetableBlockBounds(right.startTime, right.endTime).start)
+    .forEach((block) => {
+      const bounds = timetableBlockBounds(block.startTime, block.endTime);
+      let lane = laneEnds.findIndex((end) => end <= bounds.start);
+      if (lane < 0) lane = laneEnds.length;
+      laneEnds[lane] = bounds.end;
+      lanes.set(block.id, lane);
+    });
+  return { laneCount: Math.max(1, laneEnds.length), lanes };
+}
+
 export function timetableBlockBounds(startTime: string, endTime: string): { start: number; end: number } {
   const start = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, clockMinutes(startTime)));
   const parsedEnd = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, clockMinutes(endTime)));

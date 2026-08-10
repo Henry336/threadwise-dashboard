@@ -65,8 +65,16 @@ Study images remain behind the same owner/group gate. The browser requests media
 
 The snapshot separates active `modules` from `inactiveModules`. Operational arrays contain only
 active-module data; the latter exists solely for owner Restore/Activate controls. Horizontal week
-mode renders weekdays once as row labels, a bounded Due rail, and then the time track. Vertical mode
-keeps the shared Work due shelf. Both views remain projections over the same schedule and item rows.
+mode renders weekdays once as frozen row labels, a bounded frozen Deadlines rail, and then the
+independently scrolling time track. Its time ruler is sticky within the schedule viewport. Vertical
+mode keeps the shared Deadlines shelf. Both views remain projections over the same schedule and item
+rows; orientation, density tier, details, and edit state are browser presentation concerns and do not
+change Study API contracts.
+
+Existing block selection enters a reducer-backed details state before entering edit state. Display
+density is derived deterministically from the duration-accurate rendered width, while overlap lanes
+are assigned client-side for legibility. New blocks may enter create state directly. All states use
+the same authenticated Study mutation routes and reconcile from the canonical snapshot afterward.
 
 ## Production surface
 

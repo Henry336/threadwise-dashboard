@@ -75,10 +75,16 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-10 (Codex):** Refined Study Timetable horizontal context: Day and Deadlines now remain
+  frozen beneath a pinned time ruler, today has a teal row treatment distinct from the orange NOW
+  marker, existing blocks open in read-only details before editing, and duration-accurate cards use
+  narrow/compact/full density tiers. Added focused state, width, overlap, and midnight tests plus
+  desktop/mobile, light/dark visual verification.
+
 - **2026-08-10 (Codex):** Expanded Study Timetable to a scrollable 24-hour schedule in both desktop orientations, reserved/clamped the live-time indicator, and kept mobile on the day agenda. Replaced raw Study-image navigation with a same-origin lightbox and explicit retry/expiry/session states. Added the visible ten-minute Telegram capture-target status and updated architecture/design/release notes.
 
 - **2026-08-10 (Codex):** Completed the coordinated Study reliability pass. Horizontal Timetable
-  now has one weekday axis and a two-item per-row Due rail; vertical mode keeps the week shelf.
+  now has one weekday axis and a two-item per-row Deadlines rail; vertical mode keeps the week shelf.
   Inactive/Canvas-discovered modules have explicit Restore or Activate controls and remain absent
   from active semester projections supplied by the backend.
 - **2026-08-10 (Codex):** Repaired the Study Timetable's structural alignment by giving the

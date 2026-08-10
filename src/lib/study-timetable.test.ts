@@ -5,6 +5,10 @@ import {
   preferredTimetableMinute,
   timetableIndicatorOffset,
   timetableBlockBounds,
+  timetableBlockDensity,
+  timetableBlockLanes,
+  timetableHorizontalBlockWidth,
+  timetablePanelReducer,
 } from "./study-timetable";
 
 describe("Study timetable day bounds", () => {
@@ -29,5 +33,30 @@ describe("Study timetable day bounds", () => {
     expect(timetableIndicatorOffset(0, 1.05, extent)).toBe(8);
     expect(timetableIndicatorOffset(7 * 60, 1.05, extent)).toBe(441);
     expect(timetableIndicatorOffset(1440, 1.05, extent)).toBe(extent - 8);
+  });
+
+  it("uses stable density thresholds without distorting duration-based widths", () => {
+    expect(timetableHorizontalBlockWidth("10:00", "10:30", 1.35)).toBeCloseTo(34.5);
+    expect(timetableBlockDensity(34.5)).toBe("narrow");
+    expect(timetableBlockDensity(68)).toBe("compact");
+    expect(timetableBlockDensity(132)).toBe("full");
+  });
+
+  it("places overlapping and cross-midnight blocks in separate visual lanes", () => {
+    const layout = timetableBlockLanes([
+      { id: "a", startTime: "23:30", endTime: "00:30" },
+      { id: "b", startTime: "23:45", endTime: "23:55" },
+      { id: "c", startTime: "10:00", endTime: "10:30" },
+    ]);
+    expect(layout.laneCount).toBe(2);
+    expect(layout.lanes.get("a")).not.toBe(layout.lanes.get("b"));
+    expect(layout.lanes.get("c")).toBe(0);
+  });
+
+  it("moves a selected block from details to edit and closes cleanly", () => {
+    const details = timetablePanelReducer({ mode: "closed" }, { type: "open-details", blockId: "block-1" });
+    expect(details).toEqual({ mode: "details", blockId: "block-1" });
+    expect(timetablePanelReducer(details, { type: "edit" })).toEqual({ mode: "edit", blockId: "block-1" });
+    expect(timetablePanelReducer(details, { type: "close" })).toEqual({ mode: "closed" });
   });
 });

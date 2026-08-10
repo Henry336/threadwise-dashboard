@@ -51,12 +51,24 @@ viewport. Initial position follows the current time or earliest relevant work; t
 a reserved rail and must never overlap an event title. Mobile keeps the day agenda rather than shrinking
 the full-day week grid.
 
-Horizontal Timetable uses one weekday axis only: a non-interactive day label, a narrow per-day Due
-rail, then the hourly track. The Due rail shows at most two deadlines and one explicit overflow
-action. Vertical mode retains the week-level Work due shelf. This prevents the same weekday from
+Horizontal Timetable uses one weekday axis only: a non-interactive day label, a narrow per-day Deadlines
+rail, then the hourly track. The Deadlines rail shows at most two deadlines and one explicit overflow
+action. Vertical mode retains the week-level Deadlines shelf. This prevents the same weekday from
 appearing on both axes and keeps deadlines adjacent to, but semantically separate from, scheduled
 time. Module selection is never an implicit capture destination; inactive modules live in one quiet
 restore/review section rather than leaking into semester work.
+
+Horizontal Timetable keeps its **Day** and **Deadlines** columns frozen while the 24-hour axis moves.
+The time ruler stays pinned above the scrolling schedule, and the frozen pane has an opaque surface
+plus a restrained boundary shadow so blocks never show through it. Day labels are informational,
+not navigation controls. Teal marks the entire current-day row and its `TODAY · DAY DATE` label;
+orange is reserved for the live-time line and `NOW` marker.
+
+Selecting an existing timetable block opens a read-only detail sheet before any mutation is offered.
+Desktop uses a right-side sheet and mobile uses a bottom sheet. Edit changes that same sheet into a
+form; recurring deletion requires explicit confirmation. Horizontal cards adapt to actual rendered
+width: narrow blocks become labelled capsules, compact blocks show module plus title, and full blocks
+add time and venue. Every density retains the complete accessible label and opens the same details.
 
 Study image capture is intentional: the bot saves no image or OCR result until the owner confirms it.
 The Library opens images in a same-origin lightbox rather than navigating to an API response. Loading,
