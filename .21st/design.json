@@ -36,7 +36,7 @@
       "mobile-first review sheet",
       "editable task rows",
       "single primary action",
-      "desktop weekly timetable with a separate deadline lane",
+      "dual-orientation desktop weekly timetable with a separate deadline lane",
       "mobile day agenda with explicit schedule editing"
     ]
   },
@@ -67,6 +67,11 @@
       "date": "2026-08-05",
       "decision": "Give private Study a first-class timetable: recurring schedule blocks use a weekly clock grid, while assignment deadlines remain in a separate Work due lane and mobile defaults to a day agenda.",
       "reason": "Study data was already present but settings and chat cards did not reveal the shape of a week. Separating scheduled time from due time keeps the visualization truthful, and the day agenda avoids shrinking seven columns into an unusable mobile layout."
+    },
+    {
+      "date": "2026-08-10",
+      "decision": "Let desktop Study users switch the weekly timetable between vertical and horizontal orientations while retaining the same schedule data, deadline shelf, editor, and day agenda.",
+      "reason": "Days-as-columns is best for scanning a conventional week, but days-as-rows makes long teaching days and time gaps easier to compare. Orientation is a view preference, not a second scheduling model, and remains hidden on mobile where a day agenda is clearer."
     }
   ],
   "evidence": [

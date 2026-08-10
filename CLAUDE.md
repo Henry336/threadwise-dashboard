@@ -75,6 +75,11 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-10 (Codex):** Repaired the Study Timetable's structural alignment by giving the
+  weekday strip the same 84px time rail as the deadline and clock grids. Added NUSMods-style
+  Vertical and Horizontal week orientations over one schedule model; weekday controls now open
+  the selected day agenda instead of changing invisible state. Mobile keeps its rail-free,
+  touch-friendly day agenda rather than squeezing either desktop grid onto a phone.
 - **2026-08-10 (Codex):** Reconciled current product, architecture, interaction, and contributor
   documentation with dashboard v0.9.0 and backend v0.32.0. Documented exact deep-link continuation,
   immediate group assignments, progressive action hierarchy, the private Study Timetable, and

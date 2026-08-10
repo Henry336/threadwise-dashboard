@@ -44,7 +44,7 @@ On desktop, each task reads in three deliberate layers: identity and editable ti
 
 Calendar remains a secondary task integration. Frozen experiments do not appear in navigation, capture, search, onboarding, or empty states.
 
-The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey.
+The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey. Desktop week view can place days in columns with time running downward or place days in rows with time running left-to-right; both orientations edit the same blocks. Mobile keeps the day agenda instead of compressing either weekly grid.
 
 ## Identity system
 

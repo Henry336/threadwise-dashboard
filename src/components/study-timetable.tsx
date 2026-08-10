@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight,
-  Clock3, Focus, MapPin, Pencil, Plus, Trash2, X,
+  Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, X,
 } from "lucide-react";
 import type { StudyItem, StudySnapshot } from "@/lib/study-types";
 import {
@@ -12,6 +12,10 @@ import {
 } from "@/lib/study-timetable";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
+type WeekOrientation = "vertical" | "horizontal";
+
+const VERTICAL_MINUTE_SCALE = 1.05;
+const HORIZONTAL_MINUTE_SCALE = 1.35;
 
 type Props = {
   study: StudySnapshot;
@@ -31,6 +35,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     return startOfWeek(today) === week ? today : week;
   });
   const [mode, setMode] = useState<"week" | "day">("week");
+  const [orientation, setOrientation] = useState<WeekOrientation>("vertical");
   const [editor, setEditor] = useState<{ block?: ScheduleBlock; day: number } | null>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
   const activeDay = days.find((day) => day.key === selectedDay) ?? days[0]!;
@@ -75,35 +80,61 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     <div className="study-timetable-toolbar">
       <div className="study-week-stepper"><button onClick={() => moveWeek(-1)} aria-label="Previous week"><ChevronLeft size={18} /></button><button onClick={goToday}>Today</button><button onClick={() => moveWeek(1)} aria-label="Next week"><ChevronRight size={18} /></button></div>
       <div className="study-week-title"><b>{academicWeek === 0 ? "Pre-semester" : academicWeek ? `Week ${academicWeek}` : "Study week"}</b><span>{formatWeekRange(weekStart)}</span></div>
-      <div className="study-view-toggle" aria-label="Timetable layout"><button className={mode === "week" ? "active" : ""} onClick={() => setMode("week")}>Week</button><button className={mode === "day" ? "active" : ""} onClick={() => setMode("day")}>Day</button></div>
+      <div className="study-layout-controls">
+        {mode === "week" && <div className="study-orientation-toggle" aria-label="Week orientation">
+          <button type="button" className={orientation === "vertical" ? "active" : ""} aria-pressed={orientation === "vertical"} onClick={() => setOrientation("vertical")}><Columns3 size={14} /> Vertical</button>
+          <button type="button" className={orientation === "horizontal" ? "active" : ""} aria-pressed={orientation === "horizontal"} onClick={() => setOrientation("horizontal")}><Rows3 size={14} /> Horizontal</button>
+        </div>}
+        <div className="study-view-toggle" aria-label="Timetable range"><button className={mode === "week" ? "active" : ""} aria-pressed={mode === "week"} onClick={() => setMode("week")}>Week</button><button className={mode === "day" ? "active" : ""} aria-pressed={mode === "day"} onClick={() => setMode("day")}>Day</button></div>
+      </div>
     </div>
 
-    <div className="study-day-strip" role="tablist" aria-label="Choose a day">
-      {days.map((day) => <button key={day.key} role="tab" aria-selected={activeDay.key === day.key} className={`${activeDay.key === day.key ? "active" : ""} ${day.isToday ? "today" : ""}`} onClick={() => setSelectedDay(day.key)}><span>{day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b>{(day.blocks.length > 0 || day.dueItems.length > 0) && <i aria-hidden="true" />}</button>)}
-    </div>
+    <nav className={`study-day-strip ${mode === "week" && orientation === "horizontal" ? "horizontal-hidden" : ""}`} aria-label="Open a day">
+      <span className="study-day-strip-rail" aria-hidden="true"><Clock3 size={14} /></span>
+      {days.map((day) => <button
+        key={day.key}
+        type="button"
+        aria-pressed={mode === "day" && activeDay.key === day.key}
+        aria-label={`Open ${day.longLabel}, ${day.dateLabel} in day view`}
+        className={`${activeDay.key === day.key ? "active" : ""} ${day.isToday ? "today" : ""}`}
+        onClick={() => { setSelectedDay(day.key); setMode("day"); }}
+      ><span>{day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b>{(day.blocks.length > 0 || day.dueItems.length > 0) && <i aria-hidden="true" />}</button>)}
+    </nav>
 
-    <div className={`study-timetable-surface ${mode === "day" ? "day-mode" : "week-mode"}`}>
+    <div className={`study-timetable-surface ${mode === "day" ? "day-mode" : "week-mode"} ${orientation}-orientation`}>
       <section className="study-due-lane" aria-label="Work due this week">
         <header><span>Work due</span><small>Deadlines, not class time</small></header>
-        <div>{days.map((day) => <div key={day.key}>{day.dueItems.slice(0, 2).map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}{day.dueItems.length > 2 && <button className="more" onClick={() => { setSelectedDay(day.key); setMode("day"); }}>+{day.dueItems.length - 2} more</button>}</div>)}</div>
+        <div>{days.map((day) => <div key={day.key}><span className="study-due-day-label">{day.shortLabel} {day.dateLabel.split(" ")[0]}</span>{day.dueItems.slice(0, 2).map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}{day.dueItems.length > 2 && <button className="more" onClick={() => { setSelectedDay(day.key); setMode("day"); }}>+{day.dueItems.length - 2} more</button>}</div>)}</div>
       </section>
 
-      <section className="study-week-grid" aria-label={`Timetable for ${formatWeekRange(weekStart)}`} style={{ "--grid-height": `${(gridEnd - gridStart) * 1.05}px` } as CSSProperties}>
-        <div className="study-time-rail">{hours.map((hour) => <span key={hour} style={{ top: `${(hour * 60 - gridStart) * 1.05}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</span>)}</div>
+      {orientation === "vertical" && <section className="study-week-grid" aria-label={`Vertical timetable for ${formatWeekRange(weekStart)}`} style={{ "--grid-height": `${(gridEnd - gridStart) * VERTICAL_MINUTE_SCALE}px` } as CSSProperties}>
+        <div className="study-time-rail">{hours.map((hour) => <span key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</span>)}</div>
         <div className="study-week-columns">
           {days.map((day) => <div className={`study-week-day ${day.isToday ? "today" : ""}`} key={day.key}>
-            {hours.map((hour) => <i key={hour} style={{ top: `${(hour * 60 - gridStart) * 1.05}px` }} />)}
-            {day.isToday && nowMinutes >= gridStart && nowMinutes <= gridEnd && <span className="study-now-line" style={{ top: `${(nowMinutes - gridStart) * 1.05}px` }}><b>Now</b></span>}
+            {hours.map((hour) => <i key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }} />)}
+            {day.isToday && nowMinutes >= gridStart && nowMinutes <= gridEnd && <span className="study-now-line" style={{ top: `${(nowMinutes - gridStart) * VERTICAL_MINUTE_SCALE}px` }}><b>Now</b></span>}
             {day.blocks.map((block) => <button key={block.id} className="study-schedule-block" style={{
-              "--block-top": `${(clockMinutes(block.startTime) - gridStart) * 1.05}px`,
-              "--block-height": `${Math.max(42, (clockMinutes(block.endTime) - clockMinutes(block.startTime)) * 1.05 - 4)}px`,
+              "--block-top": `${(clockMinutes(block.startTime) - gridStart) * VERTICAL_MINUTE_SCALE}px`,
+              "--block-height": `${Math.max(42, (clockMinutes(block.endTime) - clockMinutes(block.startTime)) * VERTICAL_MINUTE_SCALE - 4)}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => setEditor({ block, day: block.dayOfWeek })}>
               <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
             </button>)}
           </div>)}
         </div>
-      </section>
+      </section>}
+
+      {orientation === "horizontal" && <HorizontalWeekGrid
+        study={study}
+        days={days}
+        hours={hours}
+        gridStart={gridStart}
+        gridEnd={gridEnd}
+        nowMinutes={nowMinutes}
+        weekLabel={formatWeekRange(weekStart)}
+        onOpenDay={(key) => { setSelectedDay(key); setMode("day"); }}
+        onEditBlock={(block) => setEditor({ block, day: block.dayOfWeek })}
+      />}
 
       <section className="study-day-agenda" aria-label={`${activeDay.longLabel} agenda`}>
         <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => setEditor({ day: activeDay.weekday })}><Plus size={15} /> Add block</button></header>
@@ -124,6 +155,44 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       const saved = editor.block ? await onUpdateBlock(editor.block.id, body) : await onAddBlock(body);
       if (saved !== undefined) setEditor(null);
     }} />}
+  </section>;
+}
+
+function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, onOpenDay, onEditBlock }: {
+  study: StudySnapshot;
+  days: ReturnType<typeof buildTimetableDays>;
+  hours: number[];
+  gridStart: number;
+  gridEnd: number;
+  nowMinutes: number;
+  weekLabel: string;
+  onOpenDay: (key: string) => void;
+  onEditBlock: (block: ScheduleBlock) => void;
+}) {
+  const timelineWidth = (gridEnd - gridStart) * HORIZONTAL_MINUTE_SCALE + 48;
+  return <section className="study-horizontal-grid" aria-label={`Horizontal timetable for ${weekLabel}`} style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}>
+    <div className="study-horizontal-scroll">
+      <div className="study-horizontal-time-axis">
+        <span aria-hidden="true">Day</span>
+        <div>{hours.map((hour) => <time key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</time>)}</div>
+      </div>
+      <div className="study-horizontal-days">
+        {days.map((day) => <div className={`study-horizontal-day ${day.isToday ? "today" : ""}`} key={day.key}>
+          <button type="button" className="study-horizontal-day-label" onClick={() => onOpenDay(day.key)} aria-label={`Open ${day.longLabel}, ${day.dateLabel} in day view`}><span>{day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></button>
+          <div className="study-horizontal-track">
+            {hours.map((hour) => <i key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }} />)}
+            {day.isToday && nowMinutes >= gridStart && nowMinutes <= gridEnd && <span className="study-horizontal-now" style={{ left: `${(nowMinutes - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }}><b>Now</b></span>}
+            {day.blocks.map((block) => <button key={block.id} className="study-horizontal-block" style={{
+              "--block-left": `${(clockMinutes(block.startTime) - gridStart) * HORIZONTAL_MINUTE_SCALE + 3}px`,
+              "--block-width": `${Math.max(44, (clockMinutes(block.endTime) - clockMinutes(block.startTime)) * HORIZONTAL_MINUTE_SCALE - 6)}px`,
+              "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
+            } as CSSProperties} onClick={() => onEditBlock(block)}>
+              <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
+            </button>)}
+          </div>
+        </div>)}
+      </div>
+    </div>
   </section>;
 }
 

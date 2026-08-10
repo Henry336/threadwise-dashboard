@@ -4,6 +4,13 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Study timetable alignment and day navigation
+- Aligned the weekday strip, deadline lane, and hourly schedule to one shared 84px time rail plus seven equal day columns. The earlier strip omitted the rail, shifting every weekday heading left of its actual timetable column.
+- Made weekday selection purposeful: choosing a date now opens that date's detailed day agenda instead of silently changing hidden state while the weekly grid remained unchanged.
+- Added NUSMods-style week orientation controls. Vertical view keeps days as columns and time running downward; Horizontal view uses days as rows and time running left-to-right with an independently scrollable clock axis.
+- Reused the same blocks, module colors, live-time indicator, deadline shelf, and edit action in both orientations so changing the view never changes schedule data.
+- Kept mobile navigation compact by removing the desktop time-rail spacer below 860px while preserving full-width touch targets for all seven days.
+
 ### Documentation reconciliation
 - Reconciled the README, product definition, architecture, design guidance, 21st context, and contributor handoff with dashboard v0.9.0 and backend v0.32.0.
 - Documented the current progressive Telegram-to-dashboard hierarchy, exact record deep links, immediate group-assignment rules, private Study Timetable, and Beacon's deliberate Telegram-only boundary.
