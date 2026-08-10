@@ -214,6 +214,32 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
 }) {
   const timelineWidth = (gridEnd - gridStart) * HORIZONTAL_MINUTE_SCALE + 48;
   const horizontalNowOffset = timetableIndicatorOffset(nowMinutes - gridStart, HORIZONTAL_MINUTE_SCALE, timelineWidth - 48, 20);
+
+  useEffect(() => {
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey || event.deltaY === 0 || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+      const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? viewport.clientWidth * 0.85
+          : 1;
+      const delta = event.deltaY * scale;
+      const maximum = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      const canMove = delta > 0 ? viewport.scrollLeft < maximum - 1 : viewport.scrollLeft > 1;
+
+      if (!canMove) return;
+      event.preventDefault();
+      viewport.scrollLeft = Math.min(maximum, Math.max(0, viewport.scrollLeft + delta));
+    };
+
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, [scrollRef]);
+
   return <section ref={scrollRef} className="study-horizontal-grid" aria-label={`Horizontal timetable for ${weekLabel}`} style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}>
     <div className="study-horizontal-scroll">
       <div className="study-horizontal-time-axis">

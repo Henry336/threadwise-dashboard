@@ -5,6 +5,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 ## Unreleased
 
 ### Study timetable context and inspection
+- Made ordinary mouse-wheel movement pan the Horizontal timetable's time axis while the pointer is inside its frame. Native trackpad horizontal gestures remain untouched, and vertical page scrolling resumes at either end of the timeline.
 - Kept Day and Deadlines visible while Horizontal week mode scrolls through the 24-hour time axis, with opaque frozen panes, a pinned time ruler, and a quiet boundary between context and schedule.
 - Made today unmistakable without confusing it with the current time: teal marks the current-day label and row, while orange remains reserved for the live NOW line.
 - Changed timetable block selection from immediate editing to a read-only detail sheet with explicit Edit, Delete, and Close actions. New blocks still open directly in the form.

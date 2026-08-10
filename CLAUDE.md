@@ -75,6 +75,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-11 (Codex):** Added bounded wheel-to-horizontal panning inside the Horizontal Study
+  Timetable. Vertical wheel input now moves the time axis, native horizontal trackpad input remains
+  native, and the page regains vertical scrolling when the timeline reaches either boundary.
+
 - **2026-08-10 (Codex):** Refined Study Timetable horizontal context: Day and Deadlines now remain
   frozen beneath a pinned time ruler, today has a teal row treatment distinct from the orange NOW
   marker, existing blocks open in read-only details before editing, and duration-accurate cards use
