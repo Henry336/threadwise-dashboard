@@ -1151,7 +1151,7 @@
 .study-horizontal-time-axis { position: sticky; z-index: 12; top: 0; min-height: 43px; display: grid; grid-template-columns: 84px var(--due-column-width) var(--timeline-width); border-bottom: 1px solid var(--line-strong); background: var(--surface); }
 .study-horizontal-time-axis > span { display: grid; place-items: center; border-right: 1px solid var(--line-strong); color: var(--faint); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .study-horizontal-axis-day { position: sticky; z-index: 14; left: 0; background: var(--surface); }
-.study-horizontal-axis-deadlines { position: sticky; z-index: 13; left: 84px; background: var(--surface-soft); box-shadow: 12px 0 18px -17px color-mix(in srgb, var(--ink) 55%, transparent); }
+.study-horizontal-axis-deadlines { position: sticky; z-index: 13; left: 84px; background: var(--surface-soft); }
 .study-horizontal-time-axis > div { position: relative; width: var(--timeline-width); }
 .study-horizontal-time-axis time { position: absolute; bottom: 10px; transform: translateX(-50%); color: var(--faint); font-size: 9px; font-variant-numeric: tabular-nums; }
 .study-horizontal-time-axis time:first-child { transform: translateX(4px); }
@@ -1162,7 +1162,7 @@
 .study-horizontal-day.today .study-horizontal-day-label { color: var(--study-blue); background: color-mix(in srgb, var(--study-blue) 17%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--study-blue) 42%, transparent); }
 .study-horizontal-day-label span { font-size: 9px; font-weight: 830; letter-spacing: .08em; text-transform: uppercase; }
 .study-horizontal-day-label b { font-family: var(--serif); font-size: 21px; font-weight: 500; }
-.study-horizontal-due { position: sticky; z-index: 8; left: 84px; min-height: var(--row-height, 82px); padding: 6px; display: grid; align-content: center; gap: 4px; border-right: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface-soft) 88%, var(--surface)); box-shadow: 12px 0 18px -17px color-mix(in srgb, var(--ink) 55%, transparent); }
+.study-horizontal-due { position: sticky; z-index: 8; left: 84px; min-height: var(--row-height, 82px); padding: 6px; display: grid; align-content: center; gap: 4px; border-right: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface-soft) 88%, var(--surface)); }
 .study-horizontal-day.today .study-horizontal-due { background: color-mix(in srgb, var(--study-blue) 6%, var(--surface)); }
 .study-horizontal-due > button { min-width: 0; padding: 5px 7px; display: grid; gap: 1px; border: 1px solid color-mix(in srgb, var(--module-color) 28%, var(--line)); border-radius: 5px; background: var(--surface); color: var(--ink); text-align: left; }
 .study-horizontal-due > button:hover { background: var(--study-blue-soft); }

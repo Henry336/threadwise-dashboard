@@ -75,6 +75,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-11 (Codex):** Removed the per-row edge shadows from the frozen Horizontal Timetable
+  Deadlines pane. Its existing 1px divider now carries the boundary without repeated semicircular
+  shading artifacts.
+
 - **2026-08-11 (Codex):** Added bounded wheel-to-horizontal panning inside the Horizontal Study
   Timetable. Vertical wheel input now moves the time axis, native horizontal trackpad input remains
   native, and the page regains vertical scrolling when the timeline reaches either boundary.
