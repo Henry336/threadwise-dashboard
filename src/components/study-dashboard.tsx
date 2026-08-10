@@ -19,6 +19,7 @@ import type {
   StudyResource, StudyResourceKind, StudySnapshot, StudyTrafficLight, StudyView,
 } from "@/lib/study-types";
 import { studyWeekLabel } from "@/lib/study-week";
+import { loadStudyImage, StudyImageLoadError } from "@/lib/study-image";
 
 type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
@@ -317,8 +318,54 @@ function Work({ study, moduleFilter, onModuleFilter, onEdit, onAdd, onComplete, 
 
 function LibraryView({ study, moduleFilter, onModuleFilter, onAdd, onEdit, onPin, onArchive }: { study: StudySnapshot; moduleFilter: string; onModuleFilter: (id: string) => void; onAdd: (kind: "NOTE" | "LINK" | "QUESTION") => void; onEdit: (resource: StudyResource) => void; onPin: (resource: StudyResource) => void; onArchive: (resource: StudyResource) => void }) {
   const [kind, setKind] = usePersistentState<"ALL" | StudyResourceKind>("threadwise-study-library-kind", "ALL"); const [query, setQuery] = usePersistentState("threadwise-study-library-query", "");
+  const [openImage, setOpenImage] = useState<StudyResource | null>(null);
   const visible = study.resources.filter((resource) => (moduleFilter === "all" || resource.moduleId === moduleFilter) && (kind === "ALL" || resource.kind === kind) && (!query || `${resource.title} ${resource.body ?? ""} ${resource.caption ?? ""} ${resource.ocrText ?? ""}`.toLowerCase().includes(query.toLowerCase())));
-  return <section className="study-page"><PageHead kicker="Module library" title="Context that stays findable." copy="Notes, searchable images, files, links, and questions." action={<div className="study-add-cluster"><button onClick={() => onAdd("NOTE")}><FileText size={16} /> Note</button><button onClick={() => onAdd("LINK")}><LinkIcon size={16} /> Link</button><button onClick={() => onAdd("QUESTION")}><CircleHelp size={16} /> Question</button></div>} /><div className="study-toolbar"><ModuleSelect modules={study.modules} value={moduleFilter} onChange={onModuleFilter} /><select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}><option value="ALL">All resources</option>{(["NOTE", "IMAGE", "LINK", "FILE", "QUESTION"] as StudyResourceKind[]).map((value) => <option key={value}>{humanize(value)}</option>)}</select><label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search titles and OCR" /></label></div><div className="study-resource-grid">{visible.map((resource) => <article key={resource.id} className={`kind-${resource.kind.toLowerCase()}`}><header><span>{resourceIcon(resource.kind)}{resource.module.code}</span><div>{resource.pinnedAt && <Pin size={14} />}<button onClick={() => onPin(resource)} aria-label={resource.pinnedAt ? "Unpin resource" : "Pin resource"}><Pin size={16} /></button><button onClick={() => onArchive(resource)} aria-label="Archive resource"><Archive size={16} /></button></div></header>{resource.kind === "IMAGE" && <button className="study-resource-image" onClick={() => window.open(`/api/threadwise/study/resources/${resource.id}/content`, "_blank", "noopener,noreferrer")}><img src={`/api/threadwise/study/resources/${resource.id}/content`} alt={resource.caption || resource.title} /></button>}<button className="study-resource-copy" onClick={() => onEdit(resource)}><h3>{resource.title}</h3><p>{resource.body || resource.caption || resource.ocrText || resource.url || resource.fileName || "Open resource"}</p></button><footer><span>{resource.publicId}</span>{resource.tags.slice(0, 2).map((tag) => <i key={tag}>#{tag}</i>)}{(resource.kind === "FILE" || resource.kind === "IMAGE") && <a href={`/api/threadwise/study/resources/${resource.id}/content`} target="_blank" rel="noreferrer">Open <ExternalLink size={13} /></a>}</footer></article>)}{!visible.length && <Empty title="No resources here yet." copy="Capture one in Telegram or add a note, link, or question here." />}</div></section>;
+  return <section className="study-page"><PageHead kicker="Module library" title="Library" copy="Notes, images, files, links, and questions." action={<div className="study-add-cluster"><button onClick={() => onAdd("NOTE")}><FileText size={16} /> Note</button><button onClick={() => onAdd("LINK")}><LinkIcon size={16} /> Link</button><button onClick={() => onAdd("QUESTION")}><CircleHelp size={16} /> Question</button></div>} /><div className="study-toolbar"><ModuleSelect modules={study.modules} value={moduleFilter} onChange={onModuleFilter} /><select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}><option value="ALL">All resources</option>{(["NOTE", "IMAGE", "LINK", "FILE", "QUESTION"] as StudyResourceKind[]).map((value) => <option key={value}>{humanize(value)}</option>)}</select><label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search titles and extracted text" /></label></div><div className="study-resource-grid">{visible.map((resource) => <article key={resource.id} className={`kind-${resource.kind.toLowerCase()}`}><header><span>{resourceIcon(resource.kind)}{resource.module.code}</span><div>{resource.pinnedAt && <Pin size={14} />}<button onClick={() => onPin(resource)} aria-label={resource.pinnedAt ? "Unpin resource" : "Pin resource"}><Pin size={16} /></button><button onClick={() => onArchive(resource)} aria-label="Archive resource"><Archive size={16} /></button></div></header>{resource.kind === "IMAGE" && <button className="study-resource-image" onClick={() => setOpenImage(resource)} aria-label={`View ${resource.title}`}><img src={`/api/threadwise/study/resources/${resource.id}/content`} alt={resource.caption || resource.title} /></button>}<button className="study-resource-copy" onClick={() => onEdit(resource)}><h3>{resource.title}</h3><p>{resource.body || resource.caption || resource.ocrText || resource.url || resource.fileName || "Open resource"}</p></button><footer><span>{resource.publicId}</span>{resource.tags.slice(0, 2).map((tag) => <i key={tag}>#{tag}</i>)}{resource.kind === "IMAGE" && <button className="study-resource-open" onClick={() => setOpenImage(resource)}>View <ExternalLink size={13} /></button>}{resource.kind === "FILE" && <a href={`/api/threadwise/study/resources/${resource.id}/content`} target="_blank" rel="noreferrer">Open <ExternalLink size={13} /></a>}</footer></article>)}{!visible.length && <Empty title="No resources here yet." copy="Capture one in Telegram or add a note, link, or question here." />}</div>{openImage && <StudyImageViewer key={openImage.id} resource={openImage} onClose={() => setOpenImage(null)} />}</section>;
+}
+
+function StudyImageViewer({ resource, onClose }: { resource: StudyResource; onClose: () => void }) {
+  const [revision, setRevision] = useState(0);
+  const [state, setState] = useState<{ status: "loading" | "ready" | "error"; src?: string; message?: string; retryable?: boolean }>({ status: "loading" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let objectUrl: string | undefined;
+    void loadStudyImage(resource.id, controller.signal)
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setState({ status: "ready", src: objectUrl });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setState({
+          status: "error",
+          message: error instanceof Error ? error.message : "The image could not be loaded.",
+          retryable: error instanceof StudyImageLoadError ? error.retryable : true,
+        });
+      });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [resource.id, revision]);
+
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, [onClose]);
+
+  return <div className="study-image-lightbox" role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <article>
+      <header><div><span>{resource.module.code} · {resource.publicId}</span><h2 id="study-image-title">{resource.title}</h2></div><button onClick={onClose} aria-label="Close image"><X size={20} /></button></header>
+      <div className="study-image-stage" aria-live="polite">
+        {state.status === "loading" && <div><LoaderCircle className="spin" size={25} /><b>Loading image…</b></div>}
+        {state.status === "ready" && state.src && <img src={state.src} alt={resource.caption || resource.title} />}
+        {state.status === "error" && <div><AlertCircle size={25} /><b>Image unavailable</b><p>{state.message}</p><span className="study-image-error-actions">{state.retryable && <button className="study-secondary" onClick={() => { setState({ status: "loading" }); setRevision((value) => value + 1); }}><RefreshCw size={15} /> Try again</button>}<button className="study-secondary" onClick={onClose}>Close</button></span></div>}
+      </div>
+      {(resource.caption || resource.ocrText) && <div className="study-image-context">{resource.caption && <p>{resource.caption}</p>}{resource.ocrText && <small>Extracted text is searchable.</small>}</div>}
+    </article>
+  </div>;
 }
 
 function Review({ study, busy, onMastery, onResolveMistake, onAddMistake, onSavePlan, onSaveReview }: { study: StudySnapshot; busy: boolean; onMastery: (module: StudyModule, mastery: StudyTrafficLight, reason?: string) => void; onResolveMistake: (mistake: StudyMistake) => void; onAddMistake: () => void; onSavePlan: (body: unknown) => Promise<unknown>; onSaveReview: (body: unknown) => Promise<unknown> }) {

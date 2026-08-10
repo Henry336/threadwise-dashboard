@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight,
   Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, X,
@@ -8,7 +8,8 @@ import {
 import type { StudyItem, StudySnapshot } from "@/lib/study-types";
 import {
   academicWeekForDate, addDays, buildTimetableDays, clockMinutes, currentMinutesInZone, dateKeyInZone,
-  formatClock, formatWeekRange, initialTimetableWeek, startOfWeek, timetableDuePreview,
+  formatClock, formatWeekRange, FULL_DAY_END_MINUTE, FULL_DAY_START_MINUTE, initialTimetableWeek,
+  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableDuePreview, timetableIndicatorOffset,
 } from "@/lib/study-timetable";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
@@ -37,6 +38,8 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const [mode, setMode] = useState<"week" | "day">("week");
   const [orientation, setOrientation] = useState<WeekOrientation>("vertical");
   const [editor, setEditor] = useState<{ block?: ScheduleBlock; day: number } | null>(null);
+  const verticalScrollRef = useRef<HTMLElement>(null);
+  const horizontalScrollRef = useRef<HTMLElement>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
   const activeDay = days.find((day) => day.key === selectedDay) ?? days[0]!;
   const academicWeek = academicWeekForDate(weekStart, study.workspace.semesterStartDate);
@@ -46,11 +49,22 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const todayKey = dateKeyInZone(study.generatedAt, study.workspace.timezone);
   const blocksInView = days.flatMap((day) => day.blocks.map((block) => ({ day, block })));
   const firstBlock = blocksInView.find(({ day, block }) => day.key > todayKey || (day.key === todayKey && clockMinutes(block.endTime) >= currentMinutesInZone(study.generatedAt, study.workspace.timezone))) ?? blocksInView[0];
-  const allClockMinutes = days.flatMap((day) => day.blocks.flatMap((block) => [clockMinutes(block.startTime), clockMinutes(block.endTime)]));
-  const gridStart = Math.max(6 * 60, Math.floor(Math.min(8 * 60, ...allClockMinutes) / 60) * 60);
-  const gridEnd = Math.min(24 * 60, Math.ceil(Math.max(22 * 60, ...allClockMinutes) / 60) * 60);
-  const hours = Array.from({ length: (gridEnd - gridStart) / 60 + 1 }, (_, index) => gridStart / 60 + index);
+  const gridStart = FULL_DAY_START_MINUTE;
+  const gridEnd = FULL_DAY_END_MINUTE;
+  const hours = Array.from({ length: 24 }, (_, index) => index);
   const nowMinutes = currentMinutesInZone(study.generatedAt, study.workspace.timezone);
+  const showingCurrentWeek = weekStart === startOfWeek(todayKey);
+  const preferredMinute = preferredTimetableMinute(blocksInView.map(({ block }) => block.startTime), nowMinutes, showingCurrentWeek);
+  const verticalExtent = (gridEnd - gridStart) * VERTICAL_MINUTE_SCALE;
+  const verticalNowOffset = timetableIndicatorOffset(nowMinutes - gridStart, VERTICAL_MINUTE_SCALE, verticalExtent);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      if (verticalScrollRef.current) verticalScrollRef.current.scrollTop = Math.max(0, preferredMinute * VERTICAL_MINUTE_SCALE - 150);
+      if (horizontalScrollRef.current) horizontalScrollRef.current.scrollLeft = Math.max(0, preferredMinute * HORIZONTAL_MINUTE_SCALE - 180);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mode, orientation, preferredMinute, weekStart]);
 
   const moveWeek = (amount: number) => {
     const next = addDays(weekStart, amount * 7);
@@ -66,7 +80,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
 
   return <section className="study-page study-timetable-page">
     <header className="study-timetable-head">
-      <div><span>Timetable</span><h1>Your week, in motion.</h1><p>Module timings and planned work update from the same Study workspace.</p></div>
+      <div><span>Study Mode</span><h1>Timetable</h1></div>
       <button className="study-primary" onClick={() => setEditor({ day: activeDay.weekday })}><Plus size={16} /> Add block</button>
     </header>
 
@@ -107,19 +121,19 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         <div>{days.map((day) => <div key={day.key}><span className="study-due-day-label">{day.shortLabel} {day.dateLabel.split(" ")[0]}</span>{day.dueItems.slice(0, 2).map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}{day.dueItems.length > 2 && <button className="more" onClick={() => { setSelectedDay(day.key); setMode("day"); }}>+{day.dueItems.length - 2} more</button>}</div>)}</div>
       </section>}
 
-      {orientation === "vertical" && <section className="study-week-grid" aria-label={`Vertical timetable for ${formatWeekRange(weekStart)}`} style={{ "--grid-height": `${(gridEnd - gridStart) * VERTICAL_MINUTE_SCALE}px` } as CSSProperties}>
-        <div className="study-time-rail">{hours.map((hour) => <span key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</span>)}</div>
+      {orientation === "vertical" && <section ref={verticalScrollRef} className="study-week-grid" aria-label={`Vertical timetable for ${formatWeekRange(weekStart)}`} style={{ "--grid-height": `${verticalExtent}px` } as CSSProperties}>
+        <div className="study-time-rail">{hours.map((hour) => <span key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</span>)}{showingCurrentWeek && <strong className="study-now-label" style={{ top: `${verticalNowOffset}px` }}>Now</strong>}</div>
         <div className="study-week-columns">
           {days.map((day) => <div className={`study-week-day ${day.isToday ? "today" : ""}`} key={day.key}>
             {hours.map((hour) => <i key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }} />)}
-            {day.isToday && nowMinutes >= gridStart && nowMinutes <= gridEnd && <span className="study-now-line" style={{ top: `${(nowMinutes - gridStart) * VERTICAL_MINUTE_SCALE}px` }}><b>Now</b></span>}
-            {day.blocks.map((block) => <button key={block.id} className="study-schedule-block" style={{
-              "--block-top": `${(clockMinutes(block.startTime) - gridStart) * VERTICAL_MINUTE_SCALE}px`,
-              "--block-height": `${Math.max(42, (clockMinutes(block.endTime) - clockMinutes(block.startTime)) * VERTICAL_MINUTE_SCALE - 4)}px`,
+            {day.isToday && nowMinutes >= gridStart && nowMinutes < gridEnd && <span className="study-now-line" style={{ top: `${verticalNowOffset}px` }} />}
+            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); return <button key={block.id} className="study-schedule-block" style={{
+              "--block-top": `${(bounds.start - gridStart) * VERTICAL_MINUTE_SCALE}px`,
+              "--block-height": `${Math.max(42, (bounds.end - bounds.start) * VERTICAL_MINUTE_SCALE - 4)}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => setEditor({ block, day: block.dayOfWeek })}>
               <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
-            </button>)}
+            </button>; })}
           </div>)}
         </div>
       </section>}
@@ -132,6 +146,8 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         gridEnd={gridEnd}
         nowMinutes={nowMinutes}
         weekLabel={formatWeekRange(weekStart)}
+        scrollRef={horizontalScrollRef}
+        showingCurrentWeek={showingCurrentWeek}
         onOpenDueOverflow={(key) => { setSelectedDay(key); setMode("day"); }}
         onEditItem={onEditItem}
         onEditBlock={(block) => setEditor({ block, day: block.dayOfWeek })}
@@ -159,7 +175,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   </section>;
 }
 
-function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, onOpenDueOverflow, onEditItem, onEditBlock }: {
+function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDueOverflow, onEditItem, onEditBlock }: {
   study: StudySnapshot;
   days: ReturnType<typeof buildTimetableDays>;
   hours: number[];
@@ -167,17 +183,20 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
   gridEnd: number;
   nowMinutes: number;
   weekLabel: string;
+  scrollRef: RefObject<HTMLElement | null>;
+  showingCurrentWeek: boolean;
   onOpenDueOverflow: (key: string) => void;
   onEditItem: (item: StudyItem) => void;
   onEditBlock: (block: ScheduleBlock) => void;
 }) {
   const timelineWidth = (gridEnd - gridStart) * HORIZONTAL_MINUTE_SCALE + 48;
-  return <section className="study-horizontal-grid" aria-label={`Horizontal timetable for ${weekLabel}`} style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}>
+  const horizontalNowOffset = timetableIndicatorOffset(nowMinutes - gridStart, HORIZONTAL_MINUTE_SCALE, timelineWidth - 48, 20);
+  return <section ref={scrollRef} className="study-horizontal-grid" aria-label={`Horizontal timetable for ${weekLabel}`} style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}>
     <div className="study-horizontal-scroll">
       <div className="study-horizontal-time-axis">
         <span aria-hidden="true">Day</span>
         <span aria-hidden="true">Due</span>
-        <div>{hours.map((hour) => <time key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</time>)}</div>
+        <div>{hours.map((hour) => <time key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</time>)}{showingCurrentWeek && <strong className="study-horizontal-now-label" style={{ left: `${horizontalNowOffset}px` }}>Now</strong>}</div>
       </div>
       <div className="study-horizontal-days">
         {days.map((day) => {
@@ -191,14 +210,14 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
           </div>
           <div className="study-horizontal-track">
             {hours.map((hour) => <i key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }} />)}
-            {day.isToday && nowMinutes >= gridStart && nowMinutes <= gridEnd && <span className="study-horizontal-now" style={{ left: `${(nowMinutes - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }}><b>Now</b></span>}
-            {day.blocks.map((block) => <button key={block.id} className="study-horizontal-block" style={{
-              "--block-left": `${(clockMinutes(block.startTime) - gridStart) * HORIZONTAL_MINUTE_SCALE + 3}px`,
-              "--block-width": `${Math.max(44, (clockMinutes(block.endTime) - clockMinutes(block.startTime)) * HORIZONTAL_MINUTE_SCALE - 6)}px`,
+            {day.isToday && nowMinutes >= gridStart && nowMinutes < gridEnd && <span className="study-horizontal-now" style={{ left: `${horizontalNowOffset}px` }} />}
+            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); return <button key={block.id} className="study-horizontal-block" style={{
+              "--block-left": `${(bounds.start - gridStart) * HORIZONTAL_MINUTE_SCALE + 3}px`,
+              "--block-width": `${Math.max(44, (bounds.end - bounds.start) * HORIZONTAL_MINUTE_SCALE - 6)}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => onEditBlock(block)}>
               <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
-            </button>)}
+            </button>; })}
           </div>
         </div>;
         })}

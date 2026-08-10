@@ -14,6 +14,26 @@ export type TimetableDay = {
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+export const FULL_DAY_START_MINUTE = 0;
+export const FULL_DAY_END_MINUTE = 24 * 60;
+
+export function timetableBlockBounds(startTime: string, endTime: string): { start: number; end: number } {
+  const start = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, clockMinutes(startTime)));
+  const parsedEnd = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, clockMinutes(endTime)));
+  return { start, end: parsedEnd <= start ? FULL_DAY_END_MINUTE : parsedEnd };
+}
+
+export function preferredTimetableMinute(startTimes: string[], nowMinute: number, showingCurrentPeriod: boolean): number {
+  if (showingCurrentPeriod) return Math.max(0, Math.min(FULL_DAY_END_MINUTE - 1, nowMinute));
+  const starts = startTimes.map(clockMinutes).filter((minute) => Number.isFinite(minute));
+  return starts.length ? Math.min(...starts) : 8 * 60;
+}
+
+export function timetableIndicatorOffset(minute: number, scale: number, extent: number, edgePadding = 8): number {
+  const raw = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, minute)) * scale;
+  return Math.max(edgePadding, Math.min(Math.max(edgePadding, extent - edgePadding), raw));
+}
+
 export function timetableDuePreview<T>(items: T[], limit = 2): { visible: T[]; remaining: number } {
   const safeLimit = Math.max(0, Math.trunc(limit));
   return { visible: items.slice(0, safeLimit), remaining: Math.max(0, items.length - safeLimit) };

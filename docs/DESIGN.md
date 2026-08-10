@@ -46,12 +46,21 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 
 The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey. Desktop week view can place days in columns with time running downward or place days in rows with time running left-to-right; both orientations edit the same blocks. Mobile keeps the day agenda instead of compressing either weekly grid.
 
+Both desktop timetable orientations cover the complete 00:00–24:00 day inside a fixed-height scroll
+viewport. Initial position follows the current time or earliest relevant work; the live-time label owns
+a reserved rail and must never overlap an event title. Mobile keeps the day agenda rather than shrinking
+the full-day week grid.
+
 Horizontal Timetable uses one weekday axis only: a non-interactive day label, a narrow per-day Due
 rail, then the hourly track. The Due rail shows at most two deadlines and one explicit overflow
 action. Vertical mode retains the week-level Work due shelf. This prevents the same weekday from
 appearing on both axes and keeps deadlines adjacent to, but semantically separate from, scheduled
 time. Module selection is never an implicit capture destination; inactive modules live in one quiet
 restore/review section rather than leaking into semester work.
+
+Study image capture is intentional: the bot saves no image or OCR result until the owner confirms it.
+The Library opens images in a same-origin lightbox rather than navigating to an API response. Loading,
+retryable failure, permanent expiry, and expired-session states must each have a direct next action.
 
 ## Identity system
 

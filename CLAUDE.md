@@ -75,6 +75,8 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-10 (Codex):** Expanded Study Timetable to a scrollable 24-hour schedule in both desktop orientations, reserved/clamped the live-time indicator, and kept mobile on the day agenda. Replaced raw Study-image navigation with a same-origin lightbox and explicit retry/expiry/session states. Added the visible ten-minute Telegram capture-target status and updated architecture/design/release notes.
+
 - **2026-08-10 (Codex):** Completed the coordinated Study reliability pass. Horizontal Timetable
   now has one weekday axis and a two-item per-row Due rail; vertical mode keeps the week shelf.
   Inactive/Canvas-discovered modules have explicit Restore or Activate controls and remain absent

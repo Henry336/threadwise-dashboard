@@ -4,6 +4,13 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Full-day Study timetable and in-app image viewing
+- Expanded both desktop timetable orientations to a 00:00–24:00 model with fixed-height scrolling, relevant-time auto-positioning, midnight-safe block bounds, and current-time labels reserved outside event content.
+- Kept mobile on the focused day agenda rather than compressing a 24-hour weekly grid into an unreadable viewport.
+- Replaced raw protected-media navigation with a same-origin Study lightbox that preserves caption/search context, supports Escape and backdrop dismissal, revokes object URLs, and distinguishes retryable delivery failures from expired media or dashboard authorization.
+- Added a visible ten-minute capture-target status when Telegram has a current Study module, matching the backend's durable expiry instead of implying that module selection lasts indefinitely.
+- Kept direct page copy and a clean Impeccable scan across the changed Study timetable, library, and stylesheet targets.
+
 ### Study reliability and horizontal deadline rail
 - Removed the duplicate top weekday/deadline shelf from Horizontal Timetable mode. Weekdays now appear once as non-interactive row labels, followed by a compact per-day Due rail and the hourly schedule.
 - Kept at most two deadlines visible per horizontal day and moved overflow into the existing day agenda, preserving scanability without hiding access to the full list.
