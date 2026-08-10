@@ -5,8 +5,9 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 ## Unreleased
 
 ### Study timetable context and inspection
+- Kept wheel input contained inside the Horizontal timetable at both time-axis boundaries, preventing the surrounding page from jumping. Frozen day labels now open the same focused day agenda as Vertical mode.
 - Removed the repeated edge shadows from the frozen Deadlines cells; the existing divider now provides a clean, continuous boundary without semicircular artifacts.
-- Made ordinary mouse-wheel movement pan the Horizontal timetable's time axis while the pointer is inside its frame. Native trackpad horizontal gestures remain untouched, and vertical page scrolling resumes at either end of the timeline.
+- Made ordinary mouse-wheel movement and trackpad gestures pan the Horizontal timetable's time axis while the pointer is inside its frame. Input stays contained at either end instead of moving the surrounding page.
 - Kept Day and Deadlines visible while Horizontal week mode scrolls through the 24-hour time axis, with opaque frozen panes, a pinned time ruler, and a quiet boundary between context and schedule.
 - Made today unmistakable without confusing it with the current time: teal marks the current-day label and row, while orange remains reserved for the live NOW line.
 - Changed timetable block selection from immediate editing to a read-only detail sheet with explicit Edit, Delete, and Close actions. New blocks still open directly in the form.
@@ -21,7 +22,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Kept direct page copy and a clean Impeccable scan across the changed Study timetable, library, and stylesheet targets.
 
 ### Study reliability and horizontal deadline rail
-- Removed the duplicate top weekday/deadline shelf from Horizontal Timetable mode. Weekdays now appear once as non-interactive row labels, followed by a compact per-day Deadlines rail and the hourly schedule.
+- Removed the duplicate top weekday/deadline shelf from Horizontal Timetable mode. Weekdays now appear once as frozen day-agenda controls, followed by a compact per-day Deadlines rail and the hourly schedule.
 - Kept at most two deadlines visible per horizontal day and moved overflow into the existing day agenda, preserving scanability without hiding access to the full list.
 - Added an Inactive module section with explicit Restore or Activate actions. Owner archives remain visually distinct from newly discovered Canvas courses waiting for review.
 - Updated the Study snapshot contract so archived modules and their work, resources, mistakes, sessions, schedule blocks, search results, reminders, and travel projections stay outside active semester views.

@@ -1158,7 +1158,9 @@
 .study-horizontal-now-label { position: absolute; z-index: 7; top: 3px; min-width: 39px; padding: 3px 7px; transform: translateX(-50%); border-radius: 999px; background: var(--study-amber); color: #fff; font-size: 9px; font-weight: 850; letter-spacing: .04em; text-align: center; text-transform: uppercase; box-shadow: 0 3px 10px color-mix(in srgb, var(--study-amber) 32%, transparent); }
 .study-horizontal-day { min-height: var(--row-height, 82px); display: grid; grid-template-columns: 84px var(--due-column-width) var(--timeline-width); border-bottom: 1px solid var(--line); }
 .study-horizontal-day:last-child { border-bottom: 0; }
-.study-horizontal-day-label { position: sticky; z-index: 9; left: 0; min-height: var(--row-height, 82px); display: grid; place-items: center; align-content: center; gap: 2px; border-right: 1px solid var(--line-strong); background: var(--surface); color: var(--faint); }
+.study-horizontal-day-label { position: sticky; z-index: 9; left: 0; min-height: var(--row-height, 82px); padding: 0; display: grid; place-items: center; align-content: center; gap: 2px; border: 0; border-right: 1px solid var(--line-strong); background: var(--surface); color: var(--faint); cursor: pointer; font: inherit; }
+.study-horizontal-day-label:hover { background: var(--surface-soft); color: var(--ink); }
+.study-horizontal-day-label:focus-visible { z-index: 11; outline: 2px solid var(--study-blue); outline-offset: -3px; }
 .study-horizontal-day.today .study-horizontal-day-label { color: var(--study-blue); background: color-mix(in srgb, var(--study-blue) 17%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--study-blue) 42%, transparent); }
 .study-horizontal-day-label span { font-size: 9px; font-weight: 830; letter-spacing: .08em; text-transform: uppercase; }
 .study-horizontal-day-label b { font-family: var(--serif); font-size: 21px; font-weight: 500; }

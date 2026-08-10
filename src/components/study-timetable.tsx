@@ -152,6 +152,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         weekLabel={formatWeekRange(weekStart)}
         scrollRef={horizontalScrollRef}
         showingCurrentWeek={showingCurrentWeek}
+        onOpenDay={(key) => { setSelectedDay(key); setMode("day"); }}
         onOpenDueOverflow={(key) => { setSelectedDay(key); setMode("day"); }}
         onEditItem={onEditItem}
         onOpenBlock={(block) => dispatchPanel({ type: "open-details", blockId: block.id })}
@@ -198,7 +199,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   </section>;
 }
 
-function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDueOverflow, onEditItem, onOpenBlock }: {
+function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDay, onOpenDueOverflow, onEditItem, onOpenBlock }: {
   study: StudySnapshot;
   days: ReturnType<typeof buildTimetableDays>;
   hours: number[];
@@ -208,6 +209,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
   weekLabel: string;
   scrollRef: RefObject<HTMLElement | null>;
   showingCurrentWeek: boolean;
+  onOpenDay: (key: string) => void;
   onOpenDueOverflow: (key: string) => void;
   onEditItem: (item: StudyItem) => void;
   onOpenBlock: (block: ScheduleBlock) => void;
@@ -220,19 +222,20 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
     if (!viewport) return;
 
     const handleWheel = (event: WheelEvent) => {
-      if (event.ctrlKey || event.metaKey || event.deltaY === 0 || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      if (event.ctrlKey || event.metaKey || (event.deltaX === 0 && event.deltaY === 0)) return;
 
       const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE
         ? 16
         : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
           ? viewport.clientWidth * 0.85
           : 1;
-      const delta = event.deltaY * scale;
+      const wheelDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      const delta = wheelDelta * scale;
       const maximum = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
       const canMove = delta > 0 ? viewport.scrollLeft < maximum - 1 : viewport.scrollLeft > 1;
 
-      if (!canMove) return;
       event.preventDefault();
+      if (!canMove) return;
       viewport.scrollLeft = Math.min(maximum, Math.max(0, viewport.scrollLeft + delta));
     };
 
@@ -253,7 +256,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
           const layout = timetableBlockLanes(day.blocks);
           const rowHeight = Math.max(82, layout.laneCount * 68 + 10);
           return <div className={`study-horizontal-day ${day.isToday ? "today" : ""}`} key={day.key} style={{ "--row-height": `${rowHeight}px` } as CSSProperties}>
-          <div className="study-horizontal-day-label" aria-label={`${day.longLabel}, ${day.dateLabel}`} aria-current={day.isToday ? "date" : undefined}><span>{day.isToday ? `Today · ${day.shortLabel}` : day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></div>
+          <button type="button" className="study-horizontal-day-label" aria-label={`Open ${day.longLabel}, ${day.dateLabel} in day view`} aria-current={day.isToday ? "date" : undefined} onClick={() => onOpenDay(day.key)}><span>{day.isToday ? `Today · ${day.shortLabel}` : day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></button>
           <div className="study-horizontal-due" aria-label={`Deadlines for ${day.longLabel}`}>
             {due.visible.map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}
             {due.visible.length === 0 && <span className="study-horizontal-due-empty">{"\u2014"}</span>}

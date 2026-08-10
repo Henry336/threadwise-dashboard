@@ -75,13 +75,17 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-11 (Codex):** Contained vertical wheel input inside the Horizontal Timetable even at
+  the left/right boundaries, preventing page jumps. Frozen day labels are now keyboard-accessible
+  controls that open the same day agenda used by Vertical mode.
+
 - **2026-08-11 (Codex):** Removed the per-row edge shadows from the frozen Horizontal Timetable
   Deadlines pane. Its existing 1px divider now carries the boundary without repeated semicircular
   shading artifacts.
 
 - **2026-08-11 (Codex):** Added bounded wheel-to-horizontal panning inside the Horizontal Study
-  Timetable. Vertical wheel input now moves the time axis, native horizontal trackpad input remains
-  native, and the page regains vertical scrolling when the timeline reaches either boundary.
+  Timetable. Mouse-wheel and trackpad input move the time axis and remain contained at either
+  boundary instead of shifting the surrounding page.
 
 - **2026-08-10 (Codex):** Refined Study Timetable horizontal context: Day and Deadlines now remain
   frozen beneath a pinned time ruler, today has a teal row treatment distinct from the orange NOW

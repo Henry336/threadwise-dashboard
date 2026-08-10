@@ -51,7 +51,7 @@ viewport. Initial position follows the current time or earliest relevant work; t
 a reserved rail and must never overlap an event title. Mobile keeps the day agenda rather than shrinking
 the full-day week grid.
 
-Horizontal Timetable uses one weekday axis only: a non-interactive day label, a narrow per-day Deadlines
+Horizontal Timetable uses one weekday axis only: a frozen day-agenda control, a narrow per-day Deadlines
 rail, then the hourly track. The Deadlines rail shows at most two deadlines and one explicit overflow
 action. Vertical mode retains the week-level Deadlines shelf. This prevents the same weekday from
 appearing on both axes and keeps deadlines adjacent to, but semantically separate from, scheduled
@@ -60,8 +60,8 @@ restore/review section rather than leaking into semester work.
 
 Horizontal Timetable keeps its **Day** and **Deadlines** columns frozen while the 24-hour axis moves.
 The time ruler stays pinned above the scrolling schedule, and the frozen pane has an opaque surface
-plus a restrained boundary shadow so blocks never show through it. Day labels are informational,
-not navigation controls. Teal marks the entire current-day row and its `TODAY · DAY DATE` label;
+plus a clean divider so blocks never show through it. Selecting a day label opens that date's focused
+day agenda, matching Vertical mode. Teal marks the entire current-day row and its `TODAY · DAY DATE` label;
 orange is reserved for the live-time line and `NOW` marker.
 
 Selecting an existing timetable block opens a read-only detail sheet before any mutation is offered.
