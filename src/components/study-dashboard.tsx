@@ -13,6 +13,7 @@ import {
 import { Ari, AriUntangleLoader } from "./ari";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { StudyTimetable } from "./study-timetable";
+import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
 import type {
   StudyItem, StudyItemType, StudyMistake, StudyModule,
@@ -519,19 +520,20 @@ function ScheduleSettings({ study, busy, onAdd, onUpdate, onDelete }: { study: S
   const [end, setEnd] = useState("12:00");
   const [label, setLabel] = useState("");
   const [destination, setDestination] = useState("");
+  const [destinationPlaceId, setDestinationPlaceId] = useState<string | null>(null);
   const [originId, setOriginId] = useState("");
   const [buffer, setBuffer] = useState(15);
   const [editing, setEditing] = useState<string | null>(null);
   return <section aria-labelledby="study-settings-schedule">
     <header><div><span>Schedule</span><h2 id="study-settings-schedule">Classes and recurring blocks</h2><p>Add a destination to receive a live leave-time reminder before class.</p></div></header>
     {study.scheduleBlocks.length === 0 ? <Empty title="No recurring blocks" copy="Add the first class or study block below." /> : <div className="study-block-list">{study.scheduleBlocks.map((block) => <article key={block.id} className={editing === block.id ? "editing" : ""}><div className="study-block-icon">{block.destinationStopId ? <MapPin size={17} /> : <Clock3 size={17} />}</div><div><b>{block.label}</b><small>{weekday(block.dayOfWeek)} · {block.startTime}–{block.endTime}{block.module ? ` · ${block.module.code}` : ""}</small>{block.venueName && <span className="study-travel-chip"><MapPin size={12} /> {block.venueName} · {block.defaultOrigin?.name ?? "Current origin"} · {block.travelBufferMinutes} min buffer</span>}</div><button className="study-block-configure" onClick={() => setEditing(editing === block.id ? null : block.id)}>{block.destinationStopId ? "Edit travel" : "Add travel"}</button><button aria-label={`Remove ${block.label}`} onClick={() => confirmAction(`Remove ${block.label}?`, () => onDelete(block.id))}><Trash2 size={15} /></button>{editing === block.id && <ScheduleTravelEditor block={block} origins={study.origins} busy={busy} onCancel={() => setEditing(null)} onSave={async (body) => { const saved = await onUpdate(block.id, body); if (saved) setEditing(null); }} />}</article>)}</div>}
-    <form className="study-block-form study-labelled-form" onSubmit={(event) => { event.preventDefault(); void onAdd({ moduleId: moduleId || undefined, dayOfWeek: day, startTime: start, endTime: end, label, destination: destination || undefined, defaultOriginId: originId || undefined, travelBufferMinutes: buffer }).then((saved) => { if (saved) { setLabel(""); setDestination(""); } }); }}>
+    <form className="study-block-form study-labelled-form" onSubmit={(event) => { event.preventDefault(); void onAdd({ moduleId: moduleId || undefined, dayOfWeek: day, startTime: start, endTime: end, label, destination: destination || undefined, destinationPlaceId: destinationPlaceId || undefined, defaultOriginId: originId || undefined, travelBufferMinutes: buffer }).then((saved) => { if (saved) { setLabel(""); setDestination(""); setDestinationPlaceId(null); } }); }}>
       <label>Module<select value={moduleId} onChange={(event) => setModuleId(event.target.value)}><option value="">No module</option>{study.modules.map((module) => <option key={module.id} value={module.id}>{module.code}</option>)}</select></label>
       <label>Day<select value={day} onChange={(event) => setDay(Number(event.target.value))}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{weekday(value)}</option>)}</select></label>
       <label>Starts<input type="time" value={start} onChange={(event) => setStart(event.target.value)} /></label>
       <label>Ends<input type="time" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
       <label>Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="CS2100 lecture" required /></label>
-      <label>Destination <span className="study-optional">optional</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="COM3" /></label>
+      <StudyPlaceCombobox optional value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} />
       <label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current / default</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label>
       <label>Travel buffer<input type="number" min="0" max="90" value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label>
       <button className="study-secondary" disabled={busy}><Plus size={15} /> Add block</button>
@@ -541,10 +543,11 @@ function ScheduleSettings({ study, busy, onAdd, onUpdate, onDelete }: { study: S
 
 function ScheduleTravelEditor({ block, origins, busy, onCancel, onSave }: { block: StudySnapshot["scheduleBlocks"][number]; origins: StudySnapshot["origins"]; busy: boolean; onCancel: () => void; onSave: (body: unknown) => Promise<void> }) {
   const [destination, setDestination] = useState(block.venueName ?? "");
+  const [destinationPlaceId, setDestinationPlaceId] = useState<string | null>(scheduleBlockPlaceId(block));
   const [originId, setOriginId] = useState(block.defaultOriginId ?? "");
   const [buffer, setBuffer] = useState(block.travelBufferMinutes ?? 15);
-  return <form className="study-travel-editor" onSubmit={(event) => { event.preventDefault(); void onSave({ destination: destination || null, defaultOriginId: originId || null, travelBufferMinutes: buffer }); }}>
-    <label>Destination<input required value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="COM3" /></label>
+  return <form className="study-travel-editor" onSubmit={(event) => { event.preventDefault(); void onSave({ destination: destination || null, destinationPlaceId, defaultOriginId: originId || null, travelBufferMinutes: buffer }); }}>
+    <StudyPlaceCombobox required value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} />
     <label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current / default</option>{origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label>
     <label>Buffer<input type="number" min="0" max="90" value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label>
     <div><button type="button" className="study-quiet" onClick={onCancel}>Cancel</button>{block.destinationStopId && <button type="button" className="study-quiet danger" onClick={() => void onSave({ destination: null })}>Disable</button>}<button className="study-primary" disabled={busy}><Check size={15} /> Save travel</button></div>

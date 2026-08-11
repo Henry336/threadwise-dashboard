@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Canonical Study destination autocomplete
+- Replaced the timetable destination free-text guess with an accessible NUS place combobox backed by the protected Threadwise resolver.
+- Suggestions begin after two characters, debounce for 200ms, cancel stale requests, group venues and bus stops, and support keyboard, touch, loading, empty, ambiguity, and error states.
+- Canonical selections persist stable place ids. Unresolved text remains editable but is explicitly marked and cannot silently enable a class travel reminder.
+- Added protected-proxy and component coverage and passed TypeScript, production build, and the Impeccable detector.
+
 ### Installed-app, Study library, and responsive-shell reliability
 - Replaced the native workspace selector with a viewport-safe, keyboard-navigable popover that preserves full workspace names, type, selection state, focus restoration, outside-click dismissal, and dark-mode readability without a blank modal scrim.
 - Hardened the narrow desktop/PWA header so workspace, breadcrumb, search, theme, and profile controls compress without collisions. Find a time now exposes one creation action in the empty state and reserves the header action for existing polls.

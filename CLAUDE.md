@@ -75,6 +75,8 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-11 (Codex):** Added canonical NUS destination autocomplete to Study timetable editing. The protected BFF now permits bounded place search; the accessible combobox debounces and aborts requests, groups venues/stops, persists canonical ids, and marks unresolved labels without enabling reminders. Focused proxy/component tests, TypeScript, production build, and the Impeccable detector pass; repository-wide lint still reports the documented pre-existing `dashboard-app.tsx` effect error and `group-workspace.tsx` warning.
+
 - **2026-08-11 (Codex):** Hardened the installed dashboard and Study surfaces: replaced the
   native workspace select with an accessible custom popover, fixed narrow topbar and Find-a-time
   action hierarchy, versioned PWA icons, registered/slowed the Ari loader, repaired Study filters,

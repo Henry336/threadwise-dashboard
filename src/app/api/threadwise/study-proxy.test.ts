@@ -5,6 +5,7 @@ describe("Study API proxy allowlist", () => {
   it.each([
     ["GET", "study/snapshot"],
     ["GET", "study/search"],
+    ["GET", "study/places"],
     ["POST", "study/items"],
     ["PATCH", "study/items/item-1"],
     ["DELETE", "study/resources/resource-1"],

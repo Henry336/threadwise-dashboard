@@ -4,6 +4,24 @@ export type StudyItemType = "LECTURE" | "TUTORIAL" | "LAB" | "ASSIGNMENT" | "PRO
 export type StudyPriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 export type StudyResourceKind = "NOTE" | "IMAGE" | "LINK" | "FILE" | "QUESTION";
 
+export type StudyPlace = {
+  id: string;
+  providerId: string;
+  kind: "venue" | "stop";
+  displayName: string;
+  subtitle?: string;
+  aliases: string[];
+  coordinates: { latitude: number; longitude: number };
+  nearbyStops: Array<{
+    id: string;
+    title: string;
+    shortLabel?: string;
+    busStopCode?: string;
+    distanceMetres: number;
+    walkMinutes: number;
+  }>;
+};
+
 export type StudyModule = {
   id: string;
   code: string;

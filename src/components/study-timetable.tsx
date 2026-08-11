@@ -13,6 +13,7 @@ import {
   timetableHorizontalBlockWidth, timetableIndicatorOffset, timetablePanelReducer,
 } from "@/lib/study-timetable";
 import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientation } from "@/lib/study-preferences";
+import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
 type WeekOrientation = StudyOrientation;
@@ -381,6 +382,7 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
   const [startWeek, setStartWeek] = useState(block?.startWeek?.toString() ?? "");
   const [endWeek, setEndWeek] = useState(block?.endWeek?.toString() ?? "");
   const [destination, setDestination] = useState(block?.venueName ?? "");
+  const [destinationPlaceId, setDestinationPlaceId] = useState<string | null>(block ? scheduleBlockPlaceId(block) : null);
   const [originId, setOriginId] = useState(block?.defaultOriginId ?? "");
   const [buffer, setBuffer] = useState(block?.travelBufferMinutes ?? 15);
 
@@ -398,6 +400,7 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
       startWeek: startWeek ? Number(startWeek) : null,
       endWeek: endWeek ? Number(endWeek) : null,
       destination: destination.trim() || (block ? null : undefined),
+      destinationPlaceId: destination.trim() ? destinationPlaceId : null,
       defaultOriginId: originId || null,
       travelBufferMinutes: buffer,
     });
@@ -414,7 +417,7 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
         <label>Starts<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} /></label>
         <label>Ends<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
         <div className="study-timetable-weeks"><label>From week<input type="number" min={1} max={80} value={startWeek} onChange={(event) => setStartWeek(event.target.value)} placeholder="1" /></label><span>to</span><label>Until week<input type="number" min={1} max={80} value={endWeek} onChange={(event) => setEndWeek(event.target.value)} placeholder="13" /></label></div>
-        <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><label>Destination<input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="COM3" /></label><label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current/default origin</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label><label>Travel buffer<input type="number" min={0} max={90} value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label></div>
+        <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><StudyPlaceCombobox value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} /><label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current/default origin</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label><label>Travel buffer<input type="number" min={0} max={90} value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label></div>
         <footer><span /><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : block ? "Save changes" : "Save block"}</button></div></footer>
       </form>
     </section>

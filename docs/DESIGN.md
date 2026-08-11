@@ -98,6 +98,14 @@ retryable failure, permanent expiry, and expired-session states must each have a
 
 ## Interaction language
 
+### Study place entry
+
+Timetable travel destinations use a combobox, not a blank input that assumes the user knows provider vocabulary. Search starts after two characters and groups results as **Venues** and **Bus stops**. Each option shows the human name and enough secondary context to distinguish nearby matches. Arrow keys, Enter, Escape, focus, and touch use the same selection model.
+
+A canonical choice stores the stable place id returned by Threadwise. Free text is still allowed so schedule editing never dead-ends, but it is visibly labelled unresolved and the leave-time reminder remains off until a real place is selected. The interface must never silently choose among ambiguous NUS aliases.
+
+The dashboard does not imply continuous location tracking. Current location is a private Telegram action with a four-hour expiry; the web timetable only displays or edits the resolved destination and saved-origin policy.
+
 - One capture/search deck is the primary control
 - `Ctrl/Cmd + K` opens global search; visible actions remain available to touch users
 - `N` focuses capture; `G D`, `G T`, `G N`, and `G I` move between views
