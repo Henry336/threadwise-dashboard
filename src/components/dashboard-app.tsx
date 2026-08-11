@@ -917,7 +917,9 @@ function PageHeading({ view, workspace, name, timezone, generatedAt, onAdd }: { 
     settings: workspace.kind === "GROUP" ? ["Manage group", ""] : ["Settings", ""],
   };
   const canAdd = ["tasks", "notes", "ideas"].includes(view);
-  return <div className={`tw-heading ${view === "search" ? "tw-heading-search" : ""}`}><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(now)}</p><h1>{copy[view][0]}</h1>{copy[view][1] && <span>{copy[view][1]}</span>}</div>{canAdd && <button className="tw-primary" onClick={onAdd}><Plus size={17} /> Add {view.slice(0, -1)}</button>}</div>;
+  const addLabel = `Add ${view.slice(0, -1)}`;
+  const keepMobileLabel = workspace.kind === "GROUP" && view === "tasks";
+  return <div className={`tw-heading ${view === "search" ? "tw-heading-search" : ""}`}><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(now)}</p><h1>{copy[view][0]}</h1>{copy[view][1] && <span>{copy[view][1]}</span>}</div>{canAdd && <button className={`tw-primary tw-heading-add${keepMobileLabel ? " tw-heading-add-explicit" : ""}`} aria-label={addLabel} onClick={onAdd}><Plus size={17} /> {addLabel}</button>}</div>;
 }
 
 function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEdit, isDemo }: { data: DashboardSnapshot; focusTask?: DashboardTask; overdue: number; today: number; onToggle: (task: DashboardTask) => void; onNavigate: (view: DashboardView) => void; onEdit: (task: DashboardTask) => void; isDemo: boolean }) {

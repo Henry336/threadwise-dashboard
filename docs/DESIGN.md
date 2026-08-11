@@ -130,4 +130,7 @@ Availability grids preserve 44px cells and horizontal day scrolling on narrow sc
 - Dense import rows retain 44px include, expand, assignee, and removal targets on mobile instead of shrinking controls to fit more rows
 - Narrow installed-app headers preserve one readable workspace trigger and icon-sized global actions; breadcrumbs yield before controls collide.
 - Workspace switching is a progressive popover, not a native select or full-screen dimmer. It must remain within the viewport, retain full labels, and restore focus after dismissal.
+- On narrow screens the workspace popover uses fixed viewport insets and its own bounded scroll area; it must never extend beyond the right edge or make the page scroll to reveal options.
+- Icon-only topbar actions optically center their SVG glyphs. A creation action may collapse to an icon only when its object is already unambiguous; shared Work retains the explicit `Add task` label.
+- Study overview headings carry status and the next decision, not a decorative illustration competing with the workspace name.
 - Study image grids show the image and a genuine optional caption. OCR is recall infrastructure: searchable by default, visible only after the user opens the image and expands searchable text.

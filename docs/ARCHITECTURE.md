@@ -51,6 +51,8 @@ The intended production variant uses an asymmetric keypair: the private signing 
 
 The API must never expose embeddings, raw provider payloads, OAuth state, access or refresh tokens, Telegram file IDs, receipt hashes, or assignee Telegram IDs. It may return the user-facing task, note, idea, image caption/OCR, expense, and settings fields needed by the product.
 
+Optional content encryption is owned entirely by the Render backend's Prisma boundary. Vercel and the browser receive already decrypted, authorization-scoped response data and never receive `CONTENT_ENCRYPTION_KEY`, ciphertext search keys, or blind-token internals. Consequently, enabling backend encryption does not change dashboard routes, cookies, synchronization, or client-side rendering contracts.
+
 Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF → Render → Telegram. Render performs the authenticated lookup, enforces raster-only media and a bounded download, then streams bytes with defensive browser headers. When Telegram reports a generic MIME type, the proxy identifies supported raster formats from bounded byte signatures before responding; the browser repeats that defensive check before creating an object URL. Neither the bot token nor Telegram file ID crosses into Vercel or the browser.
 
 Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.

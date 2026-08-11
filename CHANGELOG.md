@@ -4,6 +4,11 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Mobile workspace and action clarity
+- Constrained the narrow-screen workspace popover to the viewport with a fixed inset, bounded height, and contained scrolling so long workspace names and controls remain reachable.
+- Removed the decorative Ari panel from the private Study overview heading, centered the compact personal and Study search icons, and replaced the ambiguous group Work plus-only control with an explicit `Add task` action.
+- Kept these presentation fixes independent of the optional backend encryption rollout; no dashboard content key is exposed or required.
+
 ### Canonical Study destination autocomplete
 - Replaced the timetable destination free-text guess with an accessible NUS place combobox backed by the protected Threadwise resolver.
 - Suggestions begin after two characters, debounce for 200ms, cancel stale requests, group venues and bus stops, and support keyboard, touch, loading, empty, ambiguity, and error states.
