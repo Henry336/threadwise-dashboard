@@ -2,7 +2,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Design guidance verified: **2026-08-10**
+Design guidance verified: **2026-08-11**
 
 Threadwise is used to get thoughts out of the way. Its dashboard should return that information without becoming another source of noise.
 
@@ -80,6 +80,7 @@ retryable failure, permanent expiry, and expired-session states must each have a
 - Ari is the same thread given a face and body. Ari appears in onboarding, empty moments, recovery states, capture entry points, and settings where the illustration provides useful orientation.
 - Mascot artwork comes directly from the approved Ari sheet. UI implementations preserve the supplied artwork instead of approximating Ari with new paths.
 - Ari's loading motion uses eight registered frames on one fixed 3:4 stage. Playback runs forward and backward so the loop never jumps from its finished state to its opening knot; reduced motion holds on the completed frame.
+- Each registered loader pose remains visible for roughly two seconds. Frame geometry, crop, visual center, baseline, and stage aspect ratio do not change during playback.
 - Browser icons and Telegram avatars may use the approved dark Ari app icon. Product chrome always uses the faceless vector mark in both themes.
 
 ## Anti-slop rules
@@ -119,3 +120,6 @@ Availability grids preserve 44px cells and horizontal day scrolling on narrow sc
 - Mobile: compact header, single-column focus content, a compact three-part day pulse, and a five-destination bottom bar
 - Minimum touch targets are 44px for primary actions; core actions never require hover
 - Dense import rows retain 44px include, expand, assignee, and removal targets on mobile instead of shrinking controls to fit more rows
+- Narrow installed-app headers preserve one readable workspace trigger and icon-sized global actions; breadcrumbs yield before controls collide.
+- Workspace switching is a progressive popover, not a native select or full-screen dimmer. It must remain within the viewport, retain full labels, and restore focus after dismissal.
+- Study image grids show the image and a genuine optional caption. OCR is recall infrastructure: searchable by default, visible only after the user opens the image and expands searchable text.

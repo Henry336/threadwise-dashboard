@@ -1,0 +1,16 @@
+{
+  "asset": "ari-untangle-registered-v3.webp",
+  "frameCount": 8,
+  "frameWidth": 543,
+  "frameHeight": 724,
+  "aspectRatio": "3:4",
+  "playback": {
+    "secondsPerFrame": 2,
+    "sequence": [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1]
+  },
+  "artifacts": {
+    "contactSheet": "ari-untangle-contact-v3.webp",
+    "alignmentOverlay": "ari-untangle-overlay-v3.png"
+  },
+  "notes": "All frames use one registered canvas and preserve Ari's scale, baseline, face and loop anchor."
+}

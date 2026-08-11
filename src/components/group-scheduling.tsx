@@ -68,8 +68,8 @@ export function GroupSchedulingView({ polls, timezone, generatedAt, manager, isD
 
   return <section className="tw-schedule-view">
     <header className="tw-group-page-intro tw-schedule-heading">
-      <div><span><CalendarDays size={18} /> Coordinate</span><h2>Find a time</h2><p>Agree on a time without leaving the group.</p></div>
-      {manager && <button className="tw-primary" onClick={() => setCreating(true)}><Plus size={16} /> New poll</button>}
+      <div><span><CalendarDays size={18} /> Coordinate</span><h2>Find a time</h2></div>
+      {manager && polls.length > 0 && <button className="tw-primary" onClick={() => setCreating(true)}><Plus size={16} /> New poll</button>}
     </header>
 
     {creating && <CreatePollPanel timezone={timezone} anchorDate={generatedAt} busy={busy} onClose={() => setCreating(false)} onCreate={(input) => mutate(async () => {

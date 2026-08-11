@@ -25,4 +25,22 @@ describe("Study image loader", () => {
       message: "Your dashboard session can no longer load this image. Sign in again.",
     } satisfies Partial<StudyImageLoadError>);
   });
+
+  it("recovers historical images served as generic binary data", async () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
+    const fetcher = vi.fn(async () => new Response(png, {
+      status: 200,
+      headers: { "content-type": "application/octet-stream" },
+    })) as unknown as typeof fetch;
+    const blob = await loadStudyImage("historical", undefined, fetcher);
+    expect(blob.type).toBe("image/png");
+  });
+
+  it("rejects generic binary data that is not an image", async () => {
+    const fetcher = vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), {
+      status: 200,
+      headers: { "content-type": "application/octet-stream" },
+    })) as unknown as typeof fetch;
+    await expect(loadStudyImage("not-image", undefined, fetcher)).rejects.toMatchObject({ retryable: false });
+  });
 });

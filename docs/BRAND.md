@@ -1,6 +1,6 @@
 # Threadwise identity
 
-Reviewed against dashboard v0.9.0: **2026-08-10**
+Reviewed against dashboard v0.9.0: **2026-08-11**
 
 Threadwise uses one strand in two modes.
 
@@ -47,9 +47,13 @@ Do not use Ari beside every card, navigation item, save, or routine status.
 - `public/brand/ari-full-sheet.png` — exact full Ari crop
 - `public/brand/ari-threading-sheet.png` — exact thread-arranging illustration crop
 - `public/brand/ari-untangle-loading.png` — original four-frame Ari loading source
-- `public/brand/ari-untangle-loading-v2.webp` — production eight-frame loading sequence; treat as an 8×1 sprite of registered 543×724 frames and play it forward then backward
+- `public/brand/ari-untangle-registered-v3.webp` — production eight-frame loading sequence; treat as an 8×1 sprite of registered 543×724 frames and play it forward then backward at roughly two seconds per frame
+- `public/brand/ari-untangle-contact-v3.webp` and `public/brand/ari-untangle-overlay-v3.png` — registration QA artifacts used to verify scale, center, crop, and baseline consistency
+- `public/brand/ari-untangle-registered-v3.json` — frame geometry and anchor metadata used by asset tests
 - `public/brand/ari-telegram-512.png` — Telegram-ready dark avatar
 - `src/app/icon.png` — browser/app icon
 - `public/pwa/` — 192px, 512px, maskable, and Apple-touch launcher exports derived from the approved app icon
 
 Ari variants are deterministic crops from the approved sheet. The loading sequence is the sole approved motion derivative: its frames preserve Ari's visual language and share one fixed registration anchor. Do not independently redraw or regenerate other Ari variants. The faceless product mark is deliberately separate, geometric artwork designed to remain crisp at 16–32px.
+
+The previously shown 3D-esque launcher set is not present in tracked history, recoverable Git objects, the known temporary directories, or preserved attachments as of 11 August 2026. Do not fabricate a lookalike. Keep the current approved icons until the original source is supplied or deliberately replaced through a new brand decision.

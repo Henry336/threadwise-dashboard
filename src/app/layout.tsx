@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   applicationName: "Threadwise",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/pwa/icon-192.png", sizes: "192x192", type: "image/png" }],
-    apple: [{ url: "/pwa/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    icon: [{ url: "/pwa/threadwise-icon-192-v2.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/pwa/threadwise-apple-touch-icon-v2.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,

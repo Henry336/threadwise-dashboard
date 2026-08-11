@@ -1,6 +1,6 @@
 # Dashboard architecture
 
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 Current dashboard release: v0.9.0; paired backend release: v0.32.0
 
@@ -51,7 +51,7 @@ The intended production variant uses an asymmetric keypair: the private signing 
 
 The API must never expose embeddings, raw provider payloads, OAuth state, access or refresh tokens, Telegram file IDs, receipt hashes, or assignee Telegram IDs. It may return the user-facing task, note, idea, image caption/OCR, expense, and settings fields needed by the product.
 
-Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF → Render → Telegram. Render performs the authenticated lookup, enforces raster-only media and a bounded download, then streams bytes with defensive browser headers. Neither the bot token nor Telegram file ID crosses into Vercel or the browser.
+Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF → Render → Telegram. Render performs the authenticated lookup, enforces raster-only media and a bounded download, then streams bytes with defensive browser headers. When Telegram reports a generic MIME type, the proxy identifies supported raster formats from bounded byte signatures before responding; the browser repeats that defensive check before creating an object URL. Neither the bot token nor Telegram file ID crosses into Vercel or the browser.
 
 Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.
 
@@ -81,6 +81,10 @@ the same authenticated Study mutation routes and reconcile from the canonical sn
 ### Installed app shell
 
 The dashboard exposes a Next.js web app manifest and Ari launcher assets so supported browsers can install it as a standalone window. The service worker is deliberately a shell-only recovery layer: it caches immutable framework assets, brand art, PWA icons, and the generic `/offline` route. It does not cache authenticated navigations, `/dashboard`, `/api/*`, or user records. Losing the network therefore produces an honest recovery screen instead of a stale or shared copy of private work.
+
+PWA icon URLs are versioned in the manifest and document metadata so launcher caches can be invalidated without changing the privacy boundary. At narrow installed-window widths, the topbar compresses its workspace, breadcrumb, search, theme, and profile controls rather than allowing them to overlap. Workspace selection uses a custom in-document popover rather than the platform select: it preserves full names and type context, stays inside the viewport, and supports arrow keys, Home/End, typeahead, Escape, outside click, and focus restoration.
+
+Study Timetable orientation is a browser presentation preference scoped to the opaque workspace id. It is restored before paint where possible and never changes canonical schedule records or the mobile agenda. Canvas-backed module archive state remains canonical in PostgreSQL; the dashboard merely exposes owner-only restore/activate controls for the inactive projection.
 
 The current API includes the initial snapshot plus owner-scoped paginated collections, CRUD operations, task completion and recurrence, group TODO review/edit/import/cancel, idea conversion, image delivery, search, shared settings, group collaboration, group availability polls, privacy export, and confirmed account deletion. Scheduling routes cover poll creation, the viewer's availability, manager finalization/reminders/closure, and the viewer's finalized Calendar event. Personal integration routes cover direct Calendar OAuth initiation, provider status, automatic-sync settings, Calendar backfill and task actions, and retained frozen Excel implementation.
 

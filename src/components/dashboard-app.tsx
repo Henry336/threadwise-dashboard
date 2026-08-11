@@ -875,9 +875,8 @@ function WorkspaceSwitcher({ current, workspaces, disabled }: { current: Dashboa
       <ChevronDown size={16} aria-hidden="true" />
     </button>
     {open && <>
-      <button className="tw-workspace-scrim" type="button" aria-label="Close workspace menu" onClick={() => close(true)} />
       <div className="tw-workspace-menu" id={listboxId} role="listbox" aria-label="Threadwise workspaces" onKeyDown={onKeyDown}>
-        <header><div><b>Switch workspace</b><small>Choose where you want to work.</small></div><button type="button" onClick={() => close(true)} aria-label="Close workspace menu"><X size={17} /></button></header>
+        <header><div><b>Switch workspace</b></div><button type="button" onClick={() => close(true)} aria-label="Close workspace menu"><X size={17} /></button></header>
         <div>
           {choices.map((workspace, index) => {
             const selected = workspace.id === current.id;

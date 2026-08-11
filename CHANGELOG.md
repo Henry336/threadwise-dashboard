@@ -4,6 +4,16 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Installed-app, Study library, and responsive-shell reliability
+- Replaced the native workspace selector with a viewport-safe, keyboard-navigable popover that preserves full workspace names, type, selection state, focus restoration, outside-click dismissal, and dark-mode readability without a blank modal scrim.
+- Hardened the narrow desktop/PWA header so workspace, breadcrumb, search, theme, and profile controls compress without collisions. Find a time now exposes one creation action in the empty state and reserves the header action for existing polls.
+- Versioned the installed-app icon URLs to invalidate stale launcher caches. A repository-history, unreachable-object, temporary-file, and attachment search did not recover the earlier 3D icon set, so no replacement artwork was invented.
+- Re-registered Ari's loader to one fixed 3:4 stage, added intermediate poses, and slowed the forward/reverse sequence to roughly two seconds per frame. Reduced-motion users remain on the completed frame.
+- Repaired Study Work and Library filter layouts, remembered Timetable orientation per workspace, and exposed owner-only inactive-module restore controls with destructive archive styling and confirmation.
+- Simplified Study image cards to the image and an optional real caption. OCR remains searchable but hidden until the viewer is expanded; the viewer now provides metadata, retry, edit, archive, and collapsible searchable text.
+- Hardened historical Telegram image delivery by detecting PNG, JPEG, GIF, WebP, and BMP signatures when provider metadata is generic, while preserving authenticated, `no-store`, same-origin proxying.
+- Completed light/dark browser QA at 390, 920, 1024, 1280, and 1440 pixel widths with no console errors. The final Impeccable detector pass returned no findings.
+
 ### Installable dashboard and direct interface copy
 - Added a standards-based installable dashboard shell with Ari launcher and maskable icons, standalone display metadata, and a generic offline recovery page.
 - Kept the service worker privacy-safe: it caches versioned static assets only and never stores dashboard navigation responses, API responses, tasks, notes, images, or other private workspace data.

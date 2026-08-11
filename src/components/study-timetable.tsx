@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight,
   Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, X,
@@ -12,9 +12,10 @@ import {
   preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableBlockDensity, timetableBlockLanes, timetableDuePreview,
   timetableHorizontalBlockWidth, timetableIndicatorOffset, timetablePanelReducer,
 } from "@/lib/study-timetable";
+import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientation } from "@/lib/study-preferences";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
-type WeekOrientation = "vertical" | "horizontal";
+type WeekOrientation = StudyOrientation;
 
 const VERTICAL_MINUTE_SCALE = 1.05;
 const HORIZONTAL_MINUTE_SCALE = 1.35;
@@ -38,6 +39,8 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   });
   const [mode, setMode] = useState<"week" | "day">("week");
   const [orientation, setOrientation] = useState<WeekOrientation>("vertical");
+  const orientationKey = studyTimetablePreferenceKey(study.workspace.id);
+  const orientationReady = useRef(false);
   const [panel, dispatchPanel] = useReducer(timetablePanelReducer, { mode: "closed" });
   const verticalScrollRef = useRef<HTMLElement>(null);
   const horizontalScrollRef = useRef<HTMLElement>(null);
@@ -61,6 +64,19 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const panelBlock = panel.mode === "details" || panel.mode === "edit"
     ? study.scheduleBlocks.find((block) => block.id === panel.blockId)
     : undefined;
+
+  useLayoutEffect(() => {
+    const storedOrientation = parseStudyOrientation(window.localStorage.getItem(orientationKey));
+    queueMicrotask(() => {
+      setOrientation(storedOrientation);
+      orientationReady.current = true;
+    });
+  }, [orientationKey]);
+
+  useEffect(() => {
+    if (!orientationReady.current) return;
+    window.localStorage.setItem(orientationKey, orientation);
+  }, [orientation, orientationKey]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {

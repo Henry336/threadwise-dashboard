@@ -75,6 +75,14 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-11 (Codex):** Hardened the installed dashboard and Study surfaces: replaced the
+  native workspace select with an accessible custom popover, fixed narrow topbar and Find-a-time
+  action hierarchy, versioned PWA icons, registered/slowed the Ari loader, repaired Study filters,
+  persisted timetable orientation per workspace, exposed inactive-module restore controls, and
+  rebuilt Study image cards/viewer around optional captions and hidden-but-searchable OCR. The
+  exact older 3D icon set was not recoverable from Git, unreachable objects, temp files, or known
+  attachments, so current approved artwork remains rather than inventing a substitute.
+
 - **2026-08-11 (Codex):** Added the installable PWA shell with approved Ari launcher assets and a
   privacy-safe static-only service worker. Removed redundant explanatory copy across personal,
   group, Study, and demo views; personal Overview now receives one deterministic daily line.

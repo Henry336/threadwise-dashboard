@@ -2,7 +2,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Documentation verified against both Threadwise repositories: **2026-08-10**
+Documentation verified against both Threadwise repositories: **2026-08-11**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
@@ -11,7 +11,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 ## What is here
 
 - A responsive public landing page and personalized dashboard
-- An installable PWA shell for desktop taskbars and mobile home screens, with Ari launcher icons and a generic offline recovery page
+- An installable PWA shell for desktop taskbars and mobile home screens, with versioned Ari launcher icons and a generic offline recovery page
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, immediate assignments, unassigned claiming, creator/admin reassignment, and a seven-day summary
@@ -23,7 +23,8 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates
-- A date-grouped image gallery with OCR/caption search, selection, a keyboard-friendly lightbox, and note conversion
+- A date-grouped image gallery with caption/OCR search, image-first cards, hidden searchable text, a keyboard-friendly viewer, and note conversion
+- A viewport-safe custom workspace switcher with full names, workspace types, selection state, keyboard navigation, and light/dark parity
 - Secondary Google Calendar connection management, automatic task sync, provider coverage, and contextual task actions
 - Data export, integration disconnect, and confirmed account deletion controls
 - Automatic Telegram Mini App login using server-verified signed launch data

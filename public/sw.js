@@ -1,9 +1,9 @@
-const CACHE_NAME = "threadwise-shell-v1";
+const CACHE_NAME = "threadwise-shell-v2";
 const SHELL_ASSETS = [
   "/offline",
-  "/pwa/icon-192.png",
-  "/pwa/icon-512.png",
-  "/pwa/maskable-512.png",
+  "/pwa/threadwise-icon-192-v2.png",
+  "/pwa/threadwise-icon-512-v2.png",
+  "/pwa/threadwise-maskable-512-v2.png",
   "/brand/ari-avatar-light-sheet.png",
 ];
 
@@ -45,4 +45,3 @@ self.addEventListener("fetch", (event) => {
     })),
   );
 });
-
