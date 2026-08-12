@@ -144,6 +144,48 @@ export type StudySession = {
   }>;
 };
 
+export type StudyAnalysisStatus = "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED";
+
+export type StudyAnalysisFinding = {
+  title: string;
+  detail: string;
+  evidenceIds: string[];
+};
+
+export type StudyAnalysisEvidence = {
+  id: string;
+  kind: "SESSION" | "RESOURCE";
+  title: string;
+  detail?: string;
+  occurredAt?: string;
+  sessionId?: string;
+  resourceId?: string;
+};
+
+export type StudyModuleAnalysis = {
+  id: string;
+  moduleId: string;
+  status: StudyAnalysisStatus;
+  requestedAt: string;
+  completedAt?: string;
+  stale: boolean;
+  summary?: string;
+  patterns?: StudyAnalysisFinding[];
+  strengths?: StudyAnalysisFinding[];
+  gaps?: StudyAnalysisFinding[];
+  nextSteps?: StudyAnalysisFinding[];
+  evidence?: StudyAnalysisEvidence[];
+  sessionCount: number;
+  resourceCount: number;
+  errorMessage?: string;
+};
+
+export type StudyModuleAnalysisResponse = {
+  available: boolean;
+  reason?: string;
+  analysis: StudyModuleAnalysis | null;
+};
+
 export type StudySnapshot = {
   generatedAt: string;
   workspace: {

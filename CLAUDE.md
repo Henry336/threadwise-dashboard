@@ -75,6 +75,12 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-13 (Codex):** Added an opt-in, evidence-backed module review to Deep Work. The UI
+  reads cached results on module change, requests analysis only on an explicit action, polls only
+  active jobs, and ties every finding to numbered session/resource evidence with honest stale,
+  offline, failed, and limitation states. All 71 tests pass serially; changed-file lint, production
+  build, and the Impeccable detector are clean.
+
 - **2026-08-12 (Codex):** Made Deep Work a persistent Study-shell companion rather than a
   route-blocking timer. The Deep Work control center now supports structured focus styles and
   techniques, custom topics, module-resource linking, exact editable session history, outcomes,

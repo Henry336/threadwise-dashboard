@@ -15,6 +15,8 @@ describe("Study API proxy allowlist", () => {
     ["PATCH", "study/schedule/block-1"],
     ["DELETE", "study/sessions/session-1"],
     ["POST", "study/nusmods/import"],
+    ["GET", "study/modules/module-1/analysis"],
+    ["POST", "study/modules/module-1/analysis"],
   ])("allows %s %s", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);
@@ -26,6 +28,7 @@ describe("Study API proxy allowlist", () => {
     ["POST", "study/resources/resource-1/content"],
     ["GET", "study/private-debug"],
     ["POST", "study/canvas/token"],
+    ["DELETE", "study/modules/module-1/analysis"],
   ])("rejects forged or unsupported %s %s", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);
   });

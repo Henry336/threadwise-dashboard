@@ -2,7 +2,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Design guidance verified: **2026-08-12**
+Design guidance verified: **2026-08-13**
 
 Threadwise is used to get thoughts out of the way. Its dashboard should return that information without becoming another source of noise.
 
@@ -47,6 +47,8 @@ Calendar remains a secondary task integration. Frozen experiments do not appear 
 The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey. Desktop week view can place days in columns with time running downward or place days in rows with time running left-to-right; both orientations edit the same blocks. Mobile keeps the day agenda instead of compressing either weekly grid.
 
 Deep Work is a companion, not a full-page lock. While a session is active, one restrained timer and finish action remain reachable across Study routes without covering the timetable, work, or library. The Deep Work route itself is the control center: it starts sessions, records outcomes, and presents compact dated history with correction and archive actions. Method guidance stays structured but flexible: choose a focus style, combine useful techniques, or enter a precise custom topic. Ari may signal focus and completion, but must not occupy an otherwise empty work surface.
+
+Module review follows progressive disclosure and evidence before interpretation. It appears only in Deep Work, starts with one module selector and one explicit action, and never runs merely because the route or selection changed. Fresh cached results require no action; changed evidence offers Update; failures offer Retry. Findings are grouped for scanning but each points to numbered session/resource evidence in the same panel. Empty, unavailable, queued, stale, failed, and limited-evidence states use direct operational copy. The interface must call the result a reflection—not a grade, correctness check, or proof of understanding.
 
 Both desktop timetable orientations cover the complete 00:00–24:00 day inside a fixed-height scroll
 viewport. Initial position follows the current time or earliest relevant work; the live-time label owns

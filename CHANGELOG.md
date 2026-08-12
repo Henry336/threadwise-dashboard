@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Optional evidence-backed module review
+- Added an explicit Deep Work module-review panel that reads cached analysis without starting work and offers Analyze, Update, or Retry only when appropriate.
+- Gated analysis on at least one completed, non-archived module session; resources add context but cannot independently qualify a module.
+- Presented patterns, strengths, gaps, and next steps beside numbered source records, with stale, offline, working, failed, and limitation states that never imply grading or verified understanding.
+- Kept provider access behind the protected same-origin Study proxy and polled only queued or running jobs. The browser receives neither provider credentials nor unrestricted Study data.
+
 ### Persistent Deep Work companion
 - Replaced the route-blocking active-session screen with a compact companion that remains available while the owner moves through Study Work, Timetable, Modules, Library, Search, Review, and Settings.
 - Rebuilt Deep Work as the control center for starting, finishing, reviewing, editing, and archiving sessions instead of leaving a mostly empty Ari panel after completion.

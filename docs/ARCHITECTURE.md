@@ -1,6 +1,6 @@
 # Dashboard architecture
 
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Current dashboard release: v0.9.0; paired backend release: v0.32.0
 
@@ -60,6 +60,8 @@ Mutations are accepted only through the same-origin Vercel BFF. Each Render rout
 ## Private Study projection
 
 Active Deep Work is shell-level state rather than a separate browser-owned timer. The dashboard derives the current session from the canonical Study snapshot and renders one compact companion across Study routes, so navigation never stops timing or hides module material. Start, finish, correction, resource-linking, and archive actions pass through the protected same-origin proxy to the backend. Structured focus styles and techniques are presentation choices stored on the session record; the browser neither infers mastery nor performs AI analysis. Reconciliation replaces optimistic state with the next canonical snapshot after each mutation.
+
+Module review is an optional read-mostly projection layered beside Deep Work, not inside its timing or completion state. The allowlisted same-origin proxy forwards protected `GET` and `POST /api/threadwise/study/modules/:moduleId/analysis` requests: `GET` reads the latest cached response, and only an explicit `POST` asks the backend to analyze current evidence. `src/lib/study-analysis.ts` centralizes eligibility, reason copy, and Analyze/Update/Retry decisions. The component polls only queued or running jobs, keys responses to the selected module, and renders backend-issued evidence references rather than attempting browser-side inference. No Gemini credential or raw worker capability reaches the dashboard.
 
 Study Mode is discoverable only when the signed Telegram principal is the configured Study owner, the opaque workspace resolves to the configured Study chat, current Telegram membership succeeds, and the active database binding agrees. Every Study snapshot, search, protected-file request, and mutation repeats the backend gate; unauthorized direct routes receive the same opaque not-found response as a missing workspace.
 

@@ -2,7 +2,7 @@
 /* Telegram-hosted resource previews stay on the authenticated same-origin proxy. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, AlertTriangle, Archive, ArrowRight, BookOpen, Brain, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, ExternalLink,
@@ -16,9 +16,10 @@ import { StudyTimetable } from "./study-timetable";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
 import type {
-  StudyItem, StudyItemType, StudyMistake, StudyModule,
+  StudyAnalysisEvidence, StudyAnalysisFinding, StudyItem, StudyItemType, StudyMistake, StudyModule, StudyModuleAnalysisResponse,
   StudyResource, StudyResourceKind, StudySession, StudySnapshot, StudyTrafficLight, StudyView,
 } from "@/lib/study-types";
+import { studyAnalysisAction, studyAnalysisEvidenceNumbers, studyAnalysisInitialModuleId, studyAnalysisModules, studyAnalysisReason } from "@/lib/study-analysis";
 import { studyWeekLabel } from "@/lib/study-week";
 import { loadStudyImage, StudyImageLoadError } from "@/lib/study-image";
 import {
@@ -576,8 +577,133 @@ function DeepWorkPhaseOne({ study, busy, initialItemId, activeSession, outcome, 
       </article>) : <Empty title="No sessions yet" copy="Your completed sessions will appear here." />}
     </section>
 
+    <StudyModuleAnalysisPanel study={study} />
+
     {editing && <StudySessionEditor session={editing} study={study} busy={busy} onClose={() => setEditing(null)} onSave={async (body) => { const saved = await onUpdate(editing.id, body); if (saved) setEditing(null); }} />}
   </section>;
+}
+
+function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
+  const modules = useMemo(() => studyAnalysisModules(study.modules, study.sessions, study.resources), [study.modules, study.resources, study.sessions]);
+  const initialModuleId = useMemo(() => studyAnalysisInitialModuleId(study.modules, study.sessions, study.resources, study.workspace.activeModuleId), [study.modules, study.resources, study.sessions, study.workspace.activeModuleId]);
+  const [chosenModuleId, setChosenModuleId] = useState(initialModuleId);
+  const moduleId = modules.some((module) => module.id === chosenModuleId) ? chosenModuleId : initialModuleId;
+  const [loadedResponse, setLoadedResponse] = useState<{ moduleId: string; value: StudyModuleAnalysisResponse } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [requestError, setRequestError] = useState("");
+  const requestSequence = useRef(0);
+  const response = loadedResponse?.moduleId === moduleId ? loadedResponse.value : null;
+
+  const loadCached = useCallback(async (quiet = false) => {
+    if (!moduleId) return;
+    const sequence = ++requestSequence.current;
+    if (!quiet) setLoading(true);
+    try {
+      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`);
+      if (sequence === requestSequence.current) {
+        setLoadedResponse({ moduleId, value: next });
+        setLoadError("");
+      }
+    } catch (error) {
+      if (sequence === requestSequence.current) setLoadError(error instanceof Error ? error.message : "The saved analysis could not be loaded.");
+    } finally {
+      if (!quiet && sequence === requestSequence.current) setLoading(false);
+    }
+  }, [moduleId]);
+
+  useEffect(() => {
+    if (!moduleId) return;
+    const timer = window.setTimeout(() => void loadCached(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadCached, moduleId]);
+
+  const analysisStatus = response?.analysis?.status;
+  useEffect(() => {
+    if (analysisStatus !== "QUEUED" && analysisStatus !== "RUNNING") return;
+    const interval = window.setInterval(() => void loadCached(true), 3500);
+    return () => window.clearInterval(interval);
+  }, [analysisStatus, loadCached]);
+
+  const requestAnalysis = async () => {
+    if (!moduleId || !response?.available || requesting) return;
+    setRequesting(true);
+    setRequestError("");
+    try {
+      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`, "POST");
+      setLoadedResponse({ moduleId, value: next });
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "The analysis could not be started.");
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const analysis = response?.analysis;
+  const evidence = analysis?.evidence ?? [];
+  const evidenceNumbers = studyAnalysisEvidenceNumbers(evidence.map((entry) => entry.id));
+  const findings: Array<{ title: string; items?: StudyAnalysisFinding[] }> = [
+    { title: "Patterns", items: analysis?.patterns },
+    { title: "Strengths", items: analysis?.strengths },
+    { title: "Gaps", items: analysis?.gaps },
+    { title: "Next steps", items: analysis?.nextSteps },
+  ];
+  const actionableFindings = findings.filter((group) => group.items?.length);
+  const isWorking = analysis?.status === "QUEUED" || analysis?.status === "RUNNING";
+  const actionLabel = studyAnalysisAction(analysis);
+
+  if (!modules.length) return <section className="study-module-analysis study-module-analysis-empty" aria-label="Module review">
+    <Brain size={18} />
+    <div><b>Module review</b><span>Complete a module session first.</span></div>
+  </section>;
+
+  return <section className="study-module-analysis" aria-busy={loading || requesting || isWorking} aria-labelledby="study-analysis-title">
+    <header>
+      <div><span>Module review</span><h2 id="study-analysis-title">Patterns from your records</h2></div>
+      <div className="study-analysis-controls">
+        <label><span>Module</span><select value={moduleId} onChange={(event) => { setChosenModuleId(event.target.value); setLoading(true); setRequestError(""); }}>{modules.map((module) => <option key={module.id} value={module.id}>{module.code} · {module.name}</option>)}</select></label>
+        {response?.available && !isWorking && actionLabel && <button className="study-primary" disabled={requesting} onClick={() => void requestAnalysis()}>{requesting ? <LoaderCircle className="spin" size={15} /> : analysis?.status === "COMPLETE" ? <RefreshCw size={15} /> : <Brain size={15} />}{actionLabel}</button>}
+        {analysis?.status === "COMPLETE" && !analysis.stale && <span className="study-analysis-current"><CheckCircle2 size={14} /> Up to date</span>}
+      </div>
+    </header>
+
+    <div className="study-analysis-status" aria-live="polite">
+      {loading && !analysis && <><LoaderCircle className="spin" size={17} /><span>Checking saved analysis…</span></>}
+      {!loading && loadError && !analysis && <><AlertCircle size={17} /><span>{loadError}</span><button className="study-quiet" onClick={() => void loadCached()}>Retry</button></>}
+      {!loading && !loadError && response && !analysis && response.available && <><Brain size={17} /><span>No saved analysis.</span></>}
+      {!loading && !loadError && response && !analysis && !response.available && <><AlertCircle size={17} /><span>{studyAnalysisReason(response.reason)}</span></>}
+      {isWorking && <><LoaderCircle className="spin" size={17} /><span>Analyzing saved sessions and resources…</span></>}
+      {analysis?.status === "FAILED" && <><AlertCircle size={17} /><span>{analysis.errorMessage || "The analysis did not finish."}</span></>}
+      {analysis?.status === "COMPLETE" && analysis.stale && <><AlertTriangle size={17} /><span>New records are available. The saved analysis may be out of date.</span></>}
+      {analysis?.status === "COMPLETE" && !response?.available && <><AlertCircle size={17} /><span>{studyAnalysisReason(response?.reason, "New analysis is unavailable. The saved result remains below.")}</span></>}
+      {(requestError || (loadError && Boolean(analysis))) && <><AlertCircle size={17} /><span>{requestError || loadError}</span></>}
+    </div>
+
+    {analysis?.status === "COMPLETE" && <div className="study-analysis-result">
+      <div className="study-analysis-meta">
+        <span><CheckCircle2 size={15} /> Saved {analysis.completedAt ? formatDateTime(analysis.completedAt, study.workspace.timezone) : "analysis"}</span>
+        <span>{analysis.sessionCount} session{analysis.sessionCount === 1 ? "" : "s"} · {analysis.resourceCount} resource{analysis.resourceCount === 1 ? "" : "s"}</span>
+      </div>
+      {analysis.summary && <p className="study-analysis-summary">{analysis.summary}</p>}
+      {actionableFindings.length > 0 && <div className="study-analysis-findings">{actionableFindings.map((group) => <StudyAnalysisFindingGroup key={group.title} title={group.title} items={group.items ?? []} evidenceNumbers={evidenceNumbers} />)}</div>}
+      {evidence.length > 0 && <StudyAnalysisEvidenceList evidence={evidence} timezone={study.workspace.timezone} />}
+      <p className="study-analysis-disclaimer"><AlertTriangle size={14} /> <span><b>AI summary.</b> Verify it against the cited records; it does not grade mastery or correctness.</span></p>
+    </div>}
+  </section>;
+}
+
+function StudyAnalysisFindingGroup({ title, items, evidenceNumbers }: { title: string; items: StudyAnalysisFinding[]; evidenceNumbers: Map<string, number> }) {
+  return <section><h3>{title}</h3><ul>{items.map((finding, index) => {
+    const citations = finding.evidenceIds.map((id) => evidenceNumbers.get(id)).filter((value): value is number => value !== undefined);
+    return <li key={`${finding.title}-${index}`}><b>{finding.title}</b><p>{finding.detail}{citations.length > 0 && <span className="study-analysis-citations" aria-label="Evidence citations">{citations.map((number) => <a key={number} href={`#study-analysis-evidence-${number}`} aria-label={`Evidence ${number}`}>[{number}]</a>)}</span>}</p></li>;
+  })}</ul></section>;
+}
+
+function StudyAnalysisEvidenceList({ evidence, timezone }: { evidence: StudyAnalysisEvidence[]; timezone: string }) {
+  return <details className="study-analysis-evidence"><summary>Evidence <span>{evidence.length}</span></summary><ol>{evidence.map((entry, index) => <li key={entry.id} id={`study-analysis-evidence-${index + 1}`}>
+    <span>{index + 1}</span><div><b>{entry.title}</b><small>{entry.kind === "SESSION" ? "Session" : "Resource"}{entry.occurredAt ? ` · ${formatDateTime(entry.occurredAt, timezone)}` : ""}</small>{entry.detail && <p>{entry.detail}</p>}</div>
+  </li>)}</ol></details>;
 }
 
 function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusStructure, onTechniques, onCustomMethod }: { focusStructure: FocusStructureId; techniques: string[]; customMethod: string; onFocusStructure: (value: FocusStructureId) => void; onTechniques: (value: string[]) => void; onCustomMethod: (value: string) => void }) {
