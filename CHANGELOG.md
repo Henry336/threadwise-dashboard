@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Persistent Deep Work companion
+- Replaced the route-blocking active-session screen with a compact companion that remains available while the owner moves through Study Work, Timetable, Modules, Library, Search, Review, and Settings.
+- Rebuilt Deep Work as the control center for starting, finishing, reviewing, editing, and archiving sessions instead of leaving a mostly empty Ari panel after completion.
+- Added structured focus styles and study techniques alongside a custom topic, exact timestamps, outcomes, and optional links to module resources without making AI part of the core workflow.
+- Added focused state and proxy tests, completed responsive light/dark QA, and passed the production build plus a clean Impeccable detector.
+
 ### NUSMods import and Study mobile cleanup
 - Added a Study Timetable import sheet for canonical NUSMods semester share links. Imports are protected by the existing Study workspace gate and reconcile selected class types, groups, weeks, times, and venues through the backend without touching manual blocks.
 - Repaired the narrow Study drawer, centered the Deep Work Ari illustration, replaced outdated dark-square mascot art in context and empty states, and removed the duplicated Work kicker.

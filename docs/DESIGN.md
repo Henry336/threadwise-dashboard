@@ -2,7 +2,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Design guidance verified: **2026-08-11**
+Design guidance verified: **2026-08-12**
 
 Threadwise is used to get thoughts out of the way. Its dashboard should return that information without becoming another source of noise.
 
@@ -45,6 +45,8 @@ On desktop, each task reads in three deliberate layers: identity and editable ti
 Calendar remains a secondary task integration. Frozen experiments do not appear in navigation, capture, search, onboarding, or empty states.
 
 The private Study shell is module-first rather than a reskinned personal dashboard. Its navigation is Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable presents recurring classes and planned study tasks in one responsive schedule, with route context progressively disclosed only where it helps the next journey. Desktop week view can place days in columns with time running downward or place days in rows with time running left-to-right; both orientations edit the same blocks. Mobile keeps the day agenda instead of compressing either weekly grid.
+
+Deep Work is a companion, not a full-page lock. While a session is active, one restrained timer and finish action remain reachable across Study routes without covering the timetable, work, or library. The Deep Work route itself is the control center: it starts sessions, records outcomes, and presents compact dated history with correction and archive actions. Method guidance stays structured but flexible: choose a focus style, combine useful techniques, or enter a precise custom topic. Ari may signal focus and completion, but must not occupy an otherwise empty work surface.
 
 Both desktop timetable orientations cover the complete 00:00–24:00 day inside a fixed-height scroll
 viewport. Initial position follows the current time or earliest relevant work; the live-time label owns

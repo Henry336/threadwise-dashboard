@@ -75,6 +75,12 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-12 (Codex):** Made Deep Work a persistent Study-shell companion rather than a
+  route-blocking timer. The Deep Work control center now supports structured focus styles and
+  techniques, custom topics, module-resource linking, exact editable session history, outcomes,
+  and owner-only soft archiving. TypeScript, changed-file lint, 63 tests, production build, and
+  the Impeccable detector pass; the paired backend owns all canonical records and authorization.
+
 - **2026-08-11 (Codex):** Added canonical NUS destination autocomplete to Study timetable editing. The protected BFF now permits bounded place search; the accessible combobox debounces and aborts requests, groups venues/stops, persists canonical ids, and marks unresolved labels without enabling reminders. Focused proxy/component tests, TypeScript, production build, and the Impeccable detector pass; repository-wide lint still reports the documented pre-existing `dashboard-app.tsx` effect error and `group-workspace.tsx` warning.
 
 - **2026-08-11 (Codex):** Hardened the installed dashboard and Study surfaces: replaced the

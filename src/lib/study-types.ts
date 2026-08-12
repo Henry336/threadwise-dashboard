@@ -127,14 +127,21 @@ export type StudySession = {
   endedAt?: string | null;
   durationMinutes?: number | null;
   method: string;
+  topic?: string | null;
+  focusStructure?: string | null;
+  techniques: string[];
   result?: string | null;
   topicsMixed: string[];
   attemptedScore?: number | null;
   maximumScore?: number | null;
   usedNotes?: boolean | null;
   timed: boolean;
-  module: { code: string; name: string };
+  archivedAt?: string | null;
+  module: { id?: string; code: string; name: string; color?: string | null };
   item?: { publicId: string; title: string } | null;
+  resources: Array<{
+    resource: StudyResource;
+  }>;
 };
 
 export type StudySnapshot = {
@@ -170,6 +177,9 @@ export type StudySnapshot = {
       id: string;
       moduleCode: string;
       method: string;
+      topic?: string | null;
+      focusStructure?: string | null;
+      techniques: string[];
       startedAt: string;
       item?: { id: string; publicId: string; title: string };
     };

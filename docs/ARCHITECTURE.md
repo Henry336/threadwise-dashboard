@@ -1,6 +1,6 @@
 # Dashboard architecture
 
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 Current dashboard release: v0.9.0; paired backend release: v0.32.0
 
@@ -58,6 +58,8 @@ Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF →
 Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.
 
 ## Private Study projection
+
+Active Deep Work is shell-level state rather than a separate browser-owned timer. The dashboard derives the current session from the canonical Study snapshot and renders one compact companion across Study routes, so navigation never stops timing or hides module material. Start, finish, correction, resource-linking, and archive actions pass through the protected same-origin proxy to the backend. Structured focus styles and techniques are presentation choices stored on the session record; the browser neither infers mastery nor performs AI analysis. Reconciliation replaces optimistic state with the next canonical snapshot after each mutation.
 
 Study Mode is discoverable only when the signed Telegram principal is the configured Study owner, the opaque workspace resolves to the configured Study chat, current Telegram membership succeeds, and the active database binding agrees. Every Study snapshot, search, protected-file request, and mutation repeats the backend gate; unauthorized direct routes receive the same opaque not-found response as a missing workspace.
 

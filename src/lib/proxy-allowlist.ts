@@ -14,7 +14,7 @@ export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (path === "study/resources") return method === "GET" || method === "POST";
   if (/^study\/resources\/[A-Za-z0-9_-]+$/.test(path)) return method === "GET" || method === "PATCH" || method === "DELETE";
   if (/^study\/sessions\/(?:start|stop)$/.test(path)) return method === "POST";
-  if (/^study\/sessions\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH";
+  if (/^study\/sessions\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH" || method === "DELETE";
   if (path === "study/mistakes") return method === "POST";
   if (/^study\/mistakes\/[A-Za-z0-9_-]+\/resolve$/.test(path)) return method === "POST";
   if (path === "study/weekly-plan" || path === "study/settings") return method === "PATCH";
