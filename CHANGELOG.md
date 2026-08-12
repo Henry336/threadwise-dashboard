@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### NUSMods import and Study mobile cleanup
+- Added a Study Timetable import sheet for canonical NUSMods semester share links. Imports are protected by the existing Study workspace gate and reconcile selected class types, groups, weeks, times, and venues through the backend without touching manual blocks.
+- Repaired the narrow Study drawer, centered the Deep Work Ari illustration, replaced outdated dark-square mascot art in context and empty states, and removed the duplicated Work kicker.
+- Reflowed Study Work filters and cards for phone widths, removed raw Canvas URLs from the primary card surface, and kept the archive action visually destructive without overpowering the task.
+- Clarified destination suggestion copy as a final walk from the nearest destination stop, preventing a short last-mile estimate from being mistaken for the complete trip from the user's origin.
+
 ### Mobile workspace and action clarity
 - Constrained the narrow-screen workspace popover to the viewport with a fixed inset, bounded height, and contained scrolling so long workspace names and controls remain reachable.
 - Removed the decorative Ari panel from the private Study overview heading, centered the compact personal and Study search icons, and replaced the ambiguous group Work plus-only control with an explicit `Add task` action.

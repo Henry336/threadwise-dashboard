@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight,
-  Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, X,
+  Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, Upload, X,
 } from "lucide-react";
 import type { StudyItem, StudySnapshot } from "@/lib/study-types";
 import {
@@ -27,11 +27,12 @@ type Props = {
   onAddBlock: (body: unknown) => Promise<unknown>;
   onUpdateBlock: (id: string, body: unknown) => Promise<unknown>;
   onDeleteBlock: (id: string) => Promise<unknown>;
+  onImportNusmods: (url: string) => Promise<unknown>;
   onEditItem: (item: StudyItem) => void;
   onFocusItem: (item: StudyItem) => void;
 };
 
-export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDeleteBlock, onEditItem, onFocusItem }: Props) {
+export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDeleteBlock, onImportNusmods, onEditItem, onFocusItem }: Props) {
   const [weekStart, setWeekStart] = useState(() => initialTimetableWeek(study));
   const [selectedDay, setSelectedDay] = useState(() => {
     const week = initialTimetableWeek(study);
@@ -43,6 +44,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const orientationKey = studyTimetablePreferenceKey(study.workspace.id);
   const orientationReady = useRef(false);
   const [panel, dispatchPanel] = useReducer(timetablePanelReducer, { mode: "closed" });
+  const [importOpen, setImportOpen] = useState(false);
   const verticalScrollRef = useRef<HTMLElement>(null);
   const horizontalScrollRef = useRef<HTMLElement>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
@@ -102,7 +104,10 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   return <section className="study-page study-timetable-page">
     <header className="study-timetable-head">
       <div><span>Study Mode</span><h1>Timetable</h1></div>
-      <button className="study-primary" onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={16} /> Add block</button>
+      <div className="study-timetable-actions">
+        <button className="study-secondary" onClick={() => setImportOpen(true)}><Upload size={16} /> Import NUSMods</button>
+        <button className="study-primary" onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={16} /> Add block</button>
+      </div>
     </header>
 
     <div className="study-timetable-summary" aria-label="Timetable summary">
@@ -213,7 +218,41 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         if (saved !== undefined) dispatchPanel({ type: "close" });
       }}
     />}
+    {importOpen && <NusmodsImportDialog
+      busy={busy}
+      onClose={() => setImportOpen(false)}
+      onImport={async (url) => {
+        const saved = await onImportNusmods(url);
+        if (saved !== undefined) setImportOpen(false);
+      }}
+    />}
   </section>;
+}
+
+function NusmodsImportDialog({ busy, onClose, onImport }: {
+  busy: boolean;
+  onClose: () => void;
+  onImport: (url: string) => Promise<void>;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const [url, setUrl] = useState("");
+  useDialogFocus(dialogRef, busy, onClose);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void onImport(url.trim());
+  };
+
+  return <div className="study-timetable-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+    <section ref={dialogRef} className="study-timetable-dialog study-timetable-import" role="dialog" aria-modal="true" aria-labelledby="nusmods-import-title" tabIndex={-1}>
+      <header><div><span>NUSMods</span><h2 id="nusmods-import-title">Import timetable</h2></div><button onClick={onClose} disabled={busy} aria-label="Close NUSMods import"><X size={20} /></button></header>
+      <form onSubmit={submit}>
+        <label>Share link<input autoFocus required type="url" inputMode="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://nusmods.com/timetable/sem-1/share?..." /></label>
+        <p>Imports class types, times, weeks, and venues. Manual blocks stay unchanged.</p>
+        <footer><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy || !url.trim()}><Upload size={16} /> {busy ? "Importing…" : "Import"}</button></footer>
+      </form>
+    </section>
+  </div>;
 }
 
 function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDay, onOpenDueOverflow, onEditItem, onOpenBlock }: {

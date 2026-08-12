@@ -1,4 +1,4 @@
-const STUDY_PATH = /^study\/(?:snapshot|search|places|modules(?:\/[A-Za-z0-9_-]+)?|items(?:\/[A-Za-z0-9_-]+(?:\/complete)?)?|resources(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|sessions\/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:\/[A-Za-z0-9_-]+\/resolve)?|weekly-plan|review|settings|canvas\/sync|canvas\/assignments\/[A-Za-z0-9_-]+|origins(?:\/[A-Za-z0-9_-]+)?|schedule(?:\/[A-Za-z0-9_-]+)?)$/;
+const STUDY_PATH = /^study\/(?:snapshot|search|places|modules(?:\/[A-Za-z0-9_-]+)?|items(?:\/[A-Za-z0-9_-]+(?:\/complete)?)?|resources(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|sessions\/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:\/[A-Za-z0-9_-]+\/resolve)?|weekly-plan|review|settings|canvas\/sync|canvas\/assignments\/[A-Za-z0-9_-]+|origins(?:\/[A-Za-z0-9_-]+)?|schedule(?:\/[A-Za-z0-9_-]+)?|nusmods\/import)$/;
 
 export function isAllowedThreadwiseProxyPath(path: string) {
   return STUDY_PATH.test(path) || /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|task-imports\/[A-Za-z0-9_-]+(?:\/(?:items\/[A-Za-z0-9_-]+|import|cancel))?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|scheduling\/polls(?:\/[A-Za-z0-9_-]+(?:\/(?:availability|finalize|remind|cancel|calendar))?)?|integrations\/(?:calendar|excel)\/(?:connect|disconnect)|integrations\/calendar\/(?:sync|task)|integrations\/excel\/(?:sync|workbook)|privacy\/(?:export|account))$/.test(path);
@@ -24,6 +24,7 @@ export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (/^study\/origins\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH" || method === "DELETE";
   if (path === "study/schedule") return method === "POST";
   if (/^study\/schedule\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH" || method === "DELETE";
+  if (path === "study/nusmods/import") return method === "POST";
   if (path === "snapshot" || path === "workspaces" || path === "events" || path === "search" || path === "privacy/export" || /\/content$/.test(path)) return method === "GET";
   if (path === "capture/preview") return method === "POST";
   if (/^task-imports\/[A-Za-z0-9_-]+$/.test(path)) return method === "GET";

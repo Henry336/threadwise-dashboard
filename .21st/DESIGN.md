@@ -36,3 +36,9 @@ Telegram review links must select the authorized workspace and open the exact re
 ## Decision: direct operational copy
 
 Use one direct title on collection and settings pages. Do not add a subtitle that restates an obvious page name. Search names tasks, notes, ideas, and images in the heading itself. Reserve one short, deterministic daily line for the personal Overview greeting, where a small amount of personality supports orientation without competing with work.
+
+## Decision: compact Study mobile surfaces
+
+At phone widths, the Study drawer is one contained viewport-height surface with a single close action, one compact workspace/context block, scrollable primary navigation, and synchronization status anchored after the navigation rather than floating across content. Use the book/context mark for academic state; reserve illustrated Ari artwork for deliberate empty or instructional moments, never for tiny context tiles.
+
+Study Work cards prioritize action, identity, and deadline. Do not expose provider URLs in the primary reading flow. Filters occupy the full available width, empty states use a restrained symbol, and destructive archive controls remain recognizable without becoming the visual focal point. Deep Work artwork is centered as a supporting cue, not aligned like form content.

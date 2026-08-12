@@ -13,6 +13,7 @@ describe("Study API proxy allowlist", () => {
     ["POST", "study/canvas/sync"],
     ["PATCH", "study/settings"],
     ["PATCH", "study/schedule/block-1"],
+    ["POST", "study/nusmods/import"],
   ])("allows %s %s", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);

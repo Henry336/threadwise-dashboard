@@ -143,8 +143,14 @@ function PlaceGroup({ title, icon: Icon, entries, listboxId, activeIndex, onChoo
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onChoose(place)}
     >
-      <span><b>{place.displayName}</b><small>{place.subtitle || place.aliases.slice(0, 2).join(" · ")}</small></span>
-      {place.nearbyStops[0] && <em>{place.nearbyStops[0].walkMinutes ? `${place.nearbyStops[0].walkMinutes} min walk` : "At stop"}</em>}
+      <span><b>{place.displayName}</b><small>{place.subtitle || place.aliases.slice(0, 2).join(" / ")}</small></span>
+      {place.nearbyStops[0] && <em title={`From ${place.nearbyStops[0].title}`}>
+        {place.kind === "venue"
+          ? place.nearbyStops[0].walkMinutes
+            ? `Final walk: ${place.nearbyStops[0].walkMinutes} min`
+            : "At destination stop"
+          : "Bus stop"}
+      </em>}
     </button>)}
   </section>;
 }
