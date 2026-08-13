@@ -34,6 +34,8 @@ type Toast = {
   tone: "success" | "error" | "info";
   action?: { label: string; run: () => void };
 };
+type Confirmation = { message: string; action: () => unknown };
+const STUDY_CONFIRM_EVENT = "threadwise:study-confirm";
 type Editor =
   | { kind: "item"; value?: StudyItem }
   | { kind: "resource"; value?: StudyResource; resourceKind?: "NOTE" | "LINK" | "QUESTION" }
@@ -76,6 +78,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
   const [editor, setEditor] = useState<Editor>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncState>("connecting");
   const [moduleFilter, setModuleFilter] = usePersistentState<string>("threadwise-study-module-filter", "all");
@@ -159,6 +162,11 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
     window.localStorage.setItem("threadwise-theme", theme);
   }, [theme, themeReady]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
+  useEffect(() => {
+    const openConfirmation = (event: Event) => setConfirmation((event as CustomEvent<Confirmation>).detail);
+    window.addEventListener(STUDY_CONFIRM_EVENT, openConfirmation);
+    return () => window.removeEventListener(STUDY_CONFIRM_EVENT, openConfirmation);
+  }, []);
   useEffect(() => {
     const events = new EventSource("/api/threadwise/events");
     const ready = () => setSync("live");
@@ -307,6 +315,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
     {activeSession && view !== "study-focus" && <StudySessionCompanion session={activeSession} timezone={study.workspace.timezone} busy={busy} onOpen={() => navigate("study-focus")} onStop={stopSession} />}
     {editor && <StudyEditor state={editor} study={study} busy={busy} onClose={() => setEditor(null)} onSave={async (path, method, body, message) => { const saved = await mutate(path, method, body, message); if (saved) setEditor(null); }} />}
     {helpOpen && <StudyGuideSheet onClose={() => setHelpOpen(false)} />}
+    {confirmation && <StudyConfirmationDialog message={confirmation.message} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.action; setConfirmation(null); void action(); }} />}
     {toast && <div className="study-toast" data-tone={toast.tone} role={toast.tone === "error" ? "alert" : "status"}>{toast.tone === "error" ? <AlertCircle size={18} /> : toast.tone === "info" ? <Cloud size={18} /> : <CheckCircle2 size={18} />}<span>{toast.message}</span>{toast.action && <button onClick={() => { setToast(null); toast.action?.run(); }}><Undo2 size={15} /> {toast.action.label}</button>}<button className="study-toast-close" onClick={() => setToast(null)} aria-label="Dismiss message"><X size={15} /></button></div>}
   </div>;
 }
@@ -506,9 +515,9 @@ type DeepWorkPhaseOneProps = {
 };
 
 function DeepWorkPhaseOne({ study, busy, initialItemId, activeSession, outcome, onDismissOutcome, onStart, onStop, onUpdate, onArchive, onComplete, onRecordMistake, onOpenLibrary }: DeepWorkPhaseOneProps) {
-  const initialItem = study.items.find((item) => item.id === initialItemId);
+  const initialItem = study.items.find((item) => item.id === initialItemId && isUsefulFocusTarget(item));
   const [moduleId, setModuleId] = useState(initialItem?.moduleId || study.workspace.activeModuleId || study.modules[0]?.id || "");
-  const [itemId, setItemId] = useState(initialItemId || "");
+  const [itemId, setItemId] = useState(initialItem?.id || "");
   const [topic, setTopic] = useState("");
   const [focusStructure, setFocusStructure] = useState<FocusStructureId>("uninterrupted");
   const [techniques, setTechniques] = useState<string[]>([]);
@@ -517,7 +526,7 @@ function DeepWorkPhaseOne({ study, busy, initialItemId, activeSession, outcome, 
   const [result, setResult] = useState("");
   const [editing, setEditing] = useState<StudySession | null>(null);
   const elapsed = useSessionElapsed(activeSession?.startedAt);
-  const availableItems = study.items.filter((item) => item.status === "OPEN" || item.status === "IN_PROGRESS");
+  const availableItems = study.items.filter((item) => (item.status === "OPEN" || item.status === "IN_PROGRESS") && isUsefulFocusTarget(item));
   const selectedResources = study.resources.filter((resource) => resource.moduleId === moduleId);
   const validResourceIds = resourceIds.filter((id) => selectedResources.some((resource) => resource.id === id));
   const completedSessions = study.sessions.filter((session) => session.endedAt && !session.archivedAt);
@@ -557,12 +566,12 @@ function DeepWorkPhaseOne({ study, busy, initialItemId, activeSession, outcome, 
     {!activeSession && <form className="study-session-builder" onSubmit={start}>
       <div className="study-session-builder-head"><Ari variant="full" decorative /><h2>New session</h2></div>
       <div className="study-session-fields">
-        <label>Target<select value={itemId} onChange={(event) => { const next = event.target.value; setItemId(next); setResourceIds([]); const item = study.items.find((value) => value.id === next); if (item) setModuleId(item.moduleId); }}><option value="">Module-only session</option>{availableItems.map((item) => <option key={item.id} value={item.id}>{item.module.code} \u00b7 {item.publicId} \u00b7 {item.title}</option>)}</select></label>
-        <label>Module<select value={moduleId} disabled={Boolean(itemId)} onChange={(event) => { setModuleId(event.target.value); setResourceIds([]); }}>{study.modules.map((module) => <option key={module.id} value={module.id}>{module.code} \u00b7 {module.name}</option>)}</select></label>
+        <StudyChoicePicker label="Target" value={itemId} placeholder="Module-only session" searchable options={availableItems.map((item) => ({ value: item.id, label: `${item.module.code} · ${item.publicId}`, detail: item.title }))} onChange={(next) => { setItemId(next); setResourceIds([]); const item = study.items.find((value) => value.id === next); if (item) setModuleId(item.moduleId); }} />
+        <StudyChoicePicker label="Module" value={moduleId} disabled={Boolean(itemId)} options={study.modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} onChange={(next) => { setModuleId(next); setResourceIds([]); }} />
         <label className="study-field-wide">Topic or intention<input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="What are you working on?" /></label>
       </div>
       <StudyMethodPicker focusStructure={focusStructure} techniques={techniques} customMethod={customMethod} onFocusStructure={setFocusStructure} onTechniques={setTechniques} onCustomMethod={setCustomMethod} />
-      <fieldset className="study-resource-picker"><legend>Resources <small>Optional</small></legend>{selectedResources.length ? <div>{selectedResources.map((resource) => <label key={resource.id}><input type="checkbox" checked={validResourceIds.includes(resource.id)} onChange={() => setResourceIds((current) => current.includes(resource.id) ? current.filter((id) => id !== resource.id) : [...current, resource.id])} />{resourceIcon(resource.kind)}<span><b>{resource.title}</b><small>{humanize(resource.kind)}</small></span></label>)}</div> : <p>No saved resources for this module.</p>}</fieldset>
+      <StudyResourcePicker resources={selectedResources} resourceIds={validResourceIds} onChange={setResourceIds} optional />
       <button className="study-primary study-start-session" disabled={busy || !moduleId}><Play size={16} /> Start session</button>
     </form>}
 
@@ -714,6 +723,78 @@ function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusSt
   </div>;
 }
 
+function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, onChange }: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  options: Array<{ value: string; label: string; detail?: string }>;
+  disabled?: boolean;
+  searchable?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value);
+  const visible = options.filter((option) => !query || `${option.label} ${option.detail ?? ""}`.toLowerCase().includes(query.toLowerCase()));
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [open]);
+  return <div className="study-choice-field" ref={rootRef}>
+    <span>{label}</span>
+    <button type="button" className="study-choice-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+      <span><b>{selected?.label ?? placeholder}</b>{selected?.detail && <small>{selected.detail}</small>}</span><ChevronDown size={16} />
+    </button>
+    {open && <div className="study-choice-popover" role="listbox" aria-label={label}>
+      {searchable && <label><Search size={15} /><span className="sr-only">Search {label.toLowerCase()}</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} /></label>}
+      <div>
+        <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(""); setOpen(false); setQuery(""); }}><span><b>{placeholder}</b></span>{!value && <Check size={15} />}</button>
+        {visible.map((option) => <button type="button" key={option.value} role="option" aria-selected={option.value === value} onClick={() => { onChange(option.value); setOpen(false); setQuery(""); }}><span><b>{option.label}</b>{option.detail && <small>{option.detail}</small>}</span>{option.value === value && <Check size={15} />}</button>)}
+        {!visible.length && <p>No matching options.</p>}
+      </div>
+    </div>}
+  </div>;
+}
+
+function StudyResourcePicker({ resources, resourceIds, onChange, optional = false }: { resources: StudyResource[]; resourceIds: string[]; onChange: (ids: string[]) => void; optional?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = resources.filter((resource) => resourceIds.includes(resource.id));
+  const available = resources.filter((resource) => !resourceIds.includes(resource.id) && (!query || `${resource.title} ${resource.kind}`.toLowerCase().includes(query.toLowerCase())));
+  const remove = (id: string) => onChange(resourceIds.filter((value) => value !== id));
+  const add = (id: string) => onChange([...resourceIds, id]);
+  return <fieldset className="study-resource-picker study-resource-picker-progressive">
+    <legend>Linked resources {optional && <small>Optional</small>}</legend>
+    {selected.length > 0 && <div className="study-resource-selected">{selected.map((resource) => <button type="button" key={resource.id} onClick={() => remove(resource.id)} aria-label={`Remove ${resource.title}`}>
+      {resourceIcon(resource.kind)}<span><b>{resource.title}</b><small>{humanize(resource.kind)}</small></span><X size={14} />
+    </button>)}</div>}
+    {!resources.length ? <p>No saved resources for this module.</p> : <button type="button" className="study-resource-picker-toggle" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)}><Plus size={15} /> {expanded ? "Close resource picker" : selected.length ? "Add another resource" : "Add resources"}<ChevronDown size={15} /></button>}
+    {expanded && <div className="study-resource-picker-panel">
+      <label><Search size={15} /><span className="sr-only">Search resources</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this module" /></label>
+      <div>{available.map((resource) => <button type="button" key={resource.id} onClick={() => add(resource.id)}>{resourceIcon(resource.kind)}<span><b>{resource.title}</b><small>{humanize(resource.kind)}</small></span><Plus size={14} /></button>)}{!available.length && <p>{query ? "No matching resources." : "Every resource is already linked."}</p>}</div>
+    </div>}
+  </fieldset>;
+}
+
+function StudyConfirmationDialog({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+    const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", keydown);
+    return () => document.removeEventListener("keydown", keydown);
+  }, [onCancel]);
+  return <div className="study-confirm-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
+    <section className="study-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="study-confirm-title" aria-describedby="study-confirm-message">
+      <span><AlertTriangle size={18} /></span><div><h2 id="study-confirm-title">Confirm this change</h2><p id="study-confirm-message">{message}</p></div>
+      <footer><button ref={cancelRef} type="button" className="study-secondary" onClick={onCancel}>Keep it</button><button type="button" className="study-danger-button" onClick={onConfirm}>Confirm</button></footer>
+    </section>
+  </div>;
+}
+
 function StudySessionEditor({ session, study, busy, onClose, onSave }: { session: StudySession; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (body: unknown) => Promise<void> }) {
   const knownStructure = FOCUS_STRUCTURES.find((entry) => entry.id === session.focusStructure)?.id ?? "custom";
   const [focusStructure, setFocusStructure] = useState<FocusStructureId>(knownStructure);
@@ -727,13 +808,22 @@ function StudySessionEditor({ session, study, busy, onClose, onSave }: { session
   const resources = study.resources.filter((resource) => resource.moduleId === session.moduleId);
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    void onSave({ topic: topic.trim() || null, focusStructure, techniques, method: sessionMethodSummary(focusStructure, techniques, customMethod), result: result.trim() || null, startedAt: new Date(startedAt).toISOString(), endedAt: endedAt ? new Date(endedAt).toISOString() : null, resourceIds });
+    void onSave({
+      topic: topic.trim(),
+      focusStructure,
+      techniques,
+      method: sessionMethodSummary(focusStructure, techniques, customMethod),
+      result: result.trim(),
+      startedAt: new Date(startedAt).toISOString(),
+      ...(endedAt ? { endedAt: new Date(endedAt).toISOString() } : {}),
+      resourceIds,
+    });
   };
   return <StudyDialog kicker={session.endedAt ? "Session record" : "Active session"} title={session.item?.title || session.topic || `${session.module.code} session`} dirty onClose={onClose}>{() => <form className="study-editor-form study-session-editor" onSubmit={submit}>
     <div className="study-form-row"><label>Started<input required type="datetime-local" value={startedAt} onChange={(event) => setStartedAt(event.target.value)} /></label><label>Ended<input type="datetime-local" disabled={!session.endedAt} value={endedAt} onChange={(event) => setEndedAt(event.target.value)} /></label></div>
     <label>Topic or intention<input value={topic} onChange={(event) => setTopic(event.target.value)} /></label>
     <StudyMethodPicker focusStructure={focusStructure} techniques={techniques} customMethod={customMethod} onFocusStructure={setFocusStructure} onTechniques={setTechniques} onCustomMethod={setCustomMethod} />
-    <fieldset className="study-resource-picker"><legend>Linked resources</legend>{resources.length ? <div>{resources.map((resource) => <label key={resource.id}><input type="checkbox" checked={resourceIds.includes(resource.id)} onChange={() => setResourceIds((current) => current.includes(resource.id) ? current.filter((id) => id !== resource.id) : [...current, resource.id])} />{resourceIcon(resource.kind)}<span><b>{resource.title}</b><small>{humanize(resource.kind)}</small></span></label>)}</div> : <p>No saved resources for this module.</p>}</fieldset>
+    <StudyResourcePicker resources={resources} resourceIds={resourceIds} onChange={setResourceIds} />
     <label>Result or next step<textarea rows={4} value={result} onChange={(event) => setResult(event.target.value)} /></label>
     <footer><button type="button" className="study-secondary" onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={15} /> Save changes</button></footer>
   </form>}</StudyDialog>;
@@ -743,7 +833,7 @@ function StudySessionCompanion({ session, timezone, busy, onOpen, onStop }: { se
   const elapsed = useSessionElapsed(session.startedAt);
   return <aside className="study-session-companion" aria-label="Active Deep Work session" style={{ "--module-color": session.module.color ?? "#168b83" } as React.CSSProperties}>
     <Ari variant="threading" decorative />
-    <div><span>Deep Work</span><b>{session.module.code} \u00b7 {session.item?.title || session.topic || "Module session"}</b><small>{formatDuration(elapsed)} \u00b7 started {formatTime(session.startedAt, timezone)}</small></div>
+    <div><span>Deep Work</span><b>{session.module.code} · {session.item?.title || session.topic || "Module session"}</b><small>{formatDuration(elapsed)} · started {formatTime(session.startedAt, timezone)}</small></div>
     <button className="study-quiet" onClick={onOpen}>Open</button><button className="study-primary" disabled={busy} onClick={() => void onStop({})}><Square size={14} /> End</button>
   </aside>;
 }
@@ -771,7 +861,7 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
   ];
 
   return <section className="study-page">
-    <PageHead kicker="Study settings" title="Semester controls." copy="Configure one area at a time." />
+    <PageHead kicker="Study settings" title="Semester controls" />
     <div className="study-settings-layout">
       <nav className="study-settings-tabs" aria-label="Study settings sections">
         {panels.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-current={panel === id ? "page" : undefined} onClick={() => setPanel(id)}><Icon size={17} /><span>{label}</span><ChevronRight size={15} /></button>)}
@@ -788,7 +878,7 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
           <form onSubmit={(event) => { event.preventDefault(); void onSave(studySettingsPayload(settings)); }}>
             <fieldset><legend>Semester</legend><div className="study-form-row"><label>Semester name<input required value={settings.semesterName} onChange={(event) => setSettings({ ...settings, semesterName: event.target.value })} /></label><label>Starting Monday<input required type="date" value={settings.semesterStartDate?.slice(0, 10) ?? ""} onChange={(event) => setSettings({ ...settings, semesterStartDate: event.target.value ? new Date(`${event.target.value}T00:00:00+08:00`).toISOString() : null })} /></label></div></fieldset>
             <fieldset><legend>Weekly rhythm</legend><div className="study-form-row"><label>Preview day<select value={settings.weeklyPreviewDay} onChange={(event) => setSettings({ ...settings, weeklyPreviewDay: Number(event.target.value) })}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{weekday(value)}</option>)}</select></label><label>Preview time<input type="time" value={settings.weeklyPreviewTime} onChange={(event) => setSettings({ ...settings, weeklyPreviewTime: event.target.value })} /></label><label>Review day<select value={settings.weeklyReviewDay} onChange={(event) => setSettings({ ...settings, weeklyReviewDay: Number(event.target.value) })}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{weekday(value)}</option>)}</select></label><label>Review time<input type="time" value={settings.weeklyReviewTime} onChange={(event) => setSettings({ ...settings, weeklyReviewTime: event.target.value })} /></label></div></fieldset>
-            <fieldset><legend>Boundaries</legend><div className="study-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || null })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || null })} /></label><label>Daily reminder cap<input type="number" min="1" max="24" value={settings.maxRemindersPerDay} onChange={(event) => setSettings({ ...settings, maxRemindersPerDay: Number(event.target.value) })} /></label><label>Timed practice from week<input type="number" min="1" max="30" value={settings.timedPracticeStartWeek} onChange={(event) => setSettings({ ...settings, timedPracticeStartWeek: Number(event.target.value) })} /></label></div></fieldset>
+            <fieldset><legend>Boundaries</legend><div className="study-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || null })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || null })} /></label><label>Daily reminder cap<input type="number" inputMode="numeric" min="1" max="24" value={settings.maxRemindersPerDay} onChange={(event) => setSettings({ ...settings, maxRemindersPerDay: Number(event.target.value) })} onBlur={() => setSettings((current) => ({ ...current, maxRemindersPerDay: clampInteger(current.maxRemindersPerDay, 1, 24) }))} /></label><label>Timed practice from week<input type="number" inputMode="numeric" min="1" max="30" value={settings.timedPracticeStartWeek} onChange={(event) => setSettings({ ...settings, timedPracticeStartWeek: Number(event.target.value) })} onBlur={() => setSettings((current) => ({ ...current, timedPracticeStartWeek: clampInteger(current.timedPracticeStartWeek, 1, 30) }))} /></label></div></fieldset>
             <label className="study-switch"><span><b>Study-block reminders</b><small>Notify only for recurring blocks saved in Schedule.</small></span><input type="checkbox" checked={settings.studyBlockRemindersEnabled} onChange={(event) => setSettings({ ...settings, studyBlockRemindersEnabled: event.target.checked })} /></label>
             <label className="study-switch"><span><b>Automatic Canvas sync</b><small>Check every 30 minutes without submitting coursework.</small></span><input type="checkbox" checked={settings.canvasSyncEnabled} onChange={(event) => setSettings({ ...settings, canvasSyncEnabled: event.target.checked })} /></label>
             <button className="study-primary" disabled={busy}><Check size={16} /> Save rhythm</button>
@@ -797,7 +887,7 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
 
         {panel === "travel" && <section aria-labelledby="study-settings-travel">
           <header><div><span>Travel</span><h2 id="study-settings-travel">Leave-time origins</h2><p>Tell Threadwise where a study journey begins.</p></div></header>
-          <div className="study-origin-list">{study.origins.map((origin) => <article key={origin.id}><MapPin size={17} /><div><b>{origin.name}</b><small>{origin.isDefault ? "Default origin" : origin.providerVenueId || "Campus origin"}</small></div>{!origin.isDefault && <button onClick={() => void onOrigin(origin.id, { makeDefault: true })}>Make default</button>}<button aria-label={`Remove ${origin.name}`} onClick={() => confirmAction(`Remove ${origin.name}?`, () => onDeleteOrigin(origin.id))}><Trash2 size={15} /></button></article>)}</div>
+          <div className="study-origin-list">{study.origins.map((origin) => <article key={origin.id}><MapPin size={17} /><div><b>{origin.name}</b><small>{origin.isDefault ? "Default origin" : origin.providerVenueId || "Campus origin"}</small></div><div className="study-origin-actions">{!origin.isDefault && <button onClick={() => void onOrigin(origin.id, { makeDefault: true })}>Make default</button>}<button aria-label={`Remove ${origin.name}`} onClick={() => confirmAction(`Remove ${origin.name}?`, () => onDeleteOrigin(origin.id))}><Trash2 size={15} /></button></div></article>)}</div>
           <form className="study-inline-form study-origin-form" onSubmit={(event) => { event.preventDefault(); void onAddOrigin({ name: originName, venue: originVenue, makeDefault: study.origins.length === 0 }).then((saved) => { if (saved) { setOriginName(""); setOriginVenue(""); } }); }}><label>Origin name<input value={originName} onChange={(event) => setOriginName(event.target.value)} placeholder="Home" required /></label><label>NUS venue<input value={originVenue} onChange={(event) => setOriginVenue(event.target.value)} placeholder="COM3" required /></label><button className="study-secondary"><Plus size={15} /> Add origin</button></form>
         </section>}
 
@@ -1053,7 +1143,15 @@ async function studyApi<T>(path: string, method = "GET", body?: unknown): Promis
   return payload as T;
 }
 function validView(value?: string): StudyView { return NAV.some((item) => item.id === value) ? value as StudyView : "study-overview"; }
-function confirmAction(message: string, action: () => unknown) { if (window.confirm(message)) action(); }
+function confirmAction(message: string, action: () => unknown) {
+  window.dispatchEvent(new CustomEvent<Confirmation>(STUDY_CONFIRM_EVENT, { detail: { message, action } }));
+}
+function isUsefulFocusTarget(item: StudyItem) {
+  return !/^(?:image capture|image received)(?:\b|\s*[-:])/i.test(item.title.trim());
+}
+function clampInteger(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, Number.isFinite(value) ? Math.round(value) : minimum));
+}
 function formText(form: FormData, name: string) { return String(form.get(name) ?? "").trim(); }
 function studySettingsPayload(settings: StudySnapshot["workspace"]) {
   return {
