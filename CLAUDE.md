@@ -79,7 +79,8 @@ updates the Working log below** (newest first: date, who, what, current state).
   Connections/Quiz/Both selection, cited Canvas/session/note evidence with provenance, cautious pace,
   misconception clarification, expandable challenge answers, and manually editable apply/dismiss note
   proposals. Nothing edits a note without confirmation. All 76 tests, TypeScript, lint, and production
-  build pass; deployment is next.
+  build pass. Commit `7c018e1` has a successful Vercel deployment status and the canonical
+  production dashboard returns HTTP 200.
 
 - **2026-08-13 (Codex):** Updated Study module-review availability copy for the backend's new
   server-side Gemini provider while preserving cached-result behavior and the protected proxy.
