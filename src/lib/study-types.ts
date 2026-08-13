@@ -291,6 +291,18 @@ export type StudySnapshot = {
       lastSuccessfulAt?: string | null;
       nextSyncAt: string;
       lastError?: string | null;
+      lastSummary?: {
+        courses?: number;
+        assignmentsSeen?: number;
+        imported?: number;
+        updated?: number;
+        ignoredSubmitted?: number;
+        ignoredInactive?: number;
+        courseModulesSeen?: number;
+        materialsSeen?: number;
+        pagesCached?: number;
+        filesIndexed?: number;
+      } | null;
       consecutiveFailures: number;
       updatedAt: string;
     } | null;

@@ -853,6 +853,7 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
   const [panel, setPanel] = usePersistentState<"canvas" | "rhythm" | "travel" | "schedule">("threadwise-study-settings-panel", "canvas");
   const [originName, setOriginName] = useState("");
   const [originVenue, setOriginVenue] = useState("");
+  const canvasSummary = study.canvas.state?.lastSummary;
   const panels = [
     { id: "canvas" as const, label: "Canvas", icon: Cloud },
     { id: "rhythm" as const, label: "Rhythm", icon: Clock3 },
@@ -870,6 +871,13 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
         {panel === "canvas" && <section aria-labelledby="study-settings-canvas">
           <header><div><span>Canvas</span><h2 id="study-settings-canvas">Assignment sync</h2><p>{study.canvas.state?.lastSuccessfulAt ? `Last synced ${formatDateTime(study.canvas.state.lastSuccessfulAt, study.workspace.timezone)}` : study.canvas.configured ? "Ready to sync." : "Add the Canvas token in Render to connect."}</p></div><button className="study-secondary" disabled={busy || !study.canvas.configured} onClick={() => void onSync()}><RefreshCw size={15} className={study.canvas.state?.status === "RUNNING" ? "spin" : ""} /> Sync now</button></header>
           <div className="study-settings-callout"><Cloud size={19} /><div><b>Read-only by design</b><p>Threadwise imports coursework and status. It never submits or edits Canvas work.</p></div></div>
+          {canvasSummary && <div className="study-canvas-health" aria-label="Latest Canvas sync coverage">
+            <div><b>{canvasSummary.courses ?? 0}</b><span>courses scanned</span></div>
+            <div><b>{canvasSummary.assignmentsSeen ?? 0}</b><span>assignments found</span></div>
+            <div><b>{canvasSummary.courseModulesSeen ?? 0}</b><span>course modules</span></div>
+            <div><b>{canvasSummary.materialsSeen ?? 0}</b><span>materials indexed</span></div>
+            {(canvasSummary.ignoredInactive ?? 0) > 0 && <p><AlertTriangle size={15} /> {canvasSummary.ignoredInactive} open assignment{canvasSummary.ignoredInactive === 1 ? " is" : "s are"} waiting for its course to be activated in Modules.</p>}
+          </div>}
           {study.canvas.missingAssignments.length === 0 ? <Empty title="Nothing needs review" copy="Missing Canvas assignments will appear here before anything is archived." /> : study.canvas.missingAssignments.map((assignment) => <article className="study-canvas-review" key={assignment.id}><AlertTriangle size={18} /><div><b>{assignment.module.code} · {assignment.item.publicId}</b><p>{assignment.title}</p></div><button onClick={() => void onCanvasReview(assignment.id, "keep")}>Keep local</button><button onClick={() => void onCanvasReview(assignment.id, "archive")}>Archive</button></article>)}
         </section>}
 

@@ -4,6 +4,10 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Canvas coverage visibility
+- Added a compact latest-sync coverage summary to Study settings for courses, assignments, course modules, and indexed materials.
+- Calls out open assignments that were discovered under a still-inactive course, giving the owner an exact recovery action instead of silently omitting them.
+
 ### Optional evidence-backed module review
 - Added an explicit Deep Work module-review panel that reads cached analysis without starting work and offers Analyze, Update, or Retry only when appropriate.
 - Gated analysis on at least one completed, non-archived module session; resources add context but cannot independently qualify a module.

@@ -75,6 +75,11 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-13 (Codex):** Added Canvas sync coverage to Study settings. The latest successful
+  backend summary now shows courses, assignments, course modules, and indexed materials, and
+  explicitly identifies open assignments waiting for course activation. Dashboard tests remain
+  73/73; TypeScript, targeted lint, and production build pass.
+
 - **2026-08-13 (Codex):** Implemented and locally validated the timetable reliability bundle:
   refreshes no longer steal editor focus; timetable sheets use a body portal, uniform scrim,
   and viewport-bounded geometry; absent create destinations no longer send invalid null place
