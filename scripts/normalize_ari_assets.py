@@ -137,7 +137,7 @@ def build_loader() -> None:
         "frameHeight": OUTPUT_FRAME_SIZE,
         "transparent": True,
         "registration": {"tealCentroidX": TARGET_TEAL_X, "foregroundCenterY": TARGET_FOREGROUND_Y},
-        "playback": {"framesPerSecond": 2, "secondsPerFrame": 0.5, "sequence": [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1]},
+        "playback": {"framesPerSecond": 4, "secondsPerFrame": 0.25, "sequence": [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1]},
         "frames": frames,
     }, indent=2) + "\n", encoding="utf-8")
 

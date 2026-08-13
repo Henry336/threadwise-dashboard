@@ -10,8 +10,8 @@
     "foregroundCenterY": 320
   },
   "playback": {
-    "framesPerSecond": 2,
-    "secondsPerFrame": 0.5,
+    "framesPerSecond": 4,
+    "secondsPerFrame": 0.25,
     "sequence": [
       0,
       1,

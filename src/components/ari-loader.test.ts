@@ -17,7 +17,7 @@ describe("Ari untangling loader", () => {
 
     expect(asset.subarray(1, 4).toString()).toBe("PNG");
     expect(statSync(assetPath).size).toBeLessThan(1_250_000);
-    expect(manifest).toMatchObject({ frameCount: 8, frameWidth: 640, frameHeight: 640, transparent: true, playback: { framesPerSecond: 2 } });
+    expect(manifest).toMatchObject({ frameCount: 8, frameWidth: 640, frameHeight: 640, transparent: true, playback: { framesPerSecond: 4 } });
     expect(manifest.frames).toHaveLength(8);
     expect(manifest.frames.every((frame) => frame.foregroundBox[1] >= 80 && frame.foregroundBox[3] <= 560)).toBe(true);
     expect(manifest.frames.every((frame) => Math.abs(frame.tealCentroid[0] - 320) < 1)).toBe(true);
@@ -30,7 +30,7 @@ describe("Ari untangling loader", () => {
     const studyDashboard = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
     const studyCss = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
 
-    expect(css).toContain("animation: ari-untangle-frames 7s steps(1, end) infinite");
+    expect(css).toContain("animation: ari-untangle-frames 3.5s steps(1, end) infinite");
     expect(css).toContain("transform: translateX(-12.5%)");
     expect(css).toContain("transform: translateX(-25%)");
     expect(css).toContain("transform: translateX(-50%)");
