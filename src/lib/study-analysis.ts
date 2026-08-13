@@ -33,7 +33,7 @@ export function studyAnalysisEvidenceNumbers(evidenceIds: string[]) {
 export function studyAnalysisReason(reason?: string, fallback = "Analysis is unavailable right now.") {
   if (!reason) return fallback;
   if (reason === "complete_a_session_first") return "Complete a module session first.";
-  if (reason === "worker_unavailable") return "Analysis is offline right now. Saved results stay available.";
+  if (reason === "worker_unavailable" || reason === "provider_unavailable") return "Analysis is offline right now. Saved results stay available.";
   if (reason === "request_recently_submitted") return "That review was just requested.";
   return reason.includes("_") ? fallback : reason;
 }

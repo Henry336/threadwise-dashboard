@@ -75,6 +75,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-13 (Codex):** Updated Study module-review availability copy for the backend's new
+  server-side Gemini provider while preserving cached-result behavior and the protected proxy.
+  Dashboard tests remain 74/74; TypeScript, full lint, and production build pass.
+
 - **2026-08-13 (Codex):** Added exact reminder-time editing and explicit Everyone/Unassigned
   group audiences. Task sheets keep deadline, automatic rhythm, and up to 20 exact times together;
   group assignment retains named members without conflating everyone with unassigned work.

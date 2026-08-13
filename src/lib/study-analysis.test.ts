@@ -44,6 +44,7 @@ describe("Study module analysis helpers", () => {
   it("turns reason codes into recovery copy", () => {
     expect(studyAnalysisReason("complete_a_session_first")).toBe("Complete a module session first.");
     expect(studyAnalysisReason("worker_unavailable")).toContain("offline");
+    expect(studyAnalysisReason("provider_unavailable")).toContain("Saved results");
     expect(studyAnalysisReason("unexpected_code")).toBe("Analysis is unavailable right now.");
   });
 

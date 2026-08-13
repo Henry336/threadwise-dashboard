@@ -4,6 +4,10 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Server-backed Study analysis availability
+- Updated the module-review unavailable state to recognize the deployed Gemini provider instead of assuming a laptop worker. Cached results remain visible when the provider is unavailable.
+- Kept all provider credentials and execution behind the authenticated same-origin Study proxy; the browser contract remains a small async job/status/result payload.
+
 ### Exact task reminders and explicit shared obligations
 - Reworked task editing around one clear deadline, one automatic reminder rhythm, and up to 20 optional exact reminder times in the same responsive sheet.
 - Added explicit Everyone and Unassigned audience choices to group assignment controls while retaining named member assignment. Everyone obligations no longer masquerade as ownerless claimable work.
