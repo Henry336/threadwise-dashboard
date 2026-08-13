@@ -75,12 +75,13 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-14 (Codex, local validation complete):** Replaced the Study module review's raw
+- **2026-08-14 (Codex):** Replaced the Study module review's raw
   Module and Review type selects with the existing Threadwise choice popover, including selected
   checks, outside-click close, Escape, Arrow/Home/End navigation, and focus return. Removed the
   erroneous second-row span that made Review's Top three card stretch into a large empty panel.
   Focused UI regressions pass 4/4; the full dashboard suite passes 83/83; TypeScript, ESLint,
-  production build, and diff checks pass. Publication and authenticated live confirmation are next.
+  production build, and diff checks pass. Dashboard code commit `615e38e` is pushed to `main`,
+  Vercel reported the exact deployment successful, and the canonical `/dashboard` route is HTTP 200.
 
 - **2026-08-14 (Codex):** Corrected live-reported visual regressions for the next coordinated
   release. Ari keeps all 42 registered/in-between frames but slows from a
