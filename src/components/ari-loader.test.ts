@@ -23,22 +23,50 @@ describe("Ari untangling loader", () => {
     expect(manifest.frames.every((frame) => Math.abs(frame.tealCentroid[0] - 320) < 1)).toBe(true);
   });
 
-  it("plays all eight frames forward and backward and honors reduced motion", () => {
+  it("ships a bounded transparent 12 FPS animation with deterministic in-betweens", () => {
+    const assetPath = join(process.cwd(), "public", "brand", "ari-untangle-smooth-v5.webp");
+    const asset = readFileSync(assetPath);
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), "public", "brand", "ari-untangle-smooth-v5.json"), "utf8")) as {
+      sourceAsset: string;
+      frameCount: number;
+      frameWidth: number;
+      frameHeight: number;
+      transparent: boolean;
+      interpolation: { inBetweenFramesPerTransition: number; generativeRedrawing: boolean };
+      playback: { framesPerSecond: number; durationMs: number; anchorSequence: number[] };
+      validation: { decodedFrameCount: number; transparentCornerAlpha: number; maxAnchorMeanAbsoluteError: number };
+      frames: Array<{ anchor: boolean; durationMs: number }>;
+    };
+
+    expect(asset.subarray(0, 4).toString()).toBe("RIFF");
+    expect(asset.subarray(8, 12).toString()).toBe("WEBP");
+    expect(statSync(assetPath).size).toBeLessThan(2_000_000);
+    expect(manifest).toMatchObject({
+      sourceAsset: "ari-untangle-normalized-v4.png",
+      frameCount: 42,
+      frameWidth: 480,
+      frameHeight: 480,
+      transparent: true,
+      interpolation: { inBetweenFramesPerTransition: 2, generativeRedrawing: false },
+      playback: { framesPerSecond: 12, durationMs: 3_500 },
+      validation: { decodedFrameCount: 42, transparentCornerAlpha: 0 },
+    });
+    expect(manifest.validation.maxAnchorMeanAbsoluteError).toBeLessThan(4.5);
+    expect(manifest.frames).toHaveLength(42);
+    expect(manifest.frames.filter((frame) => frame.anchor)).toHaveLength(14);
+    expect(manifest.frames.reduce((total, frame) => total + frame.durationMs, 0)).toBe(3_500);
+  });
+
+  it("uses the smooth asset in both loading stages and honors reduced motion", () => {
     const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
     const loadingRoute = readFileSync(join(process.cwd(), "src", "app", "dashboard", "loading.tsx"), "utf8");
     const loaderComponent = readFileSync(join(process.cwd(), "src", "components", "ari.tsx"), "utf8");
     const studyDashboard = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
     const studyCss = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
 
-    expect(css).toContain("animation: ari-untangle-frames 3.5s steps(1, end) infinite");
-    expect(css).toContain("transform: translateX(-12.5%)");
-    expect(css).toContain("transform: translateX(-25%)");
-    expect(css).toContain("transform: translateX(-50%)");
-    expect(css).toContain("transform: translateX(-75%)");
-    expect(css).toContain("transform: translateX(-87.5%)");
-    expect(css).toContain("100% { transform: translateX(0); }");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
-    expect(loaderComponent).toContain("/brand/ari-untangle-normalized-v4.png");
+    expect(css).toContain('background: url("/brand/ari-untangle-normalized-v4.png")');
+    expect(loaderComponent).toContain("/brand/ari-untangle-smooth-v5.webp");
     expect(loaderComponent).toContain('label="Untangling your workspace…"');
     expect(loadingRoute).toContain("<AriWorkspaceLoader");
     expect(studyDashboard).toContain("if (!bootError) return <AriWorkspaceLoader />");
