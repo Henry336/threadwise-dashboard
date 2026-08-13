@@ -1,0 +1,218 @@
+{
+  "asset": "ari-untangle-normalized-v4.png",
+  "source": "ari-untangle-registered-v3.webp",
+  "frameCount": 8,
+  "frameWidth": 640,
+  "frameHeight": 640,
+  "transparent": true,
+  "registration": {
+    "tealCentroidX": 320,
+    "foregroundCenterY": 320
+  },
+  "playback": {
+    "framesPerSecond": 2,
+    "secondsPerFrame": 0.5,
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      6,
+      5,
+      4,
+      3,
+      2,
+      1
+    ]
+  },
+  "frames": [
+    {
+      "index": 0,
+      "sourceForegroundBox": [
+        128,
+        140,
+        477,
+        608
+      ],
+      "translation": [
+        53,
+        -54
+      ],
+      "foregroundBox": [
+        181,
+        86,
+        530,
+        554
+      ],
+      "tealCentroid": [
+        320.25,
+        242.7
+      ]
+    },
+    {
+      "index": 1,
+      "sourceForegroundBox": [
+        145,
+        141,
+        543,
+        607
+      ],
+      "translation": [
+        36,
+        -54
+      ],
+      "foregroundBox": [
+        181,
+        87,
+        579,
+        553
+      ],
+      "tealCentroid": [
+        320.43,
+        247.91
+      ]
+    },
+    {
+      "index": 2,
+      "sourceForegroundBox": [
+        0,
+        143,
+        543,
+        608
+      ],
+      "translation": [
+        40,
+        -56
+      ],
+      "foregroundBox": [
+        40,
+        87,
+        583,
+        552
+      ],
+      "tealCentroid": [
+        320.21,
+        215.71
+      ]
+    },
+    {
+      "index": 3,
+      "sourceForegroundBox": [
+        0,
+        142,
+        543,
+        608
+      ],
+      "translation": [
+        55,
+        -55
+      ],
+      "foregroundBox": [
+        55,
+        87,
+        598,
+        553
+      ],
+      "tealCentroid": [
+        320.26,
+        244.18
+      ]
+    },
+    {
+      "index": 4,
+      "sourceForegroundBox": [
+        0,
+        140,
+        543,
+        606
+      ],
+      "translation": [
+        0,
+        -53
+      ],
+      "foregroundBox": [
+        0,
+        87,
+        543,
+        553
+      ],
+      "tealCentroid": [
+        320.18,
+        219.47
+      ]
+    },
+    {
+      "index": 5,
+      "sourceForegroundBox": [
+        0,
+        142,
+        543,
+        607
+      ],
+      "translation": [
+        42,
+        -54
+      ],
+      "foregroundBox": [
+        42,
+        88,
+        585,
+        553
+      ],
+      "tealCentroid": [
+        320.36,
+        214.53
+      ]
+    },
+    {
+      "index": 6,
+      "sourceForegroundBox": [
+        0,
+        143,
+        454,
+        606
+      ],
+      "translation": [
+        44,
+        -54
+      ],
+      "foregroundBox": [
+        44,
+        89,
+        498,
+        552
+      ],
+      "tealCentroid": [
+        320.16,
+        253.17
+      ]
+    },
+    {
+      "index": 7,
+      "sourceForegroundBox": [
+        109,
+        140,
+        500,
+        607
+      ],
+      "translation": [
+        46,
+        -54
+      ],
+      "foregroundBox": [
+        155,
+        86,
+        546,
+        553
+      ],
+      "tealCentroid": [
+        319.72,
+        250.81
+      ]
+    }
+  ]
+}

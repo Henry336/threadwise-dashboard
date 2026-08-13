@@ -880,13 +880,9 @@ kbd { font-family: var(--sans); }
 }
 .ari-untangle-loader-frame {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 1;
   overflow: hidden;
   display: block;
-  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  border-radius: 24px;
-  background: #fffaf1;
-  box-shadow: 0 16px 45px rgba(36, 30, 22, .07);
   contain: layout paint size;
 }
 .ari-untangle-loader-frame img {
@@ -894,7 +890,7 @@ kbd { font-family: var(--sans); }
   height: 100%;
   max-width: none;
   display: block;
-  animation: ari-untangle-frames 28s steps(1, end) infinite;
+  animation: ari-untangle-frames 7s steps(1, end) infinite;
   will-change: transform;
 }
 @keyframes ari-untangle-frames {
@@ -1096,7 +1092,7 @@ kbd { font-family: var(--sans); }
 
 .tw-offline { min-height: 100dvh; padding: 28px; display: grid; place-items: center; background: var(--canvas); color: var(--ink); }
 .tw-offline section { width: min(420px,100%); text-align: center; }
-.tw-offline img { width: 96px; height: 96px; object-fit: contain; }
+.tw-offline img { width: 112px; height: 112px; margin-inline: auto; display: block; object-fit: contain; }
 .tw-offline h1 { margin: 22px 0 8px; font-family: var(--serif); font-size: clamp(40px,8vw,58px); font-weight: 500; letter-spacing: -.035em; }
 .tw-offline p { margin: 0; color: var(--muted); font-size: 15px; }
 .tw-offline a { min-height: 46px; margin-top: 24px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--ink); color: var(--surface); font-size: 13px; font-weight: 720; }

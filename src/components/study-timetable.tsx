@@ -15,6 +15,8 @@ import {
 } from "@/lib/study-timetable";
 import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientation } from "@/lib/study-preferences";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
+import { IntegerInput } from "./integer-input";
+import { clampInteger, normalizeIntegerDraft } from "@/lib/numeric-input";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
 type WeekOrientation = StudyOrientation;
@@ -477,7 +479,7 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
       destination,
       destinationPlaceId,
       defaultOriginId: originId,
-      travelBufferMinutes: buffer,
+      travelBufferMinutes: clampInteger(buffer, 0, 90),
     }, Boolean(block)));
   };
 
@@ -491,8 +493,8 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
         <label>Day<select value={day} onChange={(event) => setDay(Number(event.target.value))}>{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>
         <label>Starts<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} /></label>
         <label>Ends<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
-        <div className="study-timetable-weeks"><label>From week<input type="number" min={1} max={80} value={startWeek} onChange={(event) => setStartWeek(event.target.value)} placeholder="1" /></label><span>to</span><label>Until week<input type="number" min={1} max={80} value={endWeek} onChange={(event) => setEndWeek(event.target.value)} placeholder="13" /></label></div>
-        <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><StudyPlaceCombobox value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} /><label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current/default origin</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label><label>Travel buffer<input type="number" min={0} max={90} value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label></div>
+        <div className="study-timetable-weeks"><label>From week<input type="text" inputMode="numeric" pattern="[0-9]*" value={startWeek} onChange={(event) => setStartWeek(normalizeIntegerDraft(event.target.value))} onBlur={() => startWeek && setStartWeek(String(clampInteger(Number(startWeek), 1, 80)))} placeholder="1" /></label><span>to</span><label>Until week<input type="text" inputMode="numeric" pattern="[0-9]*" value={endWeek} onChange={(event) => setEndWeek(normalizeIntegerDraft(event.target.value))} onBlur={() => endWeek && setEndWeek(String(clampInteger(Number(endWeek), 1, 80)))} placeholder="13" /></label></div>
+        <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><StudyPlaceCombobox value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} /><label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current/default origin</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label><label>Travel buffer<IntegerInput min={0} max={90} value={buffer} onValueChange={setBuffer} aria-label="Travel buffer" /></label></div>
         <footer><span /><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : block ? "Save changes" : "Save block"}</button></div></footer>
       </form>
     </section>

@@ -9,8 +9,8 @@ export type AriVariant =
   | "mark";
 
 const ARI_SOURCES: Record<AriVariant, string> = {
-  "avatar-light": "/brand/ari-avatar-light-sheet.png",
-  "avatar-dark": "/brand/ari-avatar-dark-sheet.png",
+  "avatar-light": "/brand/ari-avatar-light-transparent-v2.webp",
+  "avatar-dark": "/brand/ari-avatar-dark-transparent-v2.webp",
   full: "/brand/ari-full-sheet.png",
   threading: "/brand/ari-threading-sheet.png",
   mark: "/brand/threadwise-mark-sheet.png",
@@ -45,7 +45,7 @@ export function AriUntangleLoader({
   return (
     <div className={`ari-untangle-loader${compact ? " compact" : ""}`} role="status" aria-live="polite">
       <span className="ari-untangle-loader-frame" aria-hidden="true">
-        <img src="/brand/ari-untangle-registered-v3.webp" alt="" />
+        <img src="/brand/ari-untangle-normalized-v4.png" alt="" />
       </span>
       <span>{label}</span>
     </div>

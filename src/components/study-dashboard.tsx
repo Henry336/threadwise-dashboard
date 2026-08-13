@@ -11,6 +11,7 @@ import {
   RefreshCw, Search, Settings, Square, Sun, Target, TimerReset, Trash2, Undo2, X,
 } from "lucide-react";
 import { Ari, AriUntangleLoader } from "./ari";
+import { IntegerInput } from "./integer-input";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { StudyTimetable } from "./study-timetable";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
@@ -22,6 +23,7 @@ import type {
 import { studyAnalysisAction, studyAnalysisEvidenceNumbers, studyAnalysisInitialModuleId, studyAnalysisModules, studyAnalysisReason } from "@/lib/study-analysis";
 import { studyWeekLabel } from "@/lib/study-week";
 import { loadStudyImage, StudyImageLoadError } from "@/lib/study-image";
+import { clampInteger } from "@/lib/numeric-input";
 import {
   FOCUS_STRUCTURES, STUDY_TECHNIQUES, type FocusStructureId,
   sessionCustomMethod, sessionElapsedSeconds, sessionMethodSummary, sessionResourceIds,
@@ -918,7 +920,7 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
           <form onSubmit={(event) => { event.preventDefault(); void onSave(studySettingsPayload(settings)); }}>
             <fieldset><legend>Semester</legend><div className="study-form-row"><label>Semester name<input required value={settings.semesterName} onChange={(event) => setSettings({ ...settings, semesterName: event.target.value })} /></label><label>Starting Monday<input required type="date" value={settings.semesterStartDate?.slice(0, 10) ?? ""} onChange={(event) => setSettings({ ...settings, semesterStartDate: event.target.value ? new Date(`${event.target.value}T00:00:00+08:00`).toISOString() : null })} /></label></div></fieldset>
             <fieldset><legend>Weekly rhythm</legend><div className="study-form-row"><label>Preview day<select value={settings.weeklyPreviewDay} onChange={(event) => setSettings({ ...settings, weeklyPreviewDay: Number(event.target.value) })}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{weekday(value)}</option>)}</select></label><label>Preview time<input type="time" value={settings.weeklyPreviewTime} onChange={(event) => setSettings({ ...settings, weeklyPreviewTime: event.target.value })} /></label><label>Review day<select value={settings.weeklyReviewDay} onChange={(event) => setSettings({ ...settings, weeklyReviewDay: Number(event.target.value) })}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{weekday(value)}</option>)}</select></label><label>Review time<input type="time" value={settings.weeklyReviewTime} onChange={(event) => setSettings({ ...settings, weeklyReviewTime: event.target.value })} /></label></div></fieldset>
-            <fieldset><legend>Boundaries</legend><div className="study-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || null })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || null })} /></label><label>Daily reminder cap<input type="number" inputMode="numeric" min="1" max="24" value={settings.maxRemindersPerDay} onChange={(event) => setSettings({ ...settings, maxRemindersPerDay: Number(event.target.value) })} onBlur={() => setSettings((current) => ({ ...current, maxRemindersPerDay: clampInteger(current.maxRemindersPerDay, 1, 24) }))} /></label><label>Timed practice from week<input type="number" inputMode="numeric" min="1" max="30" value={settings.timedPracticeStartWeek} onChange={(event) => setSettings({ ...settings, timedPracticeStartWeek: Number(event.target.value) })} onBlur={() => setSettings((current) => ({ ...current, timedPracticeStartWeek: clampInteger(current.timedPracticeStartWeek, 1, 30) }))} /></label></div></fieldset>
+            <fieldset><legend>Boundaries</legend><div className="study-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || null })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || null })} /></label><label>Daily reminder cap<IntegerInput min={1} max={24} value={settings.maxRemindersPerDay} onValueChange={(value) => setSettings({ ...settings, maxRemindersPerDay: value })} aria-label="Daily reminder cap" /></label><label>Timed practice from week<IntegerInput min={1} max={30} value={settings.timedPracticeStartWeek} onValueChange={(value) => setSettings({ ...settings, timedPracticeStartWeek: value })} aria-label="Timed practice from week" /></label></div></fieldset>
             <label className="study-switch"><span><b>Study-block reminders</b><small>Notify only for recurring blocks saved in Schedule.</small></span><input type="checkbox" checked={settings.studyBlockRemindersEnabled} onChange={(event) => setSettings({ ...settings, studyBlockRemindersEnabled: event.target.checked })} /></label>
             <label className="study-switch"><span><b>Automatic Canvas sync</b><small>Check every 30 minutes without submitting coursework.</small></span><input type="checkbox" checked={settings.canvasSyncEnabled} onChange={(event) => setSettings({ ...settings, canvasSyncEnabled: event.target.checked })} /></label>
             <button className="study-primary" disabled={busy}><Check size={16} /> Save rhythm</button>
@@ -951,7 +953,7 @@ function ScheduleSettings({ study, busy, onAdd, onUpdate, onDelete }: { study: S
   return <section aria-labelledby="study-settings-schedule">
     <header><div><span>Schedule</span><h2 id="study-settings-schedule">Classes and recurring blocks</h2><p>Add a destination to receive a live leave-time reminder before class.</p></div></header>
     {study.scheduleBlocks.length === 0 ? <Empty title="No recurring blocks" copy="Add the first class or study block below." /> : <div className="study-block-list">{study.scheduleBlocks.map((block) => <article key={block.id} className={editing === block.id ? "editing" : ""}><div className="study-block-icon">{block.destinationStopId ? <MapPin size={17} /> : <Clock3 size={17} />}</div><div><b>{block.label}</b><small>{weekday(block.dayOfWeek)} · {block.startTime}–{block.endTime}{block.module ? ` · ${block.module.code}` : ""}</small>{block.venueName && <span className="study-travel-chip"><MapPin size={12} /> {block.venueName} · {block.defaultOrigin?.name ?? "Current origin"} · {block.travelBufferMinutes} min buffer</span>}</div><button className="study-block-configure" onClick={() => setEditing(editing === block.id ? null : block.id)}>{block.destinationStopId ? "Edit travel" : "Add travel"}</button><button aria-label={`Remove ${block.label}`} onClick={() => confirmAction(`Remove ${block.label}?`, () => onDelete(block.id))}><Trash2 size={15} /></button>{editing === block.id && <ScheduleTravelEditor block={block} origins={study.origins} busy={busy} onCancel={() => setEditing(null)} onSave={async (body) => { const saved = await onUpdate(block.id, body); if (saved) setEditing(null); }} />}</article>)}</div>}
-    <form className="study-block-form study-labelled-form" onSubmit={(event) => { event.preventDefault(); void onAdd({ moduleId: moduleId || undefined, dayOfWeek: day, startTime: start, endTime: end, label, destination: destination || undefined, destinationPlaceId: destinationPlaceId || undefined, defaultOriginId: originId || undefined, travelBufferMinutes: buffer }).then((saved) => { if (saved) { setLabel(""); setDestination(""); setDestinationPlaceId(null); } }); }}>
+    <form className="study-block-form study-labelled-form" onSubmit={(event) => { event.preventDefault(); void onAdd({ moduleId: moduleId || undefined, dayOfWeek: day, startTime: start, endTime: end, label, destination: destination || undefined, destinationPlaceId: destinationPlaceId || undefined, defaultOriginId: originId || undefined, travelBufferMinutes: clampInteger(buffer, 0, 90) }).then((saved) => { if (saved) { setLabel(""); setDestination(""); setDestinationPlaceId(null); } }); }}>
       <label>Module<select value={moduleId} onChange={(event) => setModuleId(event.target.value)}><option value="">No module</option>{study.modules.map((module) => <option key={module.id} value={module.id}>{module.code}</option>)}</select></label>
       <label>Day<select value={day} onChange={(event) => setDay(Number(event.target.value))}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{weekday(value)}</option>)}</select></label>
       <label>Starts<input type="time" value={start} onChange={(event) => setStart(event.target.value)} /></label>
@@ -959,7 +961,7 @@ function ScheduleSettings({ study, busy, onAdd, onUpdate, onDelete }: { study: S
       <label>Label<input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="CS2100 lecture" required /></label>
       <StudyPlaceCombobox optional value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} />
       <label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current / default</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label>
-      <label>Travel buffer<input type="number" min="0" max="90" value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label>
+      <label>Travel buffer<IntegerInput min={0} max={90} value={buffer} onValueChange={setBuffer} aria-label="Travel buffer" /></label>
       <button className="study-secondary" disabled={busy}><Plus size={15} /> Add block</button>
     </form>
   </section>;
@@ -970,10 +972,10 @@ function ScheduleTravelEditor({ block, origins, busy, onCancel, onSave }: { bloc
   const [destinationPlaceId, setDestinationPlaceId] = useState<string | null>(scheduleBlockPlaceId(block));
   const [originId, setOriginId] = useState(block.defaultOriginId ?? "");
   const [buffer, setBuffer] = useState(block.travelBufferMinutes ?? 15);
-  return <form className="study-travel-editor" onSubmit={(event) => { event.preventDefault(); void onSave({ destination: destination || null, destinationPlaceId, defaultOriginId: originId || null, travelBufferMinutes: buffer }); }}>
+  return <form className="study-travel-editor" onSubmit={(event) => { event.preventDefault(); void onSave({ destination: destination || null, destinationPlaceId, defaultOriginId: originId || null, travelBufferMinutes: clampInteger(buffer, 0, 90) }); }}>
     <StudyPlaceCombobox required value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} />
     <label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current / default</option>{origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label>
-    <label>Buffer<input type="number" min="0" max="90" value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} /></label>
+    <label>Buffer<IntegerInput min={0} max={90} value={buffer} onValueChange={setBuffer} aria-label="Travel buffer" /></label>
     <div><button type="button" className="study-quiet" onClick={onCancel}>Cancel</button>{block.destinationStopId && <button type="button" className="study-quiet danger" onClick={() => void onSave({ destination: null })}>Disable</button>}<button className="study-primary" disabled={busy}><Check size={15} /> Save travel</button></div>
   </form>;
 }
@@ -1189,9 +1191,6 @@ function confirmAction(message: string, action: () => unknown) {
 function isUsefulFocusTarget(item: StudyItem) {
   return !/^(?:image capture|image received)(?:\b|\s*[-:])/i.test(item.title.trim());
 }
-function clampInteger(value: number, minimum: number, maximum: number) {
-  return Math.min(maximum, Math.max(minimum, Number.isFinite(value) ? Math.round(value) : minimum));
-}
 function formText(form: FormData, name: string) { return String(form.get(name) ?? "").trim(); }
 function studySettingsPayload(settings: StudySnapshot["workspace"]) {
   return {
@@ -1204,8 +1203,8 @@ function studySettingsPayload(settings: StudySnapshot["workspace"]) {
     weeklyPreviewTime: settings.weeklyPreviewTime,
     quietHoursStart: settings.quietHoursStart ?? null,
     quietHoursEnd: settings.quietHoursEnd ?? null,
-    maxRemindersPerDay: settings.maxRemindersPerDay,
-    timedPracticeStartWeek: settings.timedPracticeStartWeek,
+    maxRemindersPerDay: clampInteger(settings.maxRemindersPerDay, 1, 24),
+    timedPracticeStartWeek: clampInteger(settings.timedPracticeStartWeek, 1, 30),
     studyBlockRemindersEnabled: settings.studyBlockRemindersEnabled,
     canvasSyncEnabled: settings.canvasSyncEnabled,
   };

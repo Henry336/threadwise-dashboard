@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { Ari } from "./ari";
+import { IntegerInput } from "./integer-input";
 import { GroupSchedulingView } from "./group-scheduling";
 import { StudyDashboardApp } from "./study-dashboard";
 import { TaskImportReviewSheet } from "./task-import-review";
@@ -43,6 +44,7 @@ import type {
   CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
 } from "@/lib/types";
 import { dailyOverviewLine } from "@/lib/dashboard-copy";
+import { clampInteger } from "@/lib/numeric-input";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -1183,6 +1185,8 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
         directNudgesEnabled: undefined,
         quietHoursStart: settings.quietHoursStart || null,
         quietHoursEnd: settings.quietHoursEnd || null,
+        dueNudgeMinutes: clampInteger(settings.dueNudgeMinutes, 0, 10_080),
+        maxRemindersPerDay: clampInteger(settings.maxRemindersPerDay, 1, 2_000),
       };
       const saved = isDemo ? settings : asPayload<DashboardSettings>(await api("settings", "PATCH", payload), "settings");
       setSettings(saved); onSave(saved); announce("Settings saved in Telegram and on the web.");
@@ -1249,11 +1253,11 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
           <div className="tw-form-row">
             <label>
               Due-nudge interval (minutes)
-              <input type="number" min="0" max="10080" step="1" inputMode="numeric" list="due-nudge-presets" required value={settings.dueNudgeMinutes} onChange={(event) => setSettings({ ...settings, dueNudgeMinutes: Number(event.target.value) })} />
+              <IntegerInput min={0} max={10_080} list="due-nudge-presets" required value={settings.dueNudgeMinutes} onValueChange={(value) => setSettings({ ...settings, dueNudgeMinutes: value })} aria-label="Due-nudge interval in minutes" />
               <small>Starts this many minutes before due, then repeats at the same interval. Use 0 for due time only.</small>
               <datalist id="due-nudge-presets"><option value="0" /><option value="5" /><option value="10" /><option value="15" /><option value="30" /><option value="60" /><option value="120" /><option value="1440" /></datalist>
             </label>
-            <label>Daily reminder cap<input type="number" min="1" max="2000" required value={settings.maxRemindersPerDay} onChange={(event) => setSettings({ ...settings, maxRemindersPerDay: Number(event.target.value) })} /></label>
+            <label>Daily reminder cap<IntegerInput min={1} max={2_000} required value={settings.maxRemindersPerDay} onValueChange={(value) => setSettings({ ...settings, maxRemindersPerDay: value })} aria-label="Daily reminder cap" /></label>
           </div>
           <div className="tw-form-row"><label>Quiet hours begin<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || undefined })} /></label></div>
           {saveButton}
@@ -1330,7 +1334,7 @@ function CaptureComposer({ isDemo, timezone, currency, allowExpenses, groupName,
         {preview.kind === "task" && <><label>Details<textarea rows={3} value={String(draft.description ?? "")} onChange={(event) => field("description", event.target.value || undefined)} /></label><label>Due date &amp; time<input type="datetime-local" value={zonedInputDate(typeof draft.dueAt === "string" ? draft.dueAt : undefined, timezone)} onChange={(event) => field("dueAt", event.target.value ? zonedInputToIso(event.target.value, timezone) : null)} /></label></>}
         {preview.kind === "note" && <label>Note<textarea rows={5} value={String(draft.body ?? "")} onChange={(event) => field("body", event.target.value)} required /></label>}
         {preview.kind === "idea" && <label>Concept<textarea rows={5} value={String(draft.concept ?? "")} onChange={(event) => field("concept", event.target.value)} required /></label>}
-        {preview.kind === "expense" && <><div className="tw-form-row"><label>Merchant<input value={String(draft.merchant ?? "")} onChange={(event) => field("merchant", event.target.value || undefined)} /></label><label>Total<input type="number" min="0" step="0.01" value={String(draft.total ?? "")} onChange={(event) => field("total", Number(event.target.value))} required /></label></div><label>Description<input value={String(draft.description ?? "")} onChange={(event) => field("description", event.target.value || undefined)} /></label><div className="tw-form-row"><label>Currency<input minLength={3} maxLength={3} value={String(draft.currency ?? currency)} onChange={(event) => field("currency", event.target.value.toUpperCase())} required /></label><label>Date &amp; time<input type="datetime-local" value={zonedInputDate(typeof draft.transactionAt === "string" ? draft.transactionAt : new Date().toISOString(), timezone)} onChange={(event) => field("transactionAt", zonedInputToIso(event.target.value, timezone))} required /></label></div></>}
+        {preview.kind === "expense" && <><div className="tw-form-row"><label>Merchant<input value={String(draft.merchant ?? "")} onChange={(event) => field("merchant", event.target.value || undefined)} /></label><label>Total<input type="number" min="0" step="0.01" value={String(draft.total ?? "")} onChange={(event) => field("total", event.target.value === "" ? undefined : Number(event.target.value))} required /></label></div><label>Description<input value={String(draft.description ?? "")} onChange={(event) => field("description", event.target.value || undefined)} /></label><div className="tw-form-row"><label>Currency<input minLength={3} maxLength={3} value={String(draft.currency ?? currency)} onChange={(event) => field("currency", event.target.value.toUpperCase())} required /></label><label>Date &amp; time<input type="datetime-local" value={zonedInputDate(typeof draft.transactionAt === "string" ? draft.transactionAt : new Date().toISOString(), timezone)} onChange={(event) => field("transactionAt", zonedInputToIso(event.target.value, timezone))} required /></label></div></>}
       </div>}
       <footer><span>{preview ? "Review the details before saving." : "Nothing is saved until you confirm."}</span><button type="button" className="tw-secondary" onClick={onClose}>Cancel</button><button className="tw-primary" disabled={loading || !text.trim()}>{loading ? <LoaderCircle className="spin" size={17} /> : preview ? <Check size={17} /> : <Sparkles size={17} />}{preview ? `Save ${preview.kind}` : "Understand"}</button></footer>
     </form>
