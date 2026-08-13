@@ -23,17 +23,18 @@ describe("Ari untangling loader", () => {
     expect(manifest.frames.every((frame) => Math.abs(frame.tealCentroid[0] - 320) < 1)).toBe(true);
   });
 
-  it("ships a bounded transparent gentle animation with deterministic in-betweens", () => {
-    const assetPath = join(process.cwd(), "public", "brand", "ari-untangle-smooth-v5.webp");
+  it("ships a bounded calm animation with one intentional blink", () => {
+    const assetPath = join(process.cwd(), "public", "brand", "ari-untangle-calm-v6.webp");
     const asset = readFileSync(assetPath);
-    const manifest = JSON.parse(readFileSync(join(process.cwd(), "public", "brand", "ari-untangle-smooth-v5.json"), "utf8")) as {
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), "public", "brand", "ari-untangle-calm-v6.json"), "utf8")) as {
       sourceAsset: string;
       frameCount: number;
       frameWidth: number;
       frameHeight: number;
       transparent: boolean;
       interpolation: { inBetweenFramesPerTransition: number; generativeRedrawing: boolean };
-      playback: { framesPerSecond: number; anchorFramesPerSecond: number; durationMs: number; anchorSequence: number[] };
+      eyeAnimation: { intentionalBlinksPerLoop: number; blinkDurationMs: number; stableEyeAnchors: number };
+      playback: { averageFramesPerSecond: number; durationMs: number; anchorSequence: number[]; anchorEyeStates: string[] };
       validation: { decodedFrameCount: number; transparentCornerAlpha: number; maxAnchorMeanAbsoluteError: number };
       frames: Array<{ anchor: boolean; durationMs: number }>;
     };
@@ -48,13 +49,15 @@ describe("Ari untangling loader", () => {
       frameHeight: 480,
       transparent: true,
       interpolation: { inBetweenFramesPerTransition: 2, generativeRedrawing: false },
-      playback: { framesPerSecond: 7.5, anchorFramesPerSecond: 2.5, durationMs: 5_600 },
+      eyeAnimation: { intentionalBlinksPerLoop: 1, blinkDurationMs: 330, stableEyeAnchors: 13 },
+      playback: { durationMs: 6_090 },
       validation: { decodedFrameCount: 42, transparentCornerAlpha: 0 },
     });
     expect(manifest.validation.maxAnchorMeanAbsoluteError).toBeLessThan(4.5);
     expect(manifest.frames).toHaveLength(42);
     expect(manifest.frames.filter((frame) => frame.anchor)).toHaveLength(14);
-    expect(manifest.frames.reduce((total, frame) => total + frame.durationMs, 0)).toBe(5_600);
+    expect(manifest.playback.anchorEyeStates.filter((state) => state === "closed")).toHaveLength(1);
+    expect(manifest.frames.reduce((total, frame) => total + frame.durationMs, 0)).toBe(6_090);
   });
 
   it("uses the smooth asset in both loading stages and honors reduced motion", () => {
@@ -66,7 +69,7 @@ describe("Ari untangling loader", () => {
 
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain('background: url("/brand/ari-untangle-normalized-v4.png")');
-    expect(loaderComponent).toContain("/brand/ari-untangle-smooth-v5.webp");
+    expect(loaderComponent).toContain("/brand/ari-untangle-calm-v6.webp");
     expect(loaderComponent).toContain('label="Untangling your workspace…"');
     expect(loadingRoute).toContain("<AriWorkspaceLoader");
     expect(studyDashboard).toContain("if (!bootError) return <AriWorkspaceLoader />");

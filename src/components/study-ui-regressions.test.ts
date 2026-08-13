@@ -15,9 +15,11 @@ describe("Study UI regressions", () => {
 
   it("renders timetable titles before metadata at every density", () => {
     const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
+    const horizontal = component.slice(component.indexOf("function HorizontalWeekGrid"), component.indexOf("const DAY_NAMES"));
 
-    expect(component).toContain("<b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span>");
-    expect(component).toContain('density === "narrow" ? <b>{block.label}</b>');
+    expect(horizontal).toContain("<b>{block.label}</b>");
+    expect(horizontal).toContain('density !== "narrow" && <span>{block.module?.code ?? block.blockType}</span>');
+    expect(horizontal).not.toContain("<small>{formatClock(block.startTime)}");
     expect(component).toContain("<b>{item.title}</b><span>{item.module.code}</span>");
     expect(component).not.toContain("shortBlockLabel");
   });
@@ -39,5 +41,9 @@ describe("Study UI regressions", () => {
 
     expect(rule).toContain("align-self: start");
     expect(rule).not.toContain("grid-row");
+    expect(css).toContain(".study-plan form > footer");
+    expect(css).toContain(".study-review-step .study-priority-fields label");
+    const planRules = css.slice(css.indexOf(".study-plan { grid-column: 2;"), css.indexOf(".study-search-box"));
+    expect(planRules).not.toContain("padding-left: 46px");
   });
 });

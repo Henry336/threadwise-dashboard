@@ -1,0 +1,462 @@
+{
+  "asset": "ari-untangle-calm-v6.webp",
+  "sourceAsset": "ari-untangle-normalized-v4.png",
+  "frameCount": 42,
+  "frameWidth": 480,
+  "frameHeight": 480,
+  "transparent": true,
+  "encoding": {
+    "format": "animated-webp",
+    "quality": 82,
+    "method": 3
+  },
+  "interpolation": {
+    "method": "premultiplied-alpha-crossfade",
+    "stepsPerTransition": 3,
+    "inBetweenFramesPerTransition": 2,
+    "generativeRedrawing": false
+  },
+  "eyeAnimation": {
+    "method": "authored-eye-state-normalization",
+    "intentionalBlinksPerLoop": 1,
+    "blinkDurationMs": 330,
+    "stableEyeAnchors": 13
+  },
+  "playback": {
+    "averageFramesPerSecond": 6.897,
+    "durationMs": 6090,
+    "loop": true,
+    "anchorSequence": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      6,
+      5,
+      4,
+      3,
+      2,
+      1
+    ],
+    "anchorEyeStates": [
+      "open",
+      "open",
+      "open",
+      "open",
+      "open",
+      "open",
+      "closed",
+      "open",
+      "open",
+      "open",
+      "open",
+      "open",
+      "open",
+      "open"
+    ],
+    "normalTransitionDurationPatternMs": [
+      180,
+      150,
+      150
+    ],
+    "blinkCloseDurationPatternMs": [
+      80,
+      50,
+      40
+    ],
+    "blinkOpenDurationPatternMs": [
+      70,
+      50,
+      40
+    ]
+  },
+  "validation": {
+    "decodedFrameCount": 42,
+    "transparentCornerAlpha": 0,
+    "maxAnchorMeanAbsoluteError": 3.61
+  },
+  "frames": [
+    {
+      "index": 0,
+      "fromAnchor": 0,
+      "toAnchor": 1,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 1,
+      "fromAnchor": 0,
+      "toAnchor": 1,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 2,
+      "fromAnchor": 0,
+      "toAnchor": 1,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 3,
+      "fromAnchor": 1,
+      "toAnchor": 2,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 4,
+      "fromAnchor": 1,
+      "toAnchor": 2,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 5,
+      "fromAnchor": 1,
+      "toAnchor": 2,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 6,
+      "fromAnchor": 2,
+      "toAnchor": 3,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 7,
+      "fromAnchor": 2,
+      "toAnchor": 3,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 8,
+      "fromAnchor": 2,
+      "toAnchor": 3,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 9,
+      "fromAnchor": 3,
+      "toAnchor": 4,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 10,
+      "fromAnchor": 3,
+      "toAnchor": 4,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 11,
+      "fromAnchor": 3,
+      "toAnchor": 4,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 12,
+      "fromAnchor": 4,
+      "toAnchor": 5,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 13,
+      "fromAnchor": 4,
+      "toAnchor": 5,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 14,
+      "fromAnchor": 4,
+      "toAnchor": 5,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 15,
+      "fromAnchor": 5,
+      "toAnchor": 6,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 80
+    },
+    {
+      "index": 16,
+      "fromAnchor": 5,
+      "toAnchor": 6,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "transitioning",
+      "durationMs": 50
+    },
+    {
+      "index": 17,
+      "fromAnchor": 5,
+      "toAnchor": 6,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "transitioning",
+      "durationMs": 40
+    },
+    {
+      "index": 18,
+      "fromAnchor": 6,
+      "toAnchor": 7,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "closed",
+      "durationMs": 70
+    },
+    {
+      "index": 19,
+      "fromAnchor": 6,
+      "toAnchor": 7,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "transitioning",
+      "durationMs": 50
+    },
+    {
+      "index": 20,
+      "fromAnchor": 6,
+      "toAnchor": 7,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "transitioning",
+      "durationMs": 40
+    },
+    {
+      "index": 21,
+      "fromAnchor": 7,
+      "toAnchor": 6,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 22,
+      "fromAnchor": 7,
+      "toAnchor": 6,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 23,
+      "fromAnchor": 7,
+      "toAnchor": 6,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 24,
+      "fromAnchor": 6,
+      "toAnchor": 5,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 25,
+      "fromAnchor": 6,
+      "toAnchor": 5,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 26,
+      "fromAnchor": 6,
+      "toAnchor": 5,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 27,
+      "fromAnchor": 5,
+      "toAnchor": 4,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 28,
+      "fromAnchor": 5,
+      "toAnchor": 4,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 29,
+      "fromAnchor": 5,
+      "toAnchor": 4,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 30,
+      "fromAnchor": 4,
+      "toAnchor": 3,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 31,
+      "fromAnchor": 4,
+      "toAnchor": 3,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 32,
+      "fromAnchor": 4,
+      "toAnchor": 3,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 33,
+      "fromAnchor": 3,
+      "toAnchor": 2,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 34,
+      "fromAnchor": 3,
+      "toAnchor": 2,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 35,
+      "fromAnchor": 3,
+      "toAnchor": 2,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 36,
+      "fromAnchor": 2,
+      "toAnchor": 1,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 37,
+      "fromAnchor": 2,
+      "toAnchor": 1,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 38,
+      "fromAnchor": 2,
+      "toAnchor": 1,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 39,
+      "fromAnchor": 1,
+      "toAnchor": 0,
+      "progress": 0.0,
+      "anchor": true,
+      "eyeState": "open",
+      "durationMs": 180
+    },
+    {
+      "index": 40,
+      "fromAnchor": 1,
+      "toAnchor": 0,
+      "progress": 0.3333,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    },
+    {
+      "index": 41,
+      "fromAnchor": 1,
+      "toAnchor": 0,
+      "progress": 0.6667,
+      "anchor": false,
+      "eyeState": "open",
+      "durationMs": 150
+    }
+  ]
+}

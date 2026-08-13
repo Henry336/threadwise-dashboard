@@ -75,6 +75,18 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-14 (Codex, validated locally):** Corrected the live Review, timetable, and Ari defects.
+  Top three is now one semantic form with aligned content and a distinct desktop/mobile action footer.
+  Horizontal cards reserve up to three lines for the real title before optional module/location data;
+  redundant visible time is removed but remains in the accessible label/details, and Up next is also
+  title-first. Ari v6 keeps 42 registered frames but spreads them over 6.09 seconds, normalizes the
+  source's alternating closed-eye poses to authored open eyes, and uses exactly one deliberate 330 ms
+  blink per loop. Focused tests pass 9/9; full dashboard tests pass 83/83; TypeScript, ESLint, production
+  build, generator validation, frame-by-frame contact-sheet review, and diff checks pass. Paired backend
+  validation passes 858 tests plus 6 skips and now recovers through configured OpenAI fallback models
+  while preserving safe key/quota/rate/permission diagnostics. Next action: commit/push and verify both
+  production deployments.
+
 - **2026-08-14 (Codex):** Replaced the Study module review's raw
   Module and Review type selects with the existing Threadwise choice popover, including selected
   checks, outside-click close, Escape, Arrow/Home/End navigation, and focus return. Removed the

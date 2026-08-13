@@ -117,7 +117,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       <div><CalendarDays size={18} /><span><b>{blockCount}</b><small>blocks this week</small></span></div>
       <div><Check size={18} /><span><b>{dueCount}</b><small>work items due</small></span></div>
       <div><Clock3 size={18} /><span><b>{plannedMinutes ? `${plannedMinutes} min` : "—"}</b><small>planned workload</small></span></div>
-      <div className="study-timetable-next"><span>{academicWeek === 0 ? "First block" : "Up next"}</span>{firstBlock ? <><b>{firstBlock.block.module?.code ?? firstBlock.block.label}</b><small>{firstBlock.day.shortLabel} · {formatClock(firstBlock.block.startTime)}</small></> : <><b>Open week</b><small>Add a class or study block</small></>}</div>
+      <div className="study-timetable-next"><span>{academicWeek === 0 ? "First block" : "Up next"}</span>{firstBlock ? <><b>{firstBlock.block.label}</b><small>{firstBlock.block.module?.code ? `${firstBlock.block.module.code} · ` : ""}{firstBlock.day.shortLabel} · {formatClock(firstBlock.block.startTime)}</small></> : <><b>Open week</b><small>Add a class or study block</small></>}</div>
     </div>
 
     <div className="study-timetable-toolbar">
@@ -333,7 +333,9 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
               "--block-height": `${blockHeight}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => onOpenBlock(block)} aria-label={label} title={label}>
-              {density === "narrow" ? <b>{block.label}</b> : <><b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span>{density === "full" && <><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}</>}</>}
+              <b>{block.label}</b>
+              {density !== "narrow" && <span>{block.module?.code ?? block.blockType}</span>}
+              {density === "full" && block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
             </button>; })}
           </div>
         </div>;
@@ -346,7 +348,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function scheduleBlockAccessibleLabel(block: ScheduleBlock): string {
-  return [block.module?.code, block.label, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName]
+  return [block.label, block.module?.code, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName]
     .filter(Boolean).join(" · ");
 }
 

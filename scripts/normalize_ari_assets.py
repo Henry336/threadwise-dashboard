@@ -23,8 +23,8 @@ BRAND = ROOT / "public" / "brand"
 LOADER_SOURCE = BRAND / "ari-untangle-registered-v3.webp"
 LOADER_OUTPUT = BRAND / "ari-untangle-normalized-v4.png"
 LOADER_MANIFEST = BRAND / "ari-untangle-normalized-v4.json"
-SMOOTH_LOADER_OUTPUT = BRAND / "ari-untangle-smooth-v5.webp"
-SMOOTH_LOADER_MANIFEST = BRAND / "ari-untangle-smooth-v5.json"
+SMOOTH_LOADER_OUTPUT = BRAND / "ari-untangle-calm-v6.webp"
+SMOOTH_LOADER_MANIFEST = BRAND / "ari-untangle-calm-v6.json"
 FRAME_COUNT = 8
 SOURCE_FRAME_WIDTH = 543
 SOURCE_FRAME_HEIGHT = 724
@@ -33,11 +33,15 @@ TARGET_TEAL_X = OUTPUT_FRAME_SIZE // 2
 TARGET_FOREGROUND_Y = OUTPUT_FRAME_SIZE // 2
 SMOOTH_FRAME_SIZE = 480
 ANCHOR_SEQUENCE = (0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1)
+# The authored source alternates open and closed eyes at almost every pose. That
+# reads as strobing when the poses are animated. Closed-eye anchors are therefore
+# normalized to nearby open-eye artwork, except for one deliberate blink on the
+# forward 5 -> 6 -> 7 gesture. The reverse occurrence of pose 6 stays open.
+ANCHOR_EYE_STATES = ("open", "open", "open", "open", "open", "open", "closed", "open", "open", "open", "open", "open", "open", "open")
 TWEEN_STEPS_PER_TRANSITION = 3
-# Keep the two authored in-betweens, but let each anchor-to-anchor gesture
-# breathe for 400 ms. This preserves smoothness while reducing the effective
-# anchor cadence from 4 FPS to 2.5 FPS and lengthening the loop to 5.6 seconds.
-FRAME_DURATIONS_MS = (134, 133, 133)
+NORMAL_TRANSITION_DURATIONS_MS = (180, 150, 150)
+BLINK_CLOSE_DURATIONS_MS = (80, 50, 40)
+BLINK_OPEN_DURATIONS_MS = (70, 50, 40)
 
 STATIC_ASSETS = {
     "ari-avatar-light-sheet.png": "ari-avatar-light-transparent-v2.webp",
@@ -127,8 +131,35 @@ def interpolate_rgba(first: Image.Image, second: Image.Image, progress: float) -
     return Image.fromarray(output, "RGBA")
 
 
+def stabilize_open_eyes(anchor_frames: list[Image.Image]) -> list[Image.Image]:
+    """Replace rapid closed-eye anchors with the nearest authored open-eye pair."""
+    replacements = {
+        2: (1, ((272, 229, 292, 257), (354, 216, 373, 244)), ((263, 229, 288, 241), (347, 229, 373, 240))),
+        4: (5, ((273, 221, 292, 248), (353, 214, 372, 242)), ((263, 232, 288, 243), (348, 232, 373, 243))),
+        6: (5, ((273, 221, 292, 248), (353, 214, 372, 242)), ((265, 231, 291, 242), (350, 231, 376, 242))),
+    }
+    stabilized = [frame.copy() for frame in anchor_frames]
+    for target_index, (source_index, source_eye_boxes, target_boxes) in replacements.items():
+        target = stabilized[target_index]
+        source = anchor_frames[source_index]
+        for source_box, target_box in zip(source_eye_boxes, target_boxes):
+            target_center = ((target_box[0] + target_box[2]) // 2, (target_box[1] + target_box[3]) // 2)
+            padded_source = (source_box[0] - 3, source_box[1] - 3, source_box[2] + 3, source_box[3] + 3)
+            eye = source.crop(padded_source)
+            clear_box = (target_box[0] - 3, target_box[1] - 3, target_box[2] + 3, target_box[3] + 3)
+            target.paste((0, 0, 0, 0), clear_box)
+            destination = (target_center[0] - eye.width // 2, target_center[1] - eye.height // 2)
+            target.alpha_composite(eye, destination)
+    return stabilized
+
+
 def build_smooth_loader(anchor_frames: list[Image.Image]) -> None:
+    stabilized_anchors = stabilize_open_eyes(anchor_frames)
     resized_anchors = [
+        frame.resize((SMOOTH_FRAME_SIZE, SMOOTH_FRAME_SIZE), Image.Resampling.LANCZOS)
+        for frame in stabilized_anchors
+    ]
+    resized_original_anchors = [
         frame.resize((SMOOTH_FRAME_SIZE, SMOOTH_FRAME_SIZE), Image.Resampling.LANCZOS)
         for frame in anchor_frames
     ]
@@ -136,9 +167,19 @@ def build_smooth_loader(anchor_frames: list[Image.Image]) -> None:
     frame_manifest = []
     for transition_index, from_anchor in enumerate(ANCHOR_SEQUENCE):
         to_anchor = ANCHOR_SEQUENCE[(transition_index + 1) % len(ANCHOR_SEQUENCE)]
+        from_eye_state = ANCHOR_EYE_STATES[transition_index]
+        to_eye_state = ANCHOR_EYE_STATES[(transition_index + 1) % len(ANCHOR_EYE_STATES)]
+        from_frame = resized_original_anchors[from_anchor] if from_eye_state == "closed" else resized_anchors[from_anchor]
+        to_frame = resized_original_anchors[to_anchor] if to_eye_state == "closed" else resized_anchors[to_anchor]
+        if from_eye_state == "open" and to_eye_state == "closed":
+            transition_durations = BLINK_CLOSE_DURATIONS_MS
+        elif from_eye_state == "closed" and to_eye_state == "open":
+            transition_durations = BLINK_OPEN_DURATIONS_MS
+        else:
+            transition_durations = NORMAL_TRANSITION_DURATIONS_MS
         for tween_step in range(TWEEN_STEPS_PER_TRANSITION):
             progress = tween_step / TWEEN_STEPS_PER_TRANSITION
-            frame = interpolate_rgba(resized_anchors[from_anchor], resized_anchors[to_anchor], progress)
+            frame = interpolate_rgba(from_frame, to_frame, progress)
             playback_frames.append(frame)
             frame_manifest.append({
                 "index": len(playback_frames) - 1,
@@ -146,7 +187,8 @@ def build_smooth_loader(anchor_frames: list[Image.Image]) -> None:
                 "toAnchor": to_anchor,
                 "progress": round(progress, 4),
                 "anchor": tween_step == 0,
-                "durationMs": FRAME_DURATIONS_MS[tween_step],
+                "eyeState": from_eye_state if tween_step == 0 else "transitioning" if from_eye_state != to_eye_state else "open",
+                "durationMs": transition_durations[tween_step],
             })
 
     durations = [frame["durationMs"] for frame in frame_manifest]
@@ -172,7 +214,8 @@ def build_smooth_loader(anchor_frames: list[Image.Image]) -> None:
 
     anchor_errors = []
     for transition_index, anchor_index in enumerate(ANCHOR_SEQUENCE):
-        expected = np.asarray(resized_anchors[anchor_index], dtype=np.int16)
+        expected_frame = resized_original_anchors[anchor_index] if ANCHOR_EYE_STATES[transition_index] == "closed" else resized_anchors[anchor_index]
+        expected = np.asarray(expected_frame, dtype=np.int16)
         decoded = np.asarray(decoded_frames[transition_index * TWEEN_STEPS_PER_TRANSITION], dtype=np.int16)
         foreground = expected[:, :, 3] > 16
         anchor_errors.append(float(np.abs(expected[foreground] - decoded[foreground]).mean()))
@@ -194,13 +237,21 @@ def build_smooth_loader(anchor_frames: list[Image.Image]) -> None:
             "inBetweenFramesPerTransition": TWEEN_STEPS_PER_TRANSITION - 1,
             "generativeRedrawing": False,
         },
+        "eyeAnimation": {
+            "method": "authored-eye-state-normalization",
+            "intentionalBlinksPerLoop": 1,
+            "blinkDurationMs": sum(BLINK_CLOSE_DURATIONS_MS) + sum(BLINK_OPEN_DURATIONS_MS),
+            "stableEyeAnchors": 13,
+        },
         "playback": {
-            "framesPerSecond": 7.5,
-            "anchorFramesPerSecond": 2.5,
+            "averageFramesPerSecond": round(len(playback_frames) / (sum(durations) / 1000), 3),
             "durationMs": sum(durations),
             "loop": True,
             "anchorSequence": list(ANCHOR_SEQUENCE),
-            "frameDurationPatternMs": list(FRAME_DURATIONS_MS),
+            "anchorEyeStates": list(ANCHOR_EYE_STATES),
+            "normalTransitionDurationPatternMs": list(NORMAL_TRANSITION_DURATIONS_MS),
+            "blinkCloseDurationPatternMs": list(BLINK_CLOSE_DURATIONS_MS),
+            "blinkOpenDurationPatternMs": list(BLINK_OPEN_DURATIONS_MS),
         },
         "validation": {
             "decodedFrameCount": len(decoded_frames),
