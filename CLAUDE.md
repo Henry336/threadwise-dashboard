@@ -75,9 +75,16 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-13 (Codex):** Implemented the Phase 5 Study review surface locally: explicit
+  Connections/Quiz/Both selection, cited Canvas/session/note evidence with provenance, cautious pace,
+  misconception clarification, expandable challenge answers, and manually editable apply/dismiss note
+  proposals. Nothing edits a note without confirmation. All 76 tests, TypeScript, lint, and production
+  build pass; deployment is next.
+
 - **2026-08-13 (Codex):** Updated Study module-review availability copy for the backend's new
   server-side Gemini provider while preserving cached-result behavior and the protected proxy.
-  Dashboard tests remain 74/74; TypeScript, full lint, and production build pass.
+  Dashboard tests remain 74/74; TypeScript, full lint, and production build pass. Commit
+  `d215e7f` is Ready on Vercel and the production dashboard returns HTTP 200.
 
 - **2026-08-13 (Codex):** Added exact reminder-time editing and explicit Everyone/Unassigned
   group audiences. Task sheets keep deadline, automatic rhythm, and up to 20 exact times together;

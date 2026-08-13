@@ -14,7 +14,7 @@ const sessionValue = (id: string, moduleId: string, endedAt?: string, archivedAt
 });
 
 describe("Study module analysis helpers", () => {
-  it("only offers active modules with a completed, non-archived session", () => {
+  it("offers active modules with a completed session or a saved resource", () => {
     const modules = [moduleValue("one"), moduleValue("two"), moduleValue("three", false)];
     const sessions = [
       sessionValue("s1", "one", "2026-08-12T10:00:00.000Z"),
@@ -22,7 +22,7 @@ describe("Study module analysis helpers", () => {
       sessionValue("s3", "three", "2026-08-12T11:00:00.000Z"),
     ];
     const resourceOnly = [{ id: "r1", moduleId: "two" }] as StudyResource[];
-    expect(studyAnalysisModules(modules, sessions, resourceOnly).map((module) => module.id)).toEqual(["one"]);
+    expect(studyAnalysisModules(modules, sessions, resourceOnly).map((module) => module.id)).toEqual(["one", "two"]);
   });
 
   it("prefers the requested eligible module, then the latest completed session", () => {
@@ -43,6 +43,7 @@ describe("Study module analysis helpers", () => {
 
   it("turns reason codes into recovery copy", () => {
     expect(studyAnalysisReason("complete_a_session_first")).toBe("Complete a module session first.");
+    expect(studyAnalysisReason("save_study_evidence_first")).toContain("note or image");
     expect(studyAnalysisReason("worker_unavailable")).toContain("offline");
     expect(studyAnalysisReason("provider_unavailable")).toContain("Saved results");
     expect(studyAnalysisReason("unexpected_code")).toBe("Analysis is unavailable right now.");

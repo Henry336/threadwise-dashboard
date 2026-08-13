@@ -1,4 +1,4 @@
-const STUDY_PATH = /^study\/(?:snapshot|search|places|modules(?:\/[A-Za-z0-9_-]+(?:\/analysis)?)?|items(?:\/[A-Za-z0-9_-]+(?:\/complete)?)?|resources(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|sessions\/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:\/[A-Za-z0-9_-]+\/resolve)?|weekly-plan|review|settings|canvas\/sync|canvas\/assignments\/[A-Za-z0-9_-]+|origins(?:\/[A-Za-z0-9_-]+)?|schedule(?:\/[A-Za-z0-9_-]+)?|nusmods\/import)$/;
+const STUDY_PATH = /^study\/(?:snapshot|search|places|modules(?:\/[A-Za-z0-9_-]+(?:\/analysis)?)?|analysis-suggestions\/[A-Za-z0-9_-]+|items(?:\/[A-Za-z0-9_-]+(?:\/complete)?)?|resources(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|sessions\/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:\/[A-Za-z0-9_-]+\/resolve)?|weekly-plan|review|settings|canvas\/sync|canvas\/assignments\/[A-Za-z0-9_-]+|origins(?:\/[A-Za-z0-9_-]+)?|schedule(?:\/[A-Za-z0-9_-]+)?|nusmods\/import)$/;
 
 export function isAllowedThreadwiseProxyPath(path: string) {
   return STUDY_PATH.test(path) || /^(?:snapshot|workspaces|events|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|task-imports\/[A-Za-z0-9_-]+(?:\/(?:items\/[A-Za-z0-9_-]+|import|cancel))?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|scheduling\/polls(?:\/[A-Za-z0-9_-]+(?:\/(?:availability|finalize|remind|cancel|calendar))?)?|integrations\/(?:calendar|excel)\/(?:connect|disconnect)|integrations\/calendar\/(?:sync|task)|integrations\/excel\/(?:sync|workbook)|privacy\/(?:export|account))$/.test(path);
@@ -8,6 +8,7 @@ export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (path === "study/snapshot" || path === "study/search" || path === "study/places" || /^study\/resources\/[A-Za-z0-9_-]+\/content$/.test(path)) return method === "GET";
   if (path === "study/modules") return method === "POST";
   if (/^study\/modules\/[A-Za-z0-9_-]+\/analysis$/.test(path)) return method === "GET" || method === "POST";
+  if (/^study\/analysis-suggestions\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH";
   if (/^study\/modules\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH";
   if (path === "study/items") return method === "POST";
   if (/^study\/items\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH" || method === "DELETE";

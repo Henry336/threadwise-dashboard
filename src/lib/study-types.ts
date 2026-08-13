@@ -145,6 +145,7 @@ export type StudySession = {
 };
 
 export type StudyAnalysisStatus = "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED";
+export type StudyAnalysisMode = "CONNECTIONS" | "QUIZ" | "BOTH";
 
 export type StudyAnalysisFinding = {
   title: string;
@@ -154,26 +155,64 @@ export type StudyAnalysisFinding = {
 
 export type StudyAnalysisEvidence = {
   id: string;
-  kind: "SESSION" | "RESOURCE";
+  kind: "SESSION" | "RESOURCE" | "WORK_ITEM" | "CANVAS_MATERIAL" | "CANVAS_ASSIGNMENT";
+  authority: "LEARNER_RECORD" | "OCR_TRANSCRIPT" | "COURSE_MATERIAL" | "COURSE_METADATA" | "ACTIVITY_LOG";
   title: string;
   detail?: string;
   occurredAt?: string;
   sessionId?: string;
   resourceId?: string;
+  resourceKind?: string;
+  itemId?: string;
+  canvasMaterialId?: string;
+  canvasAssignmentId?: string;
+  courseModulePosition?: number;
+};
+
+export type StudyAnalysisMisconception = {
+  title: string;
+  learnerClaim: string;
+  correction: string;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  evidenceIds: string[];
+};
+
+export type StudyAnalysisQuizItem = {
+  question: string;
+  type: "MCQ" | "SHORT" | "APPLICATION" | "CONNECTION";
+  options: string[];
+  answer: string;
+  explanation: string;
+  difficulty: "FOUNDATIONAL" | "CHALLENGING" | "CREATIVE";
+  evidenceIds: string[];
+};
+
+export type StudyNoteEditSuggestion = {
+  id: string;
+  resourceId: string;
+  status: "PENDING" | "APPLIED" | "DISMISSED" | "SUPERSEDED";
+  originalBody: string;
+  suggestedBody: string;
+  rationale: string;
+  evidenceIds: string[];
+  reviewedAt?: string;
 };
 
 export type StudyModuleAnalysis = {
   id: string;
   moduleId: string;
+  mode: StudyAnalysisMode;
   status: StudyAnalysisStatus;
   requestedAt: string;
   completedAt?: string;
   stale: boolean;
   summary?: string;
-  patterns?: StudyAnalysisFinding[];
-  strengths?: StudyAnalysisFinding[];
-  gaps?: StudyAnalysisFinding[];
+  connections?: StudyAnalysisFinding[];
+  misconceptions?: StudyAnalysisMisconception[];
+  quiz?: StudyAnalysisQuizItem[];
+  pace?: { status: "AHEAD" | "ON_TRACK" | "BEHIND" | "UNKNOWN"; detail: string; evidenceIds: string[] };
   nextSteps?: StudyAnalysisFinding[];
+  noteEditSuggestions?: StudyNoteEditSuggestion[];
   evidence?: StudyAnalysisEvidence[];
   sessionCount: number;
   resourceCount: number;

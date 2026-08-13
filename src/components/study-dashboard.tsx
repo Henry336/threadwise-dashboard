@@ -16,7 +16,7 @@ import { StudyTimetable } from "./study-timetable";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
 import type {
-  StudyAnalysisEvidence, StudyAnalysisFinding, StudyItem, StudyItemType, StudyMistake, StudyModule, StudyModuleAnalysisResponse,
+  StudyAnalysisEvidence, StudyAnalysisFinding, StudyAnalysisMode, StudyAnalysisQuizItem, StudyItem, StudyItemType, StudyMistake, StudyModule, StudyModuleAnalysisResponse, StudyNoteEditSuggestion,
   StudyResource, StudyResourceKind, StudySession, StudySnapshot, StudyTrafficLight, StudyView,
 } from "@/lib/study-types";
 import { studyAnalysisAction, studyAnalysisEvidenceNumbers, studyAnalysisInitialModuleId, studyAnalysisModules, studyAnalysisReason } from "@/lib/study-analysis";
@@ -597,22 +597,23 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
   const initialModuleId = useMemo(() => studyAnalysisInitialModuleId(study.modules, study.sessions, study.resources, study.workspace.activeModuleId), [study.modules, study.resources, study.sessions, study.workspace.activeModuleId]);
   const [chosenModuleId, setChosenModuleId] = useState(initialModuleId);
   const moduleId = modules.some((module) => module.id === chosenModuleId) ? chosenModuleId : initialModuleId;
-  const [loadedResponse, setLoadedResponse] = useState<{ moduleId: string; value: StudyModuleAnalysisResponse } | null>(null);
+  const [mode, setMode] = useState<StudyAnalysisMode>("CONNECTIONS");
+  const [loadedResponse, setLoadedResponse] = useState<{ moduleId: string; mode: StudyAnalysisMode; value: StudyModuleAnalysisResponse } | null>(null);
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [requestError, setRequestError] = useState("");
   const requestSequence = useRef(0);
-  const response = loadedResponse?.moduleId === moduleId ? loadedResponse.value : null;
+  const response = loadedResponse?.moduleId === moduleId && loadedResponse.mode === mode ? loadedResponse.value : null;
 
   const loadCached = useCallback(async (quiet = false) => {
     if (!moduleId) return;
     const sequence = ++requestSequence.current;
     if (!quiet) setLoading(true);
     try {
-      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`);
+      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis?mode=${mode}`);
       if (sequence === requestSequence.current) {
-        setLoadedResponse({ moduleId, value: next });
+        setLoadedResponse({ moduleId, mode, value: next });
         setLoadError("");
       }
     } catch (error) {
@@ -620,7 +621,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
     } finally {
       if (!quiet && sequence === requestSequence.current) setLoading(false);
     }
-  }, [moduleId]);
+  }, [mode, moduleId]);
 
   useEffect(() => {
     if (!moduleId) return;
@@ -640,8 +641,8 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
     setRequesting(true);
     setRequestError("");
     try {
-      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`, "POST");
-      setLoadedResponse({ moduleId, value: next });
+      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`, "POST", { mode });
+      setLoadedResponse({ moduleId, mode, value: next });
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : "The analysis could not be started.");
     } finally {
@@ -653,9 +654,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
   const evidence = analysis?.evidence ?? [];
   const evidenceNumbers = studyAnalysisEvidenceNumbers(evidence.map((entry) => entry.id));
   const findings: Array<{ title: string; items?: StudyAnalysisFinding[] }> = [
-    { title: "Patterns", items: analysis?.patterns },
-    { title: "Strengths", items: analysis?.strengths },
-    { title: "Gaps", items: analysis?.gaps },
+    { title: "Connections", items: analysis?.connections },
     { title: "Next steps", items: analysis?.nextSteps },
   ];
   const actionableFindings = findings.filter((group) => group.items?.length);
@@ -669,9 +668,10 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
 
   return <section className="study-module-analysis" aria-busy={loading || requesting || isWorking} aria-labelledby="study-analysis-title">
     <header>
-      <div><span>Module review</span><h2 id="study-analysis-title">Patterns from your records</h2></div>
+      <div><span>Module review</span><h2 id="study-analysis-title">Connect, correct &amp; challenge</h2></div>
       <div className="study-analysis-controls">
         <label><span>Module</span><select value={moduleId} onChange={(event) => { setChosenModuleId(event.target.value); setLoading(true); setRequestError(""); }}>{modules.map((module) => <option key={module.id} value={module.id}>{module.code} · {module.name}</option>)}</select></label>
+        <label><span>Review type</span><select value={mode} onChange={(event) => { setMode(event.target.value as StudyAnalysisMode); setLoading(true); setRequestError(""); }}><option value="CONNECTIONS">Connections</option><option value="QUIZ">Quiz</option><option value="BOTH">Both</option></select></label>
         {response?.available && !isWorking && actionLabel && <button className="study-primary" disabled={requesting} onClick={() => void requestAnalysis()}>{requesting ? <LoaderCircle className="spin" size={15} /> : analysis?.status === "COMPLETE" ? <RefreshCw size={15} /> : <Brain size={15} />}{actionLabel}</button>}
         {analysis?.status === "COMPLETE" && !analysis.stale && <span className="study-analysis-current"><CheckCircle2 size={14} /> Up to date</span>}
       </div>
@@ -682,7 +682,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
       {!loading && loadError && !analysis && <><AlertCircle size={17} /><span>{loadError}</span><button className="study-quiet" onClick={() => void loadCached()}>Retry</button></>}
       {!loading && !loadError && response && !analysis && response.available && <><Brain size={17} /><span>No saved analysis.</span></>}
       {!loading && !loadError && response && !analysis && !response.available && <><AlertCircle size={17} /><span>{studyAnalysisReason(response.reason)}</span></>}
-      {isWorking && <><LoaderCircle className="spin" size={17} /><span>Analyzing saved sessions and resources…</span></>}
+      {isWorking && <><LoaderCircle className="spin" size={17} /><span>Connecting sessions, notes and Canvas material…</span></>}
       {analysis?.status === "FAILED" && <><AlertCircle size={17} /><span>{analysis.errorMessage || "The analysis did not finish."}</span></>}
       {analysis?.status === "COMPLETE" && analysis.stale && <><AlertTriangle size={17} /><span>New records are available. The saved analysis may be out of date.</span></>}
       {analysis?.status === "COMPLETE" && !response?.available && <><AlertCircle size={17} /><span>{studyAnalysisReason(response?.reason, "New analysis is unavailable. The saved result remains below.")}</span></>}
@@ -695,24 +695,56 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
         <span>{analysis.sessionCount} session{analysis.sessionCount === 1 ? "" : "s"} · {analysis.resourceCount} resource{analysis.resourceCount === 1 ? "" : "s"}</span>
       </div>
       {analysis.summary && <p className="study-analysis-summary">{analysis.summary}</p>}
+      {analysis.pace && <div className={`study-analysis-pace pace-${analysis.pace.status.toLowerCase()}`}><b>{analysis.pace.status === "UNKNOWN" ? "Study pace not yet measurable" : analysis.pace.status.replace("_", " ")}</b><span>{analysis.pace.detail}</span></div>}
       {actionableFindings.length > 0 && <div className="study-analysis-findings">{actionableFindings.map((group) => <StudyAnalysisFindingGroup key={group.title} title={group.title} items={group.items ?? []} evidenceNumbers={evidenceNumbers} />)}</div>}
+      {Boolean(analysis.misconceptions?.length) && <section className="study-analysis-corrections"><h3>Clarifications &amp; corrections</h3>{analysis.misconceptions?.map((item, index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><span>{item.confidence.toLowerCase()} confidence</span></div><p><del>{item.learnerClaim}</del></p><p>{item.correction}<StudyCitationLinks ids={item.evidenceIds} numbers={evidenceNumbers} /></p></article>)}</section>}
+      {Boolean(analysis.quiz?.length) && <StudyAnalysisQuiz items={analysis.quiz ?? []} evidenceNumbers={evidenceNumbers} />}
+      {Boolean(analysis.noteEditSuggestions?.length) && <section className="study-analysis-note-edits"><h3>Suggested note edits</h3><p>Nothing changes until you apply it. You can edit the proposed wording first.</p>{analysis.noteEditSuggestions?.map((suggestion) => <StudyNoteSuggestionCard key={suggestion.id} suggestion={suggestion} evidenceNumbers={evidenceNumbers} onReviewed={() => void loadCached(true)} />)}</section>}
       {evidence.length > 0 && <StudyAnalysisEvidenceList evidence={evidence} timezone={study.workspace.timezone} />}
-      <p className="study-analysis-disclaimer"><AlertTriangle size={14} /> <span><b>AI summary.</b> Verify it against the cited records; it does not grade mastery or correctness.</span></p>
+      <p className="study-analysis-disclaimer"><AlertTriangle size={14} /> <span><b>AI-assisted review.</b> Check corrections and answers against the cited course material. Threadwise never applies a suggested note edit without your confirmation.</span></p>
     </div>}
   </section>;
 }
 
+function StudyCitationLinks({ ids, numbers }: { ids: string[]; numbers: Map<string, number> }) {
+  const citations = ids.map((id) => numbers.get(id)).filter((value): value is number => value !== undefined);
+  return citations.length ? <span className="study-analysis-citations" aria-label="Evidence citations">{citations.map((number) => <a key={number} href={`#study-analysis-evidence-${number}`} aria-label={`Evidence ${number}`}>[{number}]</a>)}</span> : null;
+}
+
 function StudyAnalysisFindingGroup({ title, items, evidenceNumbers }: { title: string; items: StudyAnalysisFinding[]; evidenceNumbers: Map<string, number> }) {
   return <section><h3>{title}</h3><ul>{items.map((finding, index) => {
-    const citations = finding.evidenceIds.map((id) => evidenceNumbers.get(id)).filter((value): value is number => value !== undefined);
-    return <li key={`${finding.title}-${index}`}><b>{finding.title}</b><p>{finding.detail}{citations.length > 0 && <span className="study-analysis-citations" aria-label="Evidence citations">{citations.map((number) => <a key={number} href={`#study-analysis-evidence-${number}`} aria-label={`Evidence ${number}`}>[{number}]</a>)}</span>}</p></li>;
+    return <li key={`${finding.title}-${index}`}><b>{finding.title}</b><p>{finding.detail}<StudyCitationLinks ids={finding.evidenceIds} numbers={evidenceNumbers} /></p></li>;
   })}</ul></section>;
+}
+
+function StudyAnalysisQuiz({ items, evidenceNumbers }: { items: StudyAnalysisQuizItem[]; evidenceNumbers: Map<string, number> }) {
+  return <section className="study-analysis-quiz"><h3>Challenge quiz</h3><div>{items.map((item, index) => <details key={`${item.question}-${index}`}><summary><span>{index + 1}</span><div><b>{item.question}</b><small>{item.difficulty.toLowerCase()} · {item.type.toLowerCase()}</small></div></summary>{item.options.length > 0 && <ol>{item.options.map((option) => <li key={option}>{option}</li>)}</ol>}<div className="study-quiz-answer"><b>Answer</b><p>{item.answer}</p><p>{item.explanation}<StudyCitationLinks ids={item.evidenceIds} numbers={evidenceNumbers} /></p></div></details>)}</div></section>;
+}
+
+function StudyNoteSuggestionCard({ suggestion, evidenceNumbers, onReviewed }: { suggestion: StudyNoteEditSuggestion; evidenceNumbers: Map<string, number>; onReviewed: () => void }) {
+  const [draft, setDraft] = useState(suggestion.suggestedBody);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const review = async (action: "APPLY" | "DISMISS") => {
+    setBusy(true); setError("");
+    try {
+      await studyApi(`study/analysis-suggestions/${suggestion.id}`, "PATCH", action === "APPLY" ? { action, replacementText: draft } : { action });
+      onReviewed();
+    } catch (value) { setError(value instanceof Error ? value.message : "The suggestion could not be reviewed."); }
+    finally { setBusy(false); }
+  };
+  return <article className={`study-note-suggestion status-${suggestion.status.toLowerCase()}`}><header><b>{suggestion.status === "PENDING" ? "Review proposed wording" : suggestion.status.toLowerCase()}</b><StudyCitationLinks ids={suggestion.evidenceIds} numbers={evidenceNumbers} /></header><p>{suggestion.rationale}</p><label><span>Proposed note</span><textarea value={draft} disabled={busy || suggestion.status !== "PENDING"} onChange={(event) => setDraft(event.target.value)} rows={6} /></label>{error && <small role="alert">{error}</small>}{suggestion.status === "PENDING" && <div><button className="study-quiet" disabled={busy} onClick={() => void review("DISMISS")}>Dismiss</button><button className="study-primary" disabled={busy || !draft.trim()} onClick={() => void review("APPLY")}>{busy ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}Apply edit</button></div>}</article>;
 }
 
 function StudyAnalysisEvidenceList({ evidence, timezone }: { evidence: StudyAnalysisEvidence[]; timezone: string }) {
   return <details className="study-analysis-evidence"><summary>Evidence <span>{evidence.length}</span></summary><ol>{evidence.map((entry, index) => <li key={entry.id} id={`study-analysis-evidence-${index + 1}`}>
-    <span>{index + 1}</span><div><b>{entry.title}</b><small>{entry.kind === "SESSION" ? "Session" : "Resource"}{entry.occurredAt ? ` · ${formatDateTime(entry.occurredAt, timezone)}` : ""}</small>{entry.detail && <p>{entry.detail}</p>}</div>
+    <span>{index + 1}</span><div><b>{entry.title}</b><small>{studyEvidenceLabel(entry)}{entry.occurredAt ? ` · ${formatDateTime(entry.occurredAt, timezone)}` : ""}</small>{entry.detail && <p>{entry.detail}</p>}</div>
   </li>)}</ol></details>;
+}
+
+function studyEvidenceLabel(entry: StudyAnalysisEvidence) {
+  const kind = entry.kind === "CANVAS_MATERIAL" ? "Canvas material" : entry.kind === "CANVAS_ASSIGNMENT" ? "Canvas assignment" : entry.kind === "WORK_ITEM" ? "Work item" : entry.kind.toLowerCase();
+  return `${kind} · ${entry.authority.toLowerCase().replaceAll("_", " ")}`;
 }
 
 function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusStructure, onTechniques, onCustomMethod }: { focusStructure: FocusStructureId; techniques: string[]; customMethod: string; onFocusStructure: (value: FocusStructureId) => void; onTechniques: (value: string[]) => void; onCustomMethod: (value: string) => void }) {

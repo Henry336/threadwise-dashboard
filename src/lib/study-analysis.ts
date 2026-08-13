@@ -6,8 +6,8 @@ export function studyAnalysisModules(modules: StudyModule[], sessions: StudySess
       .filter((session) => Boolean(session.endedAt) && !session.archivedAt)
       .map((session) => session.moduleId),
   );
-  void resources;
-  return modules.filter((module) => module.active && !module.userArchivedAt && completedModuleIds.has(module.id));
+  const resourceModuleIds = new Set(resources.map((resource) => resource.moduleId));
+  return modules.filter((module) => module.active && !module.userArchivedAt && (completedModuleIds.has(module.id) || resourceModuleIds.has(module.id)));
 }
 
 export function studyAnalysisInitialModuleId(
@@ -33,6 +33,7 @@ export function studyAnalysisEvidenceNumbers(evidenceIds: string[]) {
 export function studyAnalysisReason(reason?: string, fallback = "Analysis is unavailable right now.") {
   if (!reason) return fallback;
   if (reason === "complete_a_session_first") return "Complete a module session first.";
+  if (reason === "save_study_evidence_first") return "Complete a module session or save a note or image first.";
   if (reason === "worker_unavailable" || reason === "provider_unavailable") return "Analysis is offline right now. Saved results stay available.";
   if (reason === "request_recently_submitted") return "That review was just requested.";
   return reason.includes("_") ? fallback : reason;
