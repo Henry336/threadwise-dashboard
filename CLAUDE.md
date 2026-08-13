@@ -75,6 +75,24 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-13 (Codex):** Implemented and locally validated the timetable reliability bundle:
+  refreshes no longer steal editor focus; timetable sheets use a body portal, uniform scrim,
+  and viewport-bounded geometry; absent create destinations no longer send invalid null place
+  IDs; location guidance is plain-language; horizontal blocks prioritize their title and size
+  per collision group. Tests pass 73/73; TypeScript, changed-file lint, build, detector, and
+  bounded desktop/mobile browser QA pass. Full lint retains two unrelated existing findings.
+
+- **2026-08-13 (Codex):** Added future public-Study constraints to the sibling backend's
+  `PROJECT_CONTEXT.md`; no dashboard runtime code changed. The current sealed Study dashboard
+  remains private, while future work must avoid singleton authorization and prepare separate,
+  tenant-scoped Study identity and Canvas OAuth without activating it.
+
+- **2026-08-13 (Codex):** The active cross-repository implementation ledger now lives at
+  `D:\CodexProjects\Threadwise\PROJECT_CONTEXT.md`; no dashboard product code changed.
+  It records the focus-loss, overlay, location validation, title-density, and
+  per-collision-group lane defects plus the broader Study/Group roadmap. Update it before
+  implementation, after each material checkpoint, and before an interrupted stop.
+
 - **2026-08-13 (Codex):** Added an opt-in, evidence-backed module review to Deep Work. The UI
   reads cached results on module change, requests analysis only on an explicit action, polls only
   active jobs, and ties every finding to numbered session/resource evidence with honest stale,

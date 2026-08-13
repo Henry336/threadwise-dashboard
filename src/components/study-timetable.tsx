@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight,
   Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, Upload, X,
@@ -9,7 +10,7 @@ import type { StudyItem, StudySnapshot } from "@/lib/study-types";
 import {
   academicWeekForDate, addDays, buildTimetableDays, clockMinutes, currentMinutesInZone, dateKeyInZone,
   formatClock, formatWeekRange, FULL_DAY_END_MINUTE, FULL_DAY_START_MINUTE, initialTimetableWeek,
-  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableBlockDensity, timetableBlockLanes, timetableDuePreview,
+  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableBlockDensity, timetableBlockLanes, timetableBlockPayload, timetableDuePreview,
   timetableHorizontalBlockWidth, timetableIndicatorOffset, timetablePanelReducer,
 } from "@/lib/study-timetable";
 import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientation } from "@/lib/study-preferences";
@@ -243,7 +244,7 @@ function NusmodsImportDialog({ busy, onClose, onImport }: {
     void onImport(url.trim());
   };
 
-  return <div className="study-timetable-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+  return <TimetableOverlay busy={busy} onClose={onClose}>
     <section ref={dialogRef} className="study-timetable-dialog study-timetable-import" role="dialog" aria-modal="true" aria-labelledby="nusmods-import-title" tabIndex={-1}>
       <header><div><span>NUSMods</span><h2 id="nusmods-import-title">Import timetable</h2></div><button onClick={onClose} disabled={busy} aria-label="Close NUSMods import"><X size={20} /></button></header>
       <form onSubmit={submit}>
@@ -252,7 +253,7 @@ function NusmodsImportDialog({ busy, onClose, onImport }: {
         <footer><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy || !url.trim()}><Upload size={16} /> {busy ? "Importing…" : "Import"}</button></footer>
       </form>
     </section>
-  </div>;
+  </TimetableOverlay>;
 }
 
 function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDay, onOpenDueOverflow, onEditItem, onOpenBlock }: {
@@ -310,7 +311,9 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
         {days.map((day) => {
           const due = timetableDuePreview(day.dueItems);
           const layout = timetableBlockLanes(day.blocks);
-          const rowHeight = Math.max(82, layout.laneCount * 68 + 10);
+          const laneGap = 8;
+          const rowPadding = 10;
+          const rowHeight = Math.max(82, rowPadding + layout.laneCount * 58 + (layout.laneCount - 1) * laneGap);
           return <div className={`study-horizontal-day ${day.isToday ? "today" : ""}`} key={day.key} style={{ "--row-height": `${rowHeight}px` } as CSSProperties}>
           <button type="button" className="study-horizontal-day-label" aria-label={`Open ${day.longLabel}, ${day.dateLabel} in day view`} aria-current={day.isToday ? "date" : undefined} onClick={() => onOpenDay(day.key)}><span>{day.isToday ? `Today · ${day.shortLabel}` : day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></button>
           <div className="study-horizontal-due" aria-label={`Deadlines for ${day.longLabel}`}>
@@ -321,13 +324,14 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
           <div className="study-horizontal-track">
             {hours.map((hour) => <i key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }} />)}
             {day.isToday && nowMinutes >= gridStart && nowMinutes < gridEnd && <span className="study-horizontal-now" style={{ left: `${horizontalNowOffset}px` }} />}
-            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); const width = timetableHorizontalBlockWidth(block.startTime, block.endTime, HORIZONTAL_MINUTE_SCALE); const density = timetableBlockDensity(width); const label = scheduleBlockAccessibleLabel(block); return <button key={block.id} className={`study-horizontal-block density-${density}`} style={{
+            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); const width = timetableHorizontalBlockWidth(block.startTime, block.endTime, HORIZONTAL_MINUTE_SCALE); const density = timetableBlockDensity(width); const label = scheduleBlockAccessibleLabel(block); const groupLaneCount = layout.groupLaneCounts.get(block.id) ?? 1; const blockHeight = (rowHeight - rowPadding - (groupLaneCount - 1) * laneGap) / groupLaneCount; return <button key={block.id} className={`study-horizontal-block density-${density}`} style={{
               "--block-left": `${(bounds.start - gridStart) * HORIZONTAL_MINUTE_SCALE + 3}px`,
               "--block-width": `${width}px`,
-              "--block-top": `${5 + (layout.lanes.get(block.id) ?? 0) * 68}px`,
+              "--block-top": `${5 + (layout.lanes.get(block.id) ?? 0) * (blockHeight + laneGap)}px`,
+              "--block-height": `${blockHeight}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => onOpenBlock(block)} aria-label={label} title={label}>
-              {density === "narrow" ? <strong>{shortBlockLabel(block)}</strong> : <><span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b>{density === "full" && <><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}</>}</>}
+              {density === "narrow" ? <b>{shortBlockLabel(block)}</b> : <><b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span>{density === "full" && <><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}</>}</>}
             </button>; })}
           </div>
         </div>;
@@ -340,6 +344,9 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function shortBlockLabel(block: ScheduleBlock): string {
+  const words = block.label.trim().split(/\s+/).map((word) => word.replace(/[^\p{L}\p{N}]/gu, "")).filter(Boolean);
+  if (words.length === 1) return words[0]!.slice(0, 4).toUpperCase();
+  if (words.length > 1) return words.slice(0, 4).map((word) => word[0]).join("").toUpperCase();
   if (block.module?.code) return block.module.code.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase();
   const labels: Record<string, string> = { class: "CL", lecture: "LEC", tutorial: "TUT", lab: "LAB", study: "ST", other: "•" };
   return labels[block.blockType.toLowerCase()] ?? block.blockType.slice(0, 3).toUpperCase();
@@ -351,13 +358,24 @@ function scheduleBlockAccessibleLabel(block: ScheduleBlock): string {
 }
 
 function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean, onClose: () => void) {
+  const busyRef = useRef(busy);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    busyRef.current = busy;
+    onCloseRef.current = onClose;
+  }, [busy, onClose]);
+
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    dialogRef.current?.focus();
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const initialFocus = dialog.querySelector<HTMLElement>("[autofocus]") ?? dialog;
+    initialFocus.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) { event.preventDefault(); onClose(); return; }
-      if (event.key !== "Tab" || !dialogRef.current) return;
-      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled])")];
+      if (event.key === "Escape" && !busyRef.current) { event.preventDefault(); onCloseRef.current(); return; }
+      if (event.key !== "Tab") return;
+      const focusable = [...dialog.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
       if (!focusable.length) return;
       const first = focusable[0]!;
       const last = focusable[focusable.length - 1]!;
@@ -366,7 +384,25 @@ function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean,
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => { window.removeEventListener("keydown", handleKeyDown); previous?.focus(); };
-  }, [busy, dialogRef, onClose]);
+  }, [dialogRef]);
+}
+
+function TimetableOverlay({ children, busy, onClose, className = "" }: {
+  children: ReactNode;
+  busy: boolean;
+  onClose: () => void;
+  className?: string;
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
+  if (typeof document === "undefined") return null;
+  return createPortal(<div className={`study-timetable-overlay ${className}`.trim()} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+    {children}
+  </div>, document.body);
 }
 
 function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
@@ -385,7 +421,7 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
       : `Weeks ${block.startWeek ?? 1}–${block.endWeek ?? "end"}`;
   const travelConfigured = Boolean(block.venueName || block.defaultOrigin?.name || block.defaultOriginId);
 
-  return <div className="study-timetable-overlay detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+  return <TimetableOverlay busy={busy} onClose={onClose} className="detail-overlay">
     <section ref={dialogRef} className="study-timetable-detail" role="dialog" aria-modal="true" aria-labelledby="timetable-details-title" tabIndex={-1}>
       <header><div><span>Timetable block</span><h2 id="timetable-details-title">{block.label}</h2></div><button onClick={onClose} disabled={busy} aria-label="Close block details"><X size={20} /></button></header>
       <div className="study-timetable-detail-body">
@@ -400,7 +436,7 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
       </div>
       <footer><button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete()}><Trash2 size={16} /> Delete</button><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Close</button><button type="button" className="study-primary" disabled={busy} onClick={onEdit}><Pencil size={16} /> Edit</button></div></footer>
     </section>
-  </div>;
+  </TimetableOverlay>;
 }
 
 function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
@@ -429,23 +465,23 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    void onSave({
-      moduleId: moduleId || null,
+    void onSave(timetableBlockPayload({
+      moduleId,
       dayOfWeek: day,
       startTime: start,
       endTime: end,
       label,
       blockType,
-      startWeek: startWeek ? Number(startWeek) : null,
-      endWeek: endWeek ? Number(endWeek) : null,
-      destination: destination.trim() || (block ? null : undefined),
-      destinationPlaceId: destination.trim() ? destinationPlaceId : null,
-      defaultOriginId: originId || null,
+      startWeek,
+      endWeek,
+      destination,
+      destinationPlaceId,
+      defaultOriginId: originId,
       travelBufferMinutes: buffer,
-    });
+    }, Boolean(block)));
   };
 
-  return <div className="study-timetable-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+  return <TimetableOverlay busy={busy} onClose={onClose}>
     <section ref={dialogRef} className="study-timetable-dialog" role="dialog" aria-modal="true" aria-labelledby="timetable-editor-title" tabIndex={-1}>
       <header><div><span>{block ? "Edit block" : "New block"}</span><h2 id="timetable-editor-title">{block ? block.label : "Add to the timetable"}</h2></div><button onClick={onClose} disabled={busy} aria-label="Close editor"><X size={20} /></button></header>
       <form onSubmit={submit}>
@@ -460,5 +496,5 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
         <footer><span /><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : block ? "Save changes" : "Save block"}</button></div></footer>
       </form>
     </section>
-  </div>;
+  </TimetableOverlay>;
 }

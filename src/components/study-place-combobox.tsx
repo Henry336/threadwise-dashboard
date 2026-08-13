@@ -120,7 +120,7 @@ export function StudyPlaceCombobox({
         {stops.length > 0 && <PlaceGroup title="Bus stops" icon={MapPin} entries={stops} listboxId={listboxId} activeIndex={activeIndex} onChoose={choose} />}
       </div>}
     </div>
-    {query && !placeId && <small className="study-place-warning">Choose a listed NUS place to enable leave-time reminders. This text can still be saved as a venue label.</small>}
+    {query && !placeId && <small className="study-place-warning">Pick a valid location from the list to enable leave-time reminders. You can still save this as a venue label.</small>}
   </label>;
 }
 

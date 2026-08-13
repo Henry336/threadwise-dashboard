@@ -1317,11 +1317,11 @@
 .study-horizontal-track { position: relative; width: var(--timeline-width); min-height: var(--row-height, 82px); background: color-mix(in srgb, var(--surface) 97%, var(--canvas)); }
 .study-horizontal-day.today .study-horizontal-track { background: color-mix(in srgb, var(--study-blue) 6%, var(--surface)); }
 .study-horizontal-track > i { position: absolute; inset: 0 auto 0; width: 1px; background: var(--line); }
-.study-horizontal-block { position: absolute; z-index: 2; top: var(--block-top, 5px); left: var(--block-left); width: var(--block-width); height: 58px; min-width: 1px; overflow: hidden; padding: 7px 8px; display: grid; align-content: start; gap: 2px; border: 1px solid color-mix(in srgb, var(--module-color) 42%, var(--line)); border-radius: 7px; background: color-mix(in srgb, var(--module-color) 10%, var(--surface)); color: var(--ink); text-align: left; box-shadow: 3px 5px 12px color-mix(in srgb, var(--ink) 5%, transparent); transition: transform 140ms ease, box-shadow 140ms ease; }
+.study-horizontal-block { position: absolute; z-index: 2; top: var(--block-top, 5px); left: var(--block-left); width: var(--block-width); height: var(--block-height, 58px); min-width: 1px; overflow: hidden; padding: 7px 8px; display: grid; align-content: start; gap: 2px; border: 1px solid color-mix(in srgb, var(--module-color) 42%, var(--line)); border-radius: 7px; background: color-mix(in srgb, var(--module-color) 10%, var(--surface)); color: var(--ink); text-align: left; box-shadow: 3px 5px 12px color-mix(in srgb, var(--ink) 5%, transparent); transition: transform 140ms ease, box-shadow 140ms ease; }
 .study-horizontal-block:hover { z-index: 3; transform: translateY(-1px); box-shadow: 4px 9px 20px color-mix(in srgb, var(--ink) 11%, transparent); }
 .study-horizontal-block:focus-visible { z-index: 5; outline: 3px solid color-mix(in srgb, var(--study-blue) 55%, transparent); outline-offset: 2px; }
-.study-horizontal-block.density-narrow { padding: 5px 3px; place-items: center; border-radius: 999px; }
-.study-horizontal-block.density-narrow > strong { overflow: hidden; color: var(--module-color); font-size: 8px; font-weight: 900; letter-spacing: -.02em; text-overflow: clip; white-space: nowrap; }
+.study-horizontal-block.density-narrow { padding: 5px 3px; place-items: center; }
+.study-horizontal-block.density-narrow > b { max-width: 100%; color: var(--module-color); font-size: 8px; font-weight: 900; letter-spacing: -.02em; text-align: center; text-overflow: clip; }
 .study-horizontal-block.density-compact { padding: 7px 6px; }
 .study-horizontal-block > span { color: var(--module-color); font-size: 8px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
 .study-horizontal-block > b { overflow: hidden; font-size: 10px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
@@ -1358,9 +1358,9 @@
 .study-agenda-empty b { color: var(--ink); font-family: var(--serif); font-size: 24px; font-weight: 480; }
 .study-agenda-empty p { margin: 0; font-size: 12px; }
 
-.study-timetable-overlay { position: fixed; z-index: 100; inset: 0; display: grid; place-items: stretch end; background: color-mix(in srgb, var(--ink) 47%, transparent); backdrop-filter: blur(7px); }
+.study-timetable-overlay { position: fixed; z-index: 100; inset: 0; display: grid; place-items: stretch end; overflow: hidden; background: rgb(17 24 27 / 56%); }
 .study-timetable-dialog,
-.study-timetable-detail { width: min(620px, 100%); height: 100%; max-height: 100vh; overflow: auto; border-left: 1px solid var(--line-strong); background: var(--surface); box-shadow: -24px 0 80px color-mix(in srgb, #000 24%, transparent); animation: study-sheet-in 180ms ease both; }
+.study-timetable-detail { width: min(560px, calc(100vw - clamp(24px, 5vw, 72px))); height: 100dvh; max-height: 100dvh; overflow: auto; overscroll-behavior: contain; border-left: 1px solid var(--line-strong); background: var(--surface); box-shadow: -8px 0 28px rgb(0 0 0 / 18%); animation: study-sheet-in 180ms ease both; }
 .study-timetable-detail { display: grid; grid-template-rows: auto 1fr auto; }
 .study-timetable-dialog > header { min-height: 86px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .study-timetable-detail > header { min-height: 102px; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }

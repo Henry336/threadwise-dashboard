@@ -19,6 +19,21 @@ export const FULL_DAY_END_MINUTE = 24 * 60;
 
 export type TimetableBlockDensity = "narrow" | "compact" | "full";
 
+export type TimetableBlockDraft = {
+  moduleId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  label: string;
+  blockType: string;
+  startWeek: string;
+  endWeek: string;
+  destination: string;
+  destinationPlaceId: string | null;
+  defaultOriginId: string;
+  travelBufferMinutes: number;
+};
+
 export type TimetablePanelState =
   | { mode: "closed" }
   | { mode: "details"; blockId: string }
@@ -50,22 +65,67 @@ export function timetableHorizontalBlockWidth(startTime: string, endTime: string
   return Math.max(1, (bounds.end - bounds.start) * scale - gap);
 }
 
+export function timetableBlockPayload(draft: TimetableBlockDraft, editing: boolean): Record<string, unknown> {
+  const destination = draft.destination.trim();
+  const payload: Record<string, unknown> = {
+    moduleId: draft.moduleId || null,
+    dayOfWeek: draft.dayOfWeek,
+    startTime: draft.startTime,
+    endTime: draft.endTime,
+    label: draft.label,
+    blockType: draft.blockType,
+    startWeek: draft.startWeek ? Number(draft.startWeek) : null,
+    endWeek: draft.endWeek ? Number(draft.endWeek) : null,
+    defaultOriginId: draft.defaultOriginId || null,
+    travelBufferMinutes: draft.travelBufferMinutes,
+  };
+  if (destination) payload.destination = destination;
+  else if (editing) payload.destination = null;
+  if (draft.destinationPlaceId) payload.destinationPlaceId = draft.destinationPlaceId;
+  else if (editing) payload.destinationPlaceId = null;
+  return payload;
+}
+
 export function timetableBlockLanes<T extends { id: string; startTime: string; endTime: string }>(blocks: T[]): {
   laneCount: number;
   lanes: Map<string, number>;
+  groupLaneCounts: Map<string, number>;
 } {
-  const laneEnds: number[] = [];
   const lanes = new Map<string, number>();
-  [...blocks]
-    .sort((left, right) => timetableBlockBounds(left.startTime, left.endTime).start - timetableBlockBounds(right.startTime, right.endTime).start)
-    .forEach((block) => {
-      const bounds = timetableBlockBounds(block.startTime, block.endTime);
-      let lane = laneEnds.findIndex((end) => end <= bounds.start);
+  const groupLaneCounts = new Map<string, number>();
+  const ordered = [...blocks]
+    .map((block) => ({ block, bounds: timetableBlockBounds(block.startTime, block.endTime) }))
+    .sort((left, right) => left.bounds.start - right.bounds.start || left.bounds.end - right.bounds.end);
+  let maximumLaneCount = 1;
+  let group: typeof ordered = [];
+  let groupEnd = -1;
+
+  const placeGroup = () => {
+    if (!group.length) return;
+    const laneEnds: number[] = [];
+    for (const entry of group) {
+      let lane = laneEnds.findIndex((end) => end <= entry.bounds.start);
       if (lane < 0) lane = laneEnds.length;
-      laneEnds[lane] = bounds.end;
-      lanes.set(block.id, lane);
-    });
-  return { laneCount: Math.max(1, laneEnds.length), lanes };
+      laneEnds[lane] = entry.bounds.end;
+      lanes.set(entry.block.id, lane);
+    }
+    const groupLaneCount = Math.max(1, laneEnds.length);
+    maximumLaneCount = Math.max(maximumLaneCount, groupLaneCount);
+    for (const entry of group) groupLaneCounts.set(entry.block.id, groupLaneCount);
+  };
+
+  for (const entry of ordered) {
+    if (group.length && entry.bounds.start >= groupEnd) {
+      placeGroup();
+      group = [];
+      groupEnd = -1;
+    }
+    group.push(entry);
+    groupEnd = Math.max(groupEnd, entry.bounds.end);
+  }
+  placeGroup();
+
+  return { laneCount: maximumLaneCount, lanes, groupLaneCounts };
 }
 
 export function timetableBlockBounds(startTime: string, endTime: string): { start: number; end: number } {
