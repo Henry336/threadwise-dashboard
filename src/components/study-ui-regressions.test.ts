@@ -21,4 +21,23 @@ describe("Study UI regressions", () => {
     expect(component).toContain("<b>{item.title}</b><span>{item.module.code}</span>");
     expect(component).not.toContain("shortBlockLabel");
   });
+
+  it("uses Threadwise choice popovers for module analysis instead of native selects", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const analysis = component.slice(component.indexOf('className="study-module-analysis"'), component.indexOf("function StudyCitationLinks"));
+
+    expect(analysis).toContain('<StudyChoicePicker label="Module"');
+    expect(analysis).toContain('<StudyChoicePicker label="Review type"');
+    expect(analysis).toContain("allowEmpty={false}");
+    expect(analysis).not.toContain("<select");
+  });
+
+  it("keeps the top-three plan at its content height", () => {
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+    const ruleStart = css.indexOf(".study-plan { grid-column: 2;");
+    const rule = css.slice(ruleStart, ruleStart + 120);
+
+    expect(rule).toContain("align-self: start");
+    expect(rule).not.toContain("grid-row");
+  });
 });

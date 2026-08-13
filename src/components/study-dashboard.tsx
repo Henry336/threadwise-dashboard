@@ -2,7 +2,7 @@
 /* Telegram-hosted resource previews stay on the authenticated same-origin proxy. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, AlertTriangle, Archive, ArrowRight, BookOpen, Brain, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, ExternalLink,
@@ -674,8 +674,8 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
     <header>
       <div><span>Module review</span><h2 id="study-analysis-title">Connect, correct &amp; challenge</h2></div>
       <div className="study-analysis-controls">
-        <label><span>Module</span><select value={moduleId} onChange={(event) => { setChosenModuleId(event.target.value); setLoading(true); setRequestError(""); }}>{modules.map((module) => <option key={module.id} value={module.id}>{module.code} · {module.name}</option>)}</select></label>
-        <label><span>Review type</span><select value={mode} onChange={(event) => { setMode(event.target.value as StudyAnalysisMode); setLoading(true); setRequestError(""); }}><option value="CONNECTIONS">Connections</option><option value="QUIZ">Quiz</option><option value="BOTH">Both</option></select></label>
+        <StudyChoicePicker label="Module" value={moduleId} allowEmpty={false} options={modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} onChange={(next) => { setChosenModuleId(next); setLoading(true); setRequestError(""); }} />
+        <StudyChoicePicker label="Review type" value={mode} allowEmpty={false} options={[{ value: "CONNECTIONS", label: "Connections" }, { value: "QUIZ", label: "Quiz" }, { value: "BOTH", label: "Both" }]} onChange={(next) => { setMode(next as StudyAnalysisMode); setLoading(true); setRequestError(""); }} />
         {response?.available && !isWorking && actionLabel && <button className="study-primary" disabled={requesting} onClick={() => void requestAnalysis()}>{requesting ? <LoaderCircle className="spin" size={15} /> : analysis?.status === "COMPLETE" ? <RefreshCw size={15} /> : <Brain size={15} />}{actionLabel}</button>}
         {analysis?.status === "COMPLETE" && !analysis.stale && <span className="study-analysis-current"><CheckCircle2 size={14} /> Up to date</span>}
       </div>
@@ -759,36 +759,82 @@ function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusSt
   </div>;
 }
 
-function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, onChange }: {
+function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, allowEmpty = true, onChange }: {
   label: string;
   value: string;
   placeholder?: string;
   options: Array<{ value: string; label: string; detail?: string }>;
   disabled?: boolean;
   searchable?: boolean;
+  allowEmpty?: boolean;
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const listboxId = useId();
   const selected = options.find((option) => option.value === value);
   const visible = options.filter((option) => !query || `${option.label} ${option.detail ?? ""}`.toLowerCase().includes(query.toLowerCase()));
+  const optionCount = visible.length + (allowEmpty ? 1 : 0);
+  const selectedIndex = Math.max(0, visible.findIndex((option) => option.value === value) + (allowEmpty ? 1 : 0));
+  const close = (returnFocus = false) => {
+    setOpen(false);
+    setQuery("");
+    if (returnFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+  const focusOption = (index: number) => window.requestAnimationFrame(() => optionRefs.current[index]?.focus());
+  const openAt = (index: number) => {
+    setOpen(true);
+    focusOption(Math.max(0, Math.min(index, optionCount - 1)));
+  };
+  const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "Escape" && open) {
+      event.preventDefault();
+      close(true);
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    openAt(event.key === "ArrowDown" ? selectedIndex : optionCount - 1);
+  };
+  const onListboxKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close(true);
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const lastIndex = optionCount - 1;
+    const currentIndex = optionRefs.current.findIndex((entry) => entry === document.activeElement);
+    if (event.key === "Home") focusOption(0);
+    else if (event.key === "End") focusOption(lastIndex);
+    else if (event.key === "ArrowDown") focusOption(currentIndex < 0 || currentIndex >= lastIndex ? 0 : currentIndex + 1);
+    else focusOption(currentIndex <= 0 ? lastIndex : currentIndex - 1);
+  };
   useEffect(() => {
     if (!open) return;
-    const close = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) setOpen(false); };
-    document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
   return <div className="study-choice-field" ref={rootRef}>
     <span>{label}</span>
-    <button type="button" className="study-choice-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+    <button ref={triggerRef} type="button" className="study-choice-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined} onClick={() => open ? close() : setOpen(true)} onKeyDown={onTriggerKeyDown}>
       <span><b>{selected?.label ?? placeholder}</b>{selected?.detail && <small>{selected.detail}</small>}</span><ChevronDown size={16} />
     </button>
-    {open && <div className="study-choice-popover" role="listbox" aria-label={label}>
+    {open && <div id={listboxId} className="study-choice-popover" role="listbox" aria-label={label} onKeyDown={onListboxKeyDown}>
       {searchable && <label><Search size={15} /><span className="sr-only">Search {label.toLowerCase()}</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} /></label>}
       <div>
-        <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(""); setOpen(false); setQuery(""); }}><span><b>{placeholder}</b></span>{!value && <Check size={15} />}</button>
-        {visible.map((option) => <button type="button" key={option.value} role="option" aria-selected={option.value === value} onClick={() => { onChange(option.value); setOpen(false); setQuery(""); }}><span><b>{option.label}</b>{option.detail && <small>{option.detail}</small>}</span>{option.value === value && <Check size={15} />}</button>)}
+        {allowEmpty && <button ref={(element) => { optionRefs.current[0] = element; }} type="button" role="option" aria-selected={!value} onClick={() => { onChange(""); close(true); }}><span><b>{placeholder}</b></span>{!value && <Check size={15} />}</button>}
+        {visible.map((option, index) => <button ref={(element) => { optionRefs.current[index + (allowEmpty ? 1 : 0)] = element; }} type="button" key={option.value} role="option" aria-selected={option.value === value} onClick={() => { onChange(option.value); close(true); }}><span><b>{option.label}</b>{option.detail && <small>{option.detail}</small>}</span>{option.value === value && <Check size={15} />}</button>)}
         {!visible.length && <p>No matching options.</p>}
       </div>
     </div>}
