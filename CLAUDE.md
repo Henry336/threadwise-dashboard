@@ -84,8 +84,10 @@ updates the Working log below** (newest first: date, who, what, current state).
   blink per loop. Focused tests pass 9/9; full dashboard tests pass 83/83; TypeScript, ESLint, production
   build, generator validation, frame-by-frame contact-sheet review, and diff checks pass. Paired backend
   validation passes 858 tests plus 6 skips and now recovers through configured OpenAI fallback models
-  while preserving safe key/quota/rate/permission diagnostics. Next action: commit/push and verify both
-  production deployments.
+  while preserving safe key/quota/rate/permission diagnostics. Dashboard runtime commit `313fa9d` is
+  pushed and its Vercel deployment completed successfully; `/dashboard` and the 1,663,568-byte v6 WebP
+  both return HTTP 200. Backend runtime commit `8e6a87d` is live on Render. An authenticated Study
+  request remains the final proof of the deployed OpenAI project's current quota/permission state.
 
 - **2026-08-14 (Codex):** Replaced the Study module review's raw
   Module and Review type selects with the existing Threadwise choice popover, including selected
