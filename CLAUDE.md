@@ -83,7 +83,10 @@ updates the Working log below** (newest first: date, who, what, current state).
   title before module/time metadata, including narrow horizontal blocks, instead of replacing
   narrow titles with generated initials. The regenerated asset remains 1,661,414 bytes with square
   transparent frames; 81 tests, TypeScript, full ESLint, production build, and `git diff --check`
-  pass. Next: commit, push `main`, and verify the Vercel deployment and production asset response.
+  pass. Commit `efb709e` is pushed to `origin/main`; Vercel reported a successful production
+  deployment, `/dashboard` returns HTTP 200, and the live WebP returns HTTP 200 as `image/webp`
+  with the expected 1,661,414-byte body. The live manifest reports 42 frames, 7.5 FPS, 2.5
+  authored anchors per second, and a 5.6-second loop.
 
 - **2026-08-13 (Codex):** Implemented the Phase 5 Study review surface locally: explicit
   Connections/Quiz/Both selection, cited Canvas/session/note evidence with provenance, cautious pace,
