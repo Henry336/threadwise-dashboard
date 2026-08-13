@@ -147,7 +147,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     <div className={`study-timetable-surface ${mode === "day" ? "day-mode" : "week-mode"} ${orientation}-orientation`}>
       {orientation === "vertical" && <section className="study-due-lane" aria-label="Deadlines this week">
         <header><span>Deadlines</span></header>
-        <div>{days.map((day) => <div key={day.key}><span className="study-due-day-label">{day.shortLabel} {day.dateLabel.split(" ")[0]}</span>{day.dueItems.slice(0, 2).map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}{day.dueItems.length > 2 && <button className="more" onClick={() => { setSelectedDay(day.key); setMode("day"); }}>+{day.dueItems.length - 2} more</button>}</div>)}</div>
+        <div>{days.map((day) => <div key={day.key}><span className="study-due-day-label">{day.shortLabel} {day.dateLabel.split(" ")[0]}</span>{day.dueItems.slice(0, 2).map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><b>{item.title}</b><span>{item.module.code}</span></button>)}{day.dueItems.length > 2 && <button className="more" onClick={() => { setSelectedDay(day.key); setMode("day"); }}>+{day.dueItems.length - 2} more</button>}</div>)}</div>
       </section>}
 
       {orientation === "vertical" && <section ref={verticalScrollRef} className="study-week-grid" aria-label={`Vertical timetable for ${formatWeekRange(weekStart)}`} style={{ "--grid-height": `${verticalExtent}px` } as CSSProperties}>
@@ -161,7 +161,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
               "--block-height": `${Math.max(42, (bounds.end - bounds.start) * VERTICAL_MINUTE_SCALE - 4)}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })}>
-              <span>{block.module?.code ?? block.blockType}</span><b>{block.label}</b><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
+              <b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
             </button>; })}
           </div>)}
         </div>
@@ -319,7 +319,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
           return <div className={`study-horizontal-day ${day.isToday ? "today" : ""}`} key={day.key} style={{ "--row-height": `${rowHeight}px` } as CSSProperties}>
           <button type="button" className="study-horizontal-day-label" aria-label={`Open ${day.longLabel}, ${day.dateLabel} in day view`} aria-current={day.isToday ? "date" : undefined} onClick={() => onOpenDay(day.key)}><span>{day.isToday ? `Today · ${day.shortLabel}` : day.shortLabel}</span><b>{day.dateLabel.split(" ")[0]}</b></button>
           <div className="study-horizontal-due" aria-label={`Deadlines for ${day.longLabel}`}>
-            {due.visible.map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><span>{item.module.code}</span><b>{item.title}</b></button>)}
+            {due.visible.map((item) => <button key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties} onClick={() => onEditItem(item)}><b>{item.title}</b><span>{item.module.code}</span></button>)}
             {due.visible.length === 0 && <span className="study-horizontal-due-empty">{"\u2014"}</span>}
             {due.remaining > 0 && <button className="more" onClick={() => onOpenDueOverflow(day.key)}>+{due.remaining} more</button>}
           </div>
@@ -333,7 +333,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
               "--block-height": `${blockHeight}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => onOpenBlock(block)} aria-label={label} title={label}>
-              {density === "narrow" ? <b>{shortBlockLabel(block)}</b> : <><b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span>{density === "full" && <><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}</>}</>}
+              {density === "narrow" ? <b>{block.label}</b> : <><b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span>{density === "full" && <><small>{formatClock(block.startTime)}{"\u2013"}{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}</>}</>}
             </button>; })}
           </div>
         </div>;
@@ -344,15 +344,6 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-function shortBlockLabel(block: ScheduleBlock): string {
-  const words = block.label.trim().split(/\s+/).map((word) => word.replace(/[^\p{L}\p{N}]/gu, "")).filter(Boolean);
-  if (words.length === 1) return words[0]!.slice(0, 4).toUpperCase();
-  if (words.length > 1) return words.slice(0, 4).map((word) => word[0]).join("").toUpperCase();
-  if (block.module?.code) return block.module.code.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase();
-  const labels: Record<string, string> = { class: "CL", lecture: "LEC", tutorial: "TUT", lab: "LAB", study: "ST", other: "•" };
-  return labels[block.blockType.toLowerCase()] ?? block.blockType.slice(0, 3).toUpperCase();
-}
 
 function scheduleBlockAccessibleLabel(block: ScheduleBlock): string {
   return [block.module?.code, block.label, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName]

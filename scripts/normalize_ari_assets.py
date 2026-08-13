@@ -34,7 +34,10 @@ TARGET_FOREGROUND_Y = OUTPUT_FRAME_SIZE // 2
 SMOOTH_FRAME_SIZE = 480
 ANCHOR_SEQUENCE = (0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1)
 TWEEN_STEPS_PER_TRANSITION = 3
-FRAME_DURATIONS_MS = (84, 83, 83)
+# Keep the two authored in-betweens, but let each anchor-to-anchor gesture
+# breathe for 400 ms. This preserves smoothness while reducing the effective
+# anchor cadence from 4 FPS to 2.5 FPS and lengthening the loop to 5.6 seconds.
+FRAME_DURATIONS_MS = (134, 133, 133)
 
 STATIC_ASSETS = {
     "ari-avatar-light-sheet.png": "ari-avatar-light-transparent-v2.webp",
@@ -192,7 +195,8 @@ def build_smooth_loader(anchor_frames: list[Image.Image]) -> None:
             "generativeRedrawing": False,
         },
         "playback": {
-            "framesPerSecond": 12,
+            "framesPerSecond": 7.5,
+            "anchorFramesPerSecond": 2.5,
             "durationMs": sum(durations),
             "loop": True,
             "anchorSequence": list(ANCHOR_SEQUENCE),

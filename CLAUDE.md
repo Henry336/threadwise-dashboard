@@ -75,6 +75,16 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-14 (Codex):** Corrected live-reported visual regressions for the next coordinated
+  release. Ari keeps all 42 registered/in-between frames but slows from a
+  3.5-second/12-FPS loop to a gentler 5.6-second/7.5-FPS loop (2.5 authored anchors per second).
+  Study Work search is normalized to the same 46px toolbar height after a later generic
+  form rule re-inflated its nested input. Timetable schedule/deadline cards now render the actual
+  title before module/time metadata, including narrow horizontal blocks, instead of replacing
+  narrow titles with generated initials. The regenerated asset remains 1,661,414 bytes with square
+  transparent frames; 81 tests, TypeScript, full ESLint, production build, and `git diff --check`
+  pass. Next: commit, push `main`, and verify the Vercel deployment and production asset response.
+
 - **2026-08-13 (Codex):** Implemented the Phase 5 Study review surface locally: explicit
   Connections/Quiz/Both selection, cited Canvas/session/note evidence with provenance, cautious pace,
   misconception clarification, expandable challenge answers, and manually editable apply/dismiss note

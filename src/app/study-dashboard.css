@@ -733,6 +733,24 @@
   color: var(--ink);
 }
 .study-shell textarea { min-height: 92px; resize: vertical; line-height: 1.5; }
+.study-shell .study-toolbar > label {
+  min-height: 46px;
+  padding: 0 13px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.study-shell .study-toolbar > label > input {
+  min-width: 0;
+  min-height: 0;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+}
 .study-switch { min-height: 63px; padding: 10px 12px; display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border: 1px solid var(--line); border-radius: 10px; }
 .study-switch span { display: grid; gap: 3px; }
 .study-switch b { color: var(--ink); font-size: 11px; }
@@ -1361,8 +1379,8 @@
 .study-horizontal-block { position: absolute; z-index: 2; top: var(--block-top, 5px); left: var(--block-left); width: var(--block-width); height: var(--block-height, 58px); min-width: 1px; overflow: hidden; padding: 7px 8px; display: grid; align-content: start; gap: 2px; border: 1px solid color-mix(in srgb, var(--module-color) 42%, var(--line)); border-radius: 7px; background: color-mix(in srgb, var(--module-color) 10%, var(--surface)); color: var(--ink); text-align: left; box-shadow: 3px 5px 12px color-mix(in srgb, var(--ink) 5%, transparent); transition: transform 140ms ease, box-shadow 140ms ease; }
 .study-horizontal-block:hover { z-index: 3; transform: translateY(-1px); box-shadow: 4px 9px 20px color-mix(in srgb, var(--ink) 11%, transparent); }
 .study-horizontal-block:focus-visible { z-index: 5; outline: 3px solid color-mix(in srgb, var(--study-blue) 55%, transparent); outline-offset: 2px; }
-.study-horizontal-block.density-narrow { padding: 5px 3px; place-items: center; }
-.study-horizontal-block.density-narrow > b { max-width: 100%; color: var(--module-color); font-size: 8px; font-weight: 900; letter-spacing: -.02em; text-align: center; text-overflow: clip; }
+.study-horizontal-block.density-narrow { padding: 5px 3px; align-content: center; }
+.study-horizontal-block.density-narrow > b { max-width: 100%; color: var(--ink); font-size: 8px; font-weight: 850; letter-spacing: -.02em; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .study-horizontal-block.density-compact { padding: 7px 6px; }
 .study-horizontal-block > span { color: var(--module-color); font-size: 8px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
 .study-horizontal-block > b { overflow: hidden; font-size: 10px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }

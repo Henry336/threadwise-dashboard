@@ -23,7 +23,7 @@ describe("Ari untangling loader", () => {
     expect(manifest.frames.every((frame) => Math.abs(frame.tealCentroid[0] - 320) < 1)).toBe(true);
   });
 
-  it("ships a bounded transparent 12 FPS animation with deterministic in-betweens", () => {
+  it("ships a bounded transparent gentle animation with deterministic in-betweens", () => {
     const assetPath = join(process.cwd(), "public", "brand", "ari-untangle-smooth-v5.webp");
     const asset = readFileSync(assetPath);
     const manifest = JSON.parse(readFileSync(join(process.cwd(), "public", "brand", "ari-untangle-smooth-v5.json"), "utf8")) as {
@@ -33,7 +33,7 @@ describe("Ari untangling loader", () => {
       frameHeight: number;
       transparent: boolean;
       interpolation: { inBetweenFramesPerTransition: number; generativeRedrawing: boolean };
-      playback: { framesPerSecond: number; durationMs: number; anchorSequence: number[] };
+      playback: { framesPerSecond: number; anchorFramesPerSecond: number; durationMs: number; anchorSequence: number[] };
       validation: { decodedFrameCount: number; transparentCornerAlpha: number; maxAnchorMeanAbsoluteError: number };
       frames: Array<{ anchor: boolean; durationMs: number }>;
     };
@@ -48,13 +48,13 @@ describe("Ari untangling loader", () => {
       frameHeight: 480,
       transparent: true,
       interpolation: { inBetweenFramesPerTransition: 2, generativeRedrawing: false },
-      playback: { framesPerSecond: 12, durationMs: 3_500 },
+      playback: { framesPerSecond: 7.5, anchorFramesPerSecond: 2.5, durationMs: 5_600 },
       validation: { decodedFrameCount: 42, transparentCornerAlpha: 0 },
     });
     expect(manifest.validation.maxAnchorMeanAbsoluteError).toBeLessThan(4.5);
     expect(manifest.frames).toHaveLength(42);
     expect(manifest.frames.filter((frame) => frame.anchor)).toHaveLength(14);
-    expect(manifest.frames.reduce((total, frame) => total + frame.durationMs, 0)).toBe(3_500);
+    expect(manifest.frames.reduce((total, frame) => total + frame.durationMs, 0)).toBe(5_600);
   });
 
   it("uses the smooth asset in both loading stages and honors reduced motion", () => {
