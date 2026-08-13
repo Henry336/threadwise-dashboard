@@ -51,3 +51,11 @@ export function AriUntangleLoader({
     </div>
   );
 }
+
+export function AriWorkspaceLoader() {
+  return (
+    <main className="tw-route-loading">
+      <AriUntangleLoader label="Untangling your workspace…" />
+    </main>
+  );
+}

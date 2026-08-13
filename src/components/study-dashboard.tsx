@@ -10,7 +10,7 @@ import {
   LoaderCircle, MapPin, Menu, Moon, MoreHorizontal, Pin, Play, Plus,
   RefreshCw, Search, Settings, Square, Sun, Target, TimerReset, Trash2, Undo2, X,
 } from "lucide-react";
-import { Ari, AriUntangleLoader } from "./ari";
+import { Ari, AriWorkspaceLoader } from "./ari";
 import { IntegerInput } from "./integer-input";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { StudyTimetable } from "./study-timetable";
@@ -250,14 +250,16 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
   };
 
   if (!study) {
+    if (!bootError) return <AriWorkspaceLoader />;
+
     return <main className="study-boot">
       <ThreadwiseMark />
-      {bootError ? <section className="study-boot-error" role="alert">
+      <section className="study-boot-error" role="alert">
         <Ari variant={theme === "dark" ? "avatar-dark" : "avatar-light"} decorative />
         <h1>Study Mode could not reconnect.</h1>
         <p>{bootError}</p>
         <div><button className="study-primary" onClick={() => void refresh(false)}><RefreshCw size={16} /> Retry</button><a className="study-secondary" href="/dashboard">Back to dashboard</a></div>
-      </section> : <AriUntangleLoader label="Untangling your semester..." />}
+      </section>
     </main>;
   }
 

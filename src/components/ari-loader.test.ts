@@ -26,6 +26,9 @@ describe("Ari untangling loader", () => {
   it("plays all eight frames forward and backward and honors reduced motion", () => {
     const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
     const loadingRoute = readFileSync(join(process.cwd(), "src", "app", "dashboard", "loading.tsx"), "utf8");
+    const loaderComponent = readFileSync(join(process.cwd(), "src", "components", "ari.tsx"), "utf8");
+    const studyDashboard = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const studyCss = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
 
     expect(css).toContain("animation: ari-untangle-frames 7s steps(1, end) infinite");
     expect(css).toContain("transform: translateX(-12.5%)");
@@ -35,8 +38,11 @@ describe("Ari untangling loader", () => {
     expect(css).toContain("transform: translateX(-87.5%)");
     expect(css).toContain("100% { transform: translateX(0); }");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
-    expect(readFileSync(join(process.cwd(), "src", "components", "ari.tsx"), "utf8"))
-      .toContain("/brand/ari-untangle-normalized-v4.png");
-    expect(loadingRoute).toContain("<AriUntangleLoader");
+    expect(loaderComponent).toContain("/brand/ari-untangle-normalized-v4.png");
+    expect(loaderComponent).toContain('label="Untangling your workspace…"');
+    expect(loadingRoute).toContain("<AriWorkspaceLoader");
+    expect(studyDashboard).toContain("if (!bootError) return <AriWorkspaceLoader />");
+    expect(studyDashboard).not.toContain("Untangling your semester");
+    expect(studyCss).not.toContain(".study-boot .ari-untangle-loader");
   });
 });
