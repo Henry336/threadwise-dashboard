@@ -4,6 +4,12 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Exact task reminders and explicit shared obligations
+- Reworked task editing around one clear deadline, one automatic reminder rhythm, and up to 20 optional exact reminder times in the same responsive sheet.
+- Added explicit Everyone and Unassigned audience choices to group assignment controls while retaining named member assignment. Everyone obligations no longer masquerade as ownerless claimable work.
+- Kept reminder and audience state in the authenticated dashboard snapshot/API contract, including friendly validation for invalid or past reminder times.
+- Verified the task and group-audience sheets at desktop and 390 x 844 mobile sizes with no horizontal overflow. All 74 tests, TypeScript, full lint, and the production build pass.
+
 ### Canvas coverage visibility
 - Added a compact latest-sync coverage summary to Study settings for courses, assignments, course modules, and indexed materials.
 - Calls out open assignments that were discovered under a still-inactive course, giving the owner an exact recovery action instead of silently omitting them.

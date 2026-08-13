@@ -75,6 +75,11 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-13 (Codex):** Added exact reminder-time editing and explicit Everyone/Unassigned
+  group audiences. Task sheets keep deadline, automatic rhythm, and up to 20 exact times together;
+  group assignment retains named members without conflating everyone with unassigned work.
+  All 74 tests, TypeScript, full lint, production build, and desktop/mobile browser QA pass.
+
 - **2026-08-13 (Codex):** Added Canvas sync coverage to Study settings. The latest successful
   backend summary now shows courses, assignments, course modules, and indexed materials, and
   explicitly identifies open assignments waiting for course activation. Dashboard tests remain

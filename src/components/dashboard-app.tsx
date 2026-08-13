@@ -225,10 +225,21 @@ export function DashboardApp(props: DashboardAppProps) {
 }
 
 function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, initialItem, initialItemKind, openScheduleCreate }: DashboardAppProps) {
+  const initialTarget = initialItem && initialItemKind
+    ? initialData[initialItemKind === "task" ? "tasks" : initialItemKind === "note" ? "notes" : initialItemKind === "idea" ? "ideas" : "images"]
+      .find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase())
+    : undefined;
+  const initialEditableKind: EditableKind | undefined = initialItemKind === "task" || initialItemKind === "note" || initialItemKind === "idea"
+    ? initialItemKind
+    : undefined;
   const [data, setData] = useState(initialData);
-  const [activeView, setActiveView] = useState<DashboardView>(initialView(requestedView, initialData.workspace));
+  const [activeView, setActiveView] = useState<DashboardView>(() => initialTarget && ["task", "note", "idea", "image"].includes(String(initialItemKind))
+    ? initialItemKind === "task" ? "tasks" : initialItemKind === "note" ? "notes" : initialItemKind === "idea" ? "ideas" : "images"
+    : initialView(requestedView, initialData.workspace));
   const [libraryTab, setLibraryTab] = useState<"notes" | "ideas" | "images">("notes");
-  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [editor, setEditor] = useState<EditorState | null>(() => initialTarget && initialEditableKind && !(initialEditableKind === "task" && initialData.workspace.kind === "GROUP")
+    ? { kind: initialEditableKind, item: initialTarget as EditorState["item"] }
+    : null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -238,7 +249,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   const [captureOpen, setCaptureOpen] = useState(false);
   const [ideaBrief, setIdeaBrief] = useState<IdeaBriefState | null>(null);
   const [groupTaskScope, setGroupTaskScope] = useState<GroupTaskScope>("all");
-  const [collaborationTask, setCollaborationTask] = useState<DashboardTask | null>(null);
+  const [collaborationTask, setCollaborationTask] = useState<DashboardTask | null>(() => initialItemKind === "task" && initialData.workspace.kind === "GROUP" ? initialTarget as DashboardTask | undefined ?? null : null);
   const [taskImportId, setTaskImportId] = useState(initialTaskImport);
   const [syncState, setSyncState] = useState<"connecting" | "live" | "reconnecting" | "offline">(isDemo ? "live" : "connecting");
   const [lastSyncedAt, setLastSyncedAt] = useState(initialData.generatedAt);
@@ -252,7 +263,6 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
   const refreshInFlight = useRef(false);
-  const initialTargetHandled = useRef(false);
 
   const announce = (message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -302,29 +312,6 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
-  useEffect(() => {
-    if (initialTargetHandled.current || !initialItem || !initialItemKind) return;
-    initialTargetHandled.current = true;
-    if (initialItemKind === "task") {
-      const task = data.tasks.find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase());
-      if (!task) return;
-      setActiveView("tasks");
-      if (data.workspace.kind === "GROUP") setCollaborationTask(task);
-      else setEditor({ kind: "task", item: task });
-      return;
-    }
-    if (initialItemKind === "note") {
-      const note = data.notes.find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase());
-      if (note) { setActiveView("notes"); setEditor({ kind: "note", item: note }); }
-      return;
-    }
-    if (initialItemKind === "idea") {
-      const idea = data.ideas.find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase());
-      if (idea) { setActiveView("ideas"); setEditor({ kind: "idea", item: idea }); }
-      return;
-    }
-    if (initialItemKind === "image") setActiveView("images");
-  }, [data, initialItem, initialItemKind]);
   useEffect(() => {
     const url = new URL(window.location.href);
     const provider = url.searchParams.get("integration");
@@ -1369,7 +1356,13 @@ function EntityEditor({ state, busy, currency, timezone, onClose, onSave, onDele
   const dialogRef = useRef<HTMLElement | null>(null);
   useModalFocus(dialogRef, undefined, onClose);
   const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); let values: Record<string, unknown> = {};
-    if (state.kind === "task") values = { title: form.get("title"), description: form.get("description") || undefined, dueAt: form.get("dueAt") ? zonedInputToIso(String(form.get("dueAt")), timezone) : null, reminderIntervalMinutes: form.get("reminder") ? Number(form.get("reminder")) : undefined };
+    if (state.kind === "task") values = {
+      title: form.get("title"),
+      description: form.get("description") || undefined,
+      dueAt: form.get("dueAt") ? zonedInputToIso(String(form.get("dueAt")), timezone) : null,
+      reminderIntervalMinutes: form.get("reminder") ? Number(form.get("reminder")) : undefined,
+      reminderTimes: form.getAll("reminderTimes").map(String).filter(Boolean).map((value) => zonedInputToIso(value, timezone)),
+    };
     if (state.kind === "note") values = { title: form.get("title"), body: form.get("body"), tags: String(form.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean), pinned: form.get("pinned") === "on" };
     if (state.kind === "idea") values = { title: form.get("title"), concept: form.get("concept"), tags: String(form.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean), status: form.get("status"), pinned: form.get("pinned") === "on" };
     if (state.kind === "expense") values = { merchant: form.get("merchant") || undefined, description: form.get("description"), total: Number(form.get("total")), currency: form.get("currency"), category: form.get("category") || undefined, transactionAt: zonedInputToIso(String(form.get("transactionAt")), timezone), paymentMethod: form.get("paymentMethod") || undefined, notes: form.get("notes") || undefined };
@@ -1377,13 +1370,21 @@ function EntityEditor({ state, busy, currency, timezone, onClose, onSave, onDele
     onSave(state.kind, values, item);
   };
   return <div className="tw-modal-overlay" onMouseDown={onClose}><section ref={dialogRef} className="tw-sheet" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}><header><div><span>{state.kind}</span><h2>{title}</h2></div><button onClick={onClose} aria-label="Close"><X size={20} /></button></header><form onSubmit={submit}>
-    {state.kind === "task" && <><label>Task title<input name="title" required maxLength={500} autoFocus defaultValue={(item as DashboardTask | undefined)?.title ?? state.seed ?? ""} /></label><label>Details<textarea name="description" maxLength={5000} defaultValue={(item as DashboardTask | undefined)?.description ?? ""} /></label><div className="tw-form-row"><label>Due date &amp; time<input name="dueAt" type="datetime-local" defaultValue={zonedInputDate((item as DashboardTask | undefined)?.dueAt, timezone)} /></label><label>Reminder rhythm<select name="reminder" defaultValue={(item as DashboardTask | undefined)?.reminderIntervalMinutes ?? ""}><option value="">Use my default</option><option value="60">Every hour</option><option value="180">Every 3 hours</option><option value="360">Every 6 hours</option><option value="1440">Daily</option></select></label></div><p className="tw-form-help"><Bell size={14} /> Times use your Threadwise timezone ({timezone}). A task can have a due time; reminders bring it back when useful.</p></>}
+    {state.kind === "task" && <><label>Task title<input name="title" required maxLength={500} autoFocus defaultValue={(item as DashboardTask | undefined)?.title ?? state.seed ?? ""} /></label><label>Details<textarea name="description" maxLength={5000} defaultValue={(item as DashboardTask | undefined)?.description ?? ""} /></label><div className="tw-form-row"><label>Deadline<input name="dueAt" type="datetime-local" defaultValue={zonedInputDate((item as DashboardTask | undefined)?.dueAt, timezone)} /></label><label>Automatic reminder rhythm<select name="reminder" defaultValue={(item as DashboardTask | undefined)?.reminderIntervalMinutes ?? ""}><option value="">Use my default</option><option value="60">Every hour</option><option value="180">Every 3 hours</option><option value="360">Every 6 hours</option><option value="1440">Daily</option></select></label></div><TaskReminderFields initial={(item as DashboardTask | undefined)?.reminderTimes ?? []} timezone={timezone} /><p className="tw-form-help"><Bell size={14} /> Times use your Threadwise timezone ({timezone}). Automatic reminders ramp up near the deadline; the exact times above are always kept.</p></>}
     {state.kind === "note" && <><label>Title<input name="title" required maxLength={500} autoFocus defaultValue={(item as DashboardNote | undefined)?.title ?? (state.seed ? state.seed.slice(0, 80) : "")} /></label><label>Note<textarea name="body" required maxLength={50000} rows={8} defaultValue={(item as DashboardNote | undefined)?.body ?? (item as DashboardNote | undefined)?.summary ?? state.seed ?? ""} /></label><label>Tags <small>comma-separated</small><input name="tags" defaultValue={(item as DashboardNote | undefined)?.tags.join(", ") ?? ""} /></label><label className="tw-checkbox"><input type="checkbox" name="pinned" defaultChecked={(item as DashboardNote | undefined)?.pinned} /> Pin this note</label></>}
     {state.kind === "idea" && <><label>Idea title<input name="title" required maxLength={500} autoFocus defaultValue={(item as DashboardIdea | undefined)?.title ?? state.seed ?? ""} /></label><label>Concept<textarea name="concept" required maxLength={20000} rows={7} defaultValue={(item as DashboardIdea | undefined)?.concept ?? state.seed ?? ""} /></label><div className="tw-form-row"><label>Stage<select name="status" defaultValue={(item as DashboardIdea | undefined)?.status ?? "RAW"}>{IDEA_STATUSES.map((status) => <option key={status} value={status}>{status.toLowerCase()}</option>)}</select></label><label>Tags<input name="tags" defaultValue={(item as DashboardIdea | undefined)?.tags.join(", ") ?? ""} /></label></div><label className="tw-checkbox"><input type="checkbox" name="pinned" defaultChecked={(item as DashboardIdea | undefined)?.pinned} /> Pin this idea</label></>}
     {state.kind === "expense" && <><div className="tw-form-row"><label>Merchant<input name="merchant" autoFocus defaultValue={(item as DashboardExpense | undefined)?.merchant ?? ""} /></label><label>Total<input name="total" type="number" required min="0" step="0.01" defaultValue={(item as DashboardExpense | undefined)?.total ?? ""} /></label></div><label>Description<input name="description" required maxLength={5000} defaultValue={(item as DashboardExpense | undefined)?.description ?? ""} /></label><div className="tw-form-row"><label>Date &amp; time<input name="transactionAt" required type="datetime-local" defaultValue={zonedInputDate((item as DashboardExpense | undefined)?.transactionAt ?? new Date().toISOString(), timezone)} /></label><label>Currency<input name="currency" required minLength={3} maxLength={3} defaultValue={(item as DashboardExpense | undefined)?.currency ?? currency} /></label></div><div className="tw-form-row"><label>Category<input name="category" defaultValue={(item as DashboardExpense | undefined)?.category ?? ""} /></label><label>Payment method<input name="paymentMethod" defaultValue={(item as DashboardExpense | undefined)?.paymentMethod ?? ""} /></label></div><label>Notes<textarea name="notes" defaultValue={(item as DashboardExpense | undefined)?.notes ?? ""} /></label></>}
     {state.kind === "image" && <><div className="tw-image-form-preview"><ImageIcon size={25} /><span>{(item as DashboardImage).fileName ?? (item as DashboardImage).publicId}</span></div><label>Caption<textarea name="caption" rows={4} autoFocus defaultValue={(item as DashboardImage).caption ?? ""} /></label>{(item as DashboardImage).ocrText && <div className="tw-ocr-copy"><span>Text found in this image</span><p>{(item as DashboardImage).ocrText}</p></div>}</>}
     <footer>{item && <button type="button" className="tw-danger-quiet" onClick={() => onDelete(state.kind, item)}><Trash2 size={16} /> {state.kind === "note" ? "Delete" : ["task", "idea"].includes(state.kind) ? "Archive" : "Delete"}</button>}{state.kind === "idea" && item && <button type="button" className="tw-secondary" onClick={() => onConvert(item as DashboardIdea)}><Zap size={15} /> Make task</button>}<span /><button type="button" className="tw-secondary" onClick={onClose}>Cancel</button><button className="tw-primary" disabled={busy}>{busy ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save</button></footer>
   </form></section></div>;
+}
+
+function TaskReminderFields({ initial, timezone }: { initial: string[]; timezone: string }) {
+  const [rows, setRows] = useState(() => initial.map((value, index) => ({ id: `initial-${index}`, value: zonedInputDate(value, timezone) })));
+  const add = () => setRows((current) => current.length >= 20 ? current : [...current, { id: `new-${Date.now()}-${current.length}`, value: "" }]);
+  const update = (id: string, value: string) => setRows((current) => current.map((row) => row.id === id ? { ...row, value } : row));
+  const remove = (id: string) => setRows((current) => current.filter((row) => row.id !== id));
+  return <fieldset className="tw-task-reminders"><legend><span>Exact reminders</span><small>Optional · up to 20</small></legend>{rows.map((row, index) => <div key={row.id}><label><span>Reminder {index + 1}</span><input name="reminderTimes" type="datetime-local" value={row.value} onChange={(event) => update(row.id, event.target.value)} /></label><button type="button" onClick={() => remove(row.id)} aria-label={`Remove reminder ${index + 1}`}><X size={16} /></button></div>)}<button type="button" className="tw-secondary" onClick={add} disabled={rows.length >= 20}><Plus size={15} /> Add reminder</button></fieldset>;
 }
 
 function CommandPalette({ data, items, onClose, onNavigate }: { data: DashboardSnapshot; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) {

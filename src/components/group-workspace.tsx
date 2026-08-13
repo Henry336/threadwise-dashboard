@@ -29,7 +29,8 @@ type Collaboration = NonNullable<DashboardSnapshot["collaboration"]>;
 type Member = Collaboration["members"][number];
 export type GroupTaskScope = "all" | "mine" | "unassigned" | `member:${string}`;
 export type CollaborationPayload = {
-  action: "assign" | "unassign" | "claim";
+  action: "set-audience" | "assign" | "unassign" | "claim";
+  audience?: "UNASSIGNED" | "EVERYONE";
   assigneeId?: string;
   targetTelegramId?: string;
   reason?: string;
@@ -60,7 +61,7 @@ export function GroupOverview({
   ];
   const needsAttention = data.tasks
     .filter((task) => task.status === "OPEN" && (
-      !(task.assignees ?? []).length
+      task.audience === "UNASSIGNED"
       || Boolean(task.dueAt && new Date(task.dueAt).getTime() < generatedAt)
     ))
     .slice(0, 5);
@@ -181,7 +182,7 @@ export function GroupTasksView({
     if (!`${task.title} ${task.description ?? ""} ${task.publicId}`.toLowerCase().includes(query.toLowerCase())) return false;
     const assignees = task.assignees ?? [];
     if (scope === "mine") return assignees.some((item) => item.telegramId === viewer);
-    if (scope === "unassigned") return !assignees.length;
+    if (scope === "unassigned") return task.audience === "UNASSIGNED";
     if (memberScope) return assignees.some((item) => item.telegramId === memberScope);
     return task.status !== "CANCELED";
   }).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || +(new Date(b.createdAt ?? 0)) - +(new Date(a.createdAt ?? 0)));
@@ -199,7 +200,7 @@ export function GroupTasksView({
       return <article key={task.id} className={task.status === "DONE" ? "done" : ""} style={{ "--group-index": index } as React.CSSProperties} onContextMenu={(event) => { event.preventDefault(); onManage(task); }}>
         {canComplete ? <button className="tw-group-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={16} /></button> : <span className="tw-group-task-check" aria-hidden="true"><CircleUserRound size={16} /></span>}
         <button className="tw-group-task-copy" onClick={() => onManage(task)}><span><em>{task.publicId}</em></span><h3>{task.title}</h3><p>{task.description || "No extra details yet."}</p><small>{task.dueAt ? new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(task.dueAt)) : "No due date"}</small></button>
-        <div className="tw-group-task-owners"><span className="tw-group-owner-stack"><AssigneeStack assignees={assignees} limit={4} />{task.teamOwnerLabel && <small>{task.teamOwnerLabel}</small>}</span><button onClick={() => onManage(task)}><MoreHorizontal size={18} /><span>Assignments</span></button></div>
+        <div className="tw-group-task-owners"><span className="tw-group-owner-stack">{task.audience === "EVERYONE" ? <span className="tw-assignee-empty"><UsersRound size={14} /> Everyone</span> : <AssigneeStack assignees={assignees} limit={4} />}{task.teamOwnerLabel && <small>{task.teamOwnerLabel}</small>}</span><button onClick={() => onManage(task)}><MoreHorizontal size={18} /><span>Assignments</span></button></div>
         <div className="tw-group-task-actions">{canEdit && <button onClick={() => onEdit(task)}><Pencil size={14} /> Edit</button>}<button onClick={() => onManage(task)}><UsersRound size={14} /> View task</button></div>
       </article>;
     })}</div>
@@ -265,12 +266,16 @@ export function TaskCollaborationSheet({
   return <div className="tw-collab-overlay" onMouseDown={onClose}>
     <section className="tw-collab-sheet" role="dialog" aria-modal="true" aria-label={`Assignments for ${task.title}`} onMouseDown={(event) => event.stopPropagation()}>
       <header><div><span>{task.publicId}</span><h2>{task.title}</h2><p>Assignments take effect immediately and stay in sync with Telegram.</p></div><button onClick={onClose} aria-label="Close assignment panel"><X size={20} /></button></header>
+      {canManage && <div className="tw-collab-audience" role="group" aria-label="Who this task is for">
+        <button className={task.audience === "EVERYONE" ? "active" : ""} disabled={busy} onClick={() => onAction({ action: "set-audience", audience: "EVERYONE" })}><UsersRound size={16} /><span><b>Everyone</b><small>A shared obligation for the whole group</small></span></button>
+        <button className={task.audience === "UNASSIGNED" ? "active" : ""} disabled={busy} onClick={() => onAction({ action: "set-audience", audience: "UNASSIGNED" })}><CircleUserRound size={16} /><span><b>Unassigned</b><small>Open for one person to claim</small></span></button>
+      </div>}
       <div className="tw-collab-assignees">
         {assignees.map((assignee) => <article key={assignee.id}>
             <div className="tw-collab-person"><span>{initials(assignee.displayName)}</span><div><b>{assignee.displayName}</b><small data-status={assignee.status}>{statusLabel(assignee)}</small></div></div>
             {canManage && <div className="tw-collab-actions"><button className="quiet" disabled={busy} onClick={() => onAction({ action: "unassign", assigneeId: assignee.id })}>Remove</button></div>}
           </article>)}
-        {!assignees.length && <div className="tw-collab-empty"><UsersRound size={22} /><b>Unassigned</b><span>{canManage ? "Choose an active member below, or leave it open for someone to claim." : "Claim this task if you are taking it."}</span>{!canManage && <button className="tw-primary" disabled={busy} onClick={() => onAction({ action: "claim" })}>Claim task</button>}</div>}
+        {!assignees.length && <div className="tw-collab-empty"><UsersRound size={22} /><b>{task.audience === "EVERYONE" ? "Everyone" : "Unassigned"}</b><span>{task.audience === "EVERYONE" ? "Every group member is expected to take part." : canManage ? "Choose a specific member below, or leave it open for someone to claim." : "Claim this task if you are taking it."}</span>{!canManage && task.audience === "UNASSIGNED" && <button className="tw-primary" disabled={busy} onClick={() => onAction({ action: "claim" })}>Claim task</button>}</div>}
       </div>
       {canManage ? <footer><label><UserPlus size={16} /><select value={target} onChange={(event) => setTarget(event.target.value)}><option value="">Add an assignee…</option>{available.map((member) => <option key={member.telegramId} value={member.telegramId}>{member.displayName}</option>)}</select></label><button className="tw-primary" disabled={busy || !target} onClick={() => onAction({ action: "assign", targetTelegramId: target })}>Assign</button></footer> : assignees.length > 0 ? <footer className="tw-collab-member-note"><ShieldCheck size={16} /><span><b>Assigned</b><small>The creator or a current Telegram group administrator can reassign this task.</small></span></footer> : null}
     </section>
@@ -291,18 +296,22 @@ function MemberAvatar({ member }: { member: Member }) {
 }
 
 function TaskGlyph({ task }: { task: DashboardTask }) {
-  const assigned = (task.assignees ?? []).length > 0;
+  const assigned = task.audience === "EVERYONE" || (task.assignees ?? []).length > 0;
   return <span className="tw-task-glyph" data-state={assigned ? "ready" : "unassigned"}>{assigned ? <ShieldCheck size={16} /> : <CircleUserRound size={16} />}</span>;
 }
 
 function taskAttention(task: DashboardTask): string {
   const assignees = task.assignees ?? [];
+  if (task.audience === "EVERYONE") return "Everyone";
   if (!assignees.length) return "Needs an owner";
   if (task.dueAt && new Date(task.dueAt).getTime() < Date.now()) return "Overdue";
   return "Assigned";
 }
 
-function statusLabel(_assignee: DashboardTaskAssignee): string {
+function statusLabel(assignee: DashboardTaskAssignee): string {
+  if (assignee.status === "BLOCKED") return "Blocked";
+  if (assignee.status === "DECLINED") return "Declined";
+  if (assignee.status === "PENDING") return "Awaiting response";
   return "Assigned";
 }
 

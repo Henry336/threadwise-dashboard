@@ -39,7 +39,9 @@ export type DashboardTask = {
   nextReminderAt?: string;
   snoozedUntil?: string;
   reminderIntervalMinutes?: number;
+  reminderTimes?: string[];
   status: "OPEN" | "DONE" | "CANCELED";
+  audience?: "UNASSIGNED" | "EVERYONE" | "ASSIGNEES";
   recurrenceRule?: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
   recurring?: boolean;
   pinned?: boolean;

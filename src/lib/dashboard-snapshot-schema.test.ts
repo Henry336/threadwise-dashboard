@@ -78,6 +78,22 @@ describe("dashboard snapshot contract", () => {
     expect(parsed.tasks[0]?.snoozedUntil).toBe("2026-07-17T13:00:00.000Z");
   });
 
+  it("preserves explicit task audiences and multiple reminder moments", () => {
+    const parsed = parseDashboardSnapshot({
+      ...snapshot("03:00", "06:00"),
+      tasks: [{
+        id: "task-2",
+        publicId: "TASK-2",
+        title: "Attend the workshop",
+        status: "OPEN",
+        audience: "EVERYONE",
+        reminderTimes: ["2026-08-16T13:00:00.000Z", "2026-08-17T01:00:00.000Z"],
+      }],
+    });
+    expect(parsed.tasks[0]?.audience).toBe("EVERYONE");
+    expect(parsed.tasks[0]?.reminderTimes).toHaveLength(2);
+  });
+
   it("preserves saved idea briefs and image favourites", () => {
     const brief = {
       buildability: 8, usefulness: 9, novelty: 7, portfolioValue: 8,
