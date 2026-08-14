@@ -2,7 +2,7 @@
 /* Telegram-hosted resource previews stay on the authenticated same-origin proxy. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, AlertTriangle, Archive, ArrowRight, BookOpen, Brain, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, ExternalLink,
@@ -15,6 +15,7 @@ import { IntegerInput } from "./integer-input";
 import { ThreadwiseMark } from "./threadwise-mark";
 import { StudyTimetable } from "./study-timetable";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
+import { StudyChoicePicker } from "./study-choice-picker";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
 import type {
   StudyAnalysisEvidence, StudyAnalysisFinding, StudyAnalysisMode, StudyAnalysisQuizItem, StudyItem, StudyItemType, StudyMistake, StudyModule, StudyModuleAnalysisResponse, StudyNoteEditSuggestion,
@@ -756,88 +757,6 @@ function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusSt
     <fieldset><legend>Focus structure</legend><div className="study-method-options">{FOCUS_STRUCTURES.map((option) => <label key={option.id} className={focusStructure === option.id ? "selected" : ""}><input type="radio" name="focus-structure" value={option.id} checked={focusStructure === option.id} onChange={() => onFocusStructure(option.id)} /><span><b>{option.label}</b><small>{option.note}</small></span></label>)}</div></fieldset>
     <fieldset><legend>Techniques <small>Select any that apply</small></legend><div className="study-technique-options">{STUDY_TECHNIQUES.map((technique) => <button type="button" key={technique} aria-pressed={techniques.includes(technique)} onClick={() => onTechniques(techniques.includes(technique) ? techniques.filter((value) => value !== technique) : [...techniques, technique])}>{techniques.includes(technique) && <Check size={14} />}{technique}</button>)}</div></fieldset>
     <label>Custom method or session topic<input value={customMethod} onChange={(event) => onCustomMethod(event.target.value)} placeholder="Optional" /></label>
-  </div>;
-}
-
-function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, allowEmpty = true, onChange }: {
-  label: string;
-  value: string;
-  placeholder?: string;
-  options: Array<{ value: string; label: string; detail?: string }>;
-  disabled?: boolean;
-  searchable?: boolean;
-  allowEmpty?: boolean;
-  onChange: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const listboxId = useId();
-  const selected = options.find((option) => option.value === value);
-  const visible = options.filter((option) => !query || `${option.label} ${option.detail ?? ""}`.toLowerCase().includes(query.toLowerCase()));
-  const optionCount = visible.length + (allowEmpty ? 1 : 0);
-  const selectedIndex = Math.max(0, visible.findIndex((option) => option.value === value) + (allowEmpty ? 1 : 0));
-  const close = (returnFocus = false) => {
-    setOpen(false);
-    setQuery("");
-    if (returnFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
-  };
-  const focusOption = (index: number) => window.requestAnimationFrame(() => optionRefs.current[index]?.focus());
-  const openAt = (index: number) => {
-    setOpen(true);
-    focusOption(Math.max(0, Math.min(index, optionCount - 1)));
-  };
-  const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === "Escape" && open) {
-      event.preventDefault();
-      close(true);
-      return;
-    }
-    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    event.preventDefault();
-    openAt(event.key === "ArrowDown" ? selectedIndex : optionCount - 1);
-  };
-  const onListboxKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      close(true);
-      return;
-    }
-    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-    event.preventDefault();
-    const lastIndex = optionCount - 1;
-    const currentIndex = optionRefs.current.findIndex((entry) => entry === document.activeElement);
-    if (event.key === "Home") focusOption(0);
-    else if (event.key === "End") focusOption(lastIndex);
-    else if (event.key === "ArrowDown") focusOption(currentIndex < 0 || currentIndex >= lastIndex ? 0 : currentIndex + 1);
-    else focusOption(currentIndex <= 0 ? lastIndex : currentIndex - 1);
-  };
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
-  return <div className="study-choice-field" ref={rootRef}>
-    <span>{label}</span>
-    <button ref={triggerRef} type="button" className="study-choice-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined} onClick={() => open ? close() : setOpen(true)} onKeyDown={onTriggerKeyDown}>
-      <span><b>{selected?.label ?? placeholder}</b>{selected?.detail && <small>{selected.detail}</small>}</span><ChevronDown size={16} />
-    </button>
-    {open && <div id={listboxId} className="study-choice-popover" role="listbox" aria-label={label} onKeyDown={onListboxKeyDown}>
-      {searchable && <label><Search size={15} /><span className="sr-only">Search {label.toLowerCase()}</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} /></label>}
-      <div>
-        {allowEmpty && <button ref={(element) => { optionRefs.current[0] = element; }} type="button" role="option" aria-selected={!value} onClick={() => { onChange(""); close(true); }}><span><b>{placeholder}</b></span>{!value && <Check size={15} />}</button>}
-        {visible.map((option, index) => <button ref={(element) => { optionRefs.current[index + (allowEmpty ? 1 : 0)] = element; }} type="button" key={option.value} role="option" aria-selected={option.value === value} onClick={() => { onChange(option.value); close(true); }}><span><b>{option.label}</b>{option.detail && <small>{option.detail}</small>}</span>{option.value === value && <Check size={15} />}</button>)}
-        {!visible.length && <p>No matching options.</p>}
-      </div>
-    </div>}
   </div>;
 }
 

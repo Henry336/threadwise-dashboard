@@ -15,6 +15,7 @@ import {
 } from "@/lib/study-timetable";
 import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientation } from "@/lib/study-preferences";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
+import { StudyChoicePicker, StudyTimePicker } from "./study-choice-picker";
 import { IntegerInput } from "./integer-input";
 import { clampInteger, normalizeIntegerDraft } from "@/lib/numeric-input";
 
@@ -23,6 +24,15 @@ type WeekOrientation = StudyOrientation;
 
 const VERTICAL_MINUTE_SCALE = 1.05;
 const HORIZONTAL_MINUTE_SCALE = 1.35;
+const TIMETABLE_DAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((label, index) => ({ value: String(index + 1), label }));
+const TIMETABLE_TYPE_OPTIONS = [
+  { value: "class", label: "Class" },
+  { value: "lecture", label: "Lecture" },
+  { value: "tutorial", label: "Tutorial" },
+  { value: "lab", label: "Lab" },
+  { value: "study", label: "Study block" },
+  { value: "other", label: "Other" },
+];
 
 type Props = {
   study: StudySnapshot;
@@ -186,9 +196,9 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       <section className="study-day-agenda" aria-label={`${activeDay.longLabel} agenda`}>
         <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={15} /> Add block</button></header>
         {activeDay.blocks.length === 0 && activeDay.dueItems.length === 0 ? <div className="study-agenda-empty"><CalendarDays size={23} /><b>Nothing scheduled.</b><p>Keep the space open or add a study block.</p></div> : <>
-          {activeDay.blocks.map((block) => <article className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties}>
-            <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div><button onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })} aria-label={`View ${block.label}`}><ChevronRight size={17} /></button>
-          </article>)}
+          {activeDay.blocks.map((block) => <button className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })} aria-label={`View ${block.label}`}>
+            <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div><span className="study-agenda-block-arrow" aria-hidden="true"><ChevronRight size={17} /></span>
+          </button>)}
           {activeDay.dueItems.length > 0 && <div className="study-agenda-due"><span>Deadlines</span>{activeDay.dueItems.map((item) => <article key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties}><button onClick={() => onEditItem(item)}><small>{item.module.code} · {item.plannedMinutes ? `${item.plannedMinutes} min` : "unestimated"}</small><b>{item.title}</b></button><button onClick={() => onFocusItem(item)} aria-label={`Focus on ${item.title}`}><Focus size={16} /></button></article>)}</div>}
         </>}
       </section>
@@ -481,13 +491,13 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
       <header><div><span>{block ? "Edit block" : "New block"}</span><h2 id="timetable-editor-title">{block ? block.label : "Add to the timetable"}</h2></div><button onClick={onClose} disabled={busy} aria-label="Close editor"><X size={20} /></button></header>
       <form onSubmit={submit}>
         <label className="wide">Label<input autoFocus required maxLength={200} value={label} onChange={(event) => setLabel(event.target.value)} placeholder="CS2100 lecture" /></label>
-        <label>Module<select value={moduleId} onChange={(event) => setModuleId(event.target.value)}><option value="">No module</option>{study.modules.map((module) => <option key={module.id} value={module.id}>{module.code} · {module.name}</option>)}</select></label>
-        <label>Type<select value={blockType} onChange={(event) => setBlockType(event.target.value)}><option value="class">Class</option><option value="lecture">Lecture</option><option value="tutorial">Tutorial</option><option value="lab">Lab</option><option value="study">Study block</option><option value="other">Other</option></select></label>
-        <label>Day<select value={day} onChange={(event) => setDay(Number(event.target.value))}>{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>
-        <label>Starts<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} /></label>
-        <label>Ends<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
+        <StudyChoicePicker label="Module" value={moduleId} placeholder="No module" searchable options={study.modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} onChange={setModuleId} />
+        <StudyChoicePicker label="Type" value={blockType} options={TIMETABLE_TYPE_OPTIONS} allowEmpty={false} onChange={setBlockType} />
+        <StudyChoicePicker label="Day" value={String(day)} options={TIMETABLE_DAY_OPTIONS} allowEmpty={false} onChange={(value) => setDay(Number(value))} />
+        <StudyTimePicker label="Starts" value={start} onChange={setStart} />
+        <StudyTimePicker label="Ends" value={end} onChange={setEnd} />
         <div className="study-timetable-weeks"><label>From week<input type="text" inputMode="numeric" pattern="[0-9]*" value={startWeek} onChange={(event) => setStartWeek(normalizeIntegerDraft(event.target.value))} onBlur={() => startWeek && setStartWeek(String(clampInteger(Number(startWeek), 1, 80)))} placeholder="1" /></label><span>to</span><label>Until week<input type="text" inputMode="numeric" pattern="[0-9]*" value={endWeek} onChange={(event) => setEndWeek(normalizeIntegerDraft(event.target.value))} onBlur={() => endWeek && setEndWeek(String(clampInteger(Number(endWeek), 1, 80)))} placeholder="13" /></label></div>
-        <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><StudyPlaceCombobox value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} /><label>Usual origin<select value={originId} onChange={(event) => setOriginId(event.target.value)}><option value="">Current/default origin</option>{study.origins.map((origin) => <option key={origin.id} value={origin.id}>{origin.name}</option>)}</select></label><label>Travel buffer<IntegerInput min={0} max={90} value={buffer} onValueChange={setBuffer} aria-label="Travel buffer" /></label></div>
+        <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><StudyPlaceCombobox value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} /><StudyChoicePicker label="Usual origin" value={originId} placeholder="Current/default origin" options={study.origins.map((origin) => ({ value: origin.id, label: origin.name }))} onChange={setOriginId} /><label>Travel buffer<IntegerInput min={0} max={90} value={buffer} onValueChange={setBuffer} aria-label="Travel buffer" /></label></div>
         <footer><span /><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : block ? "Save changes" : "Save block"}</button></div></footer>
       </form>
     </section>

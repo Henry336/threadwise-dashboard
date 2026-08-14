@@ -75,6 +75,15 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-15 (Codex, validated locally):** Replaced every browser-native selector in the Study
+  timetable block editor (module, type, day, start/end time, and usual origin) with the shared
+  accessible Threadwise choice popover; existing non-quarter-hour values remain selectable. The
+  laptop day agenda now opens block details from the entire keyboard-accessible row. Personal
+  Reminder settings now distinguish regular follow-ups from near-deadline warnings, explain the
+  ordinary-reminder safety limit accurately, and keep neighboring numeric inputs at one control
+  height. The shared personal/group exact-reminder editor is compact when empty and reveals rows
+  only when added. All 87 tests, TypeScript, full ESLint, production build, and diff checks pass.
+
 - **2026-08-14 (Codex, validated locally):** Corrected the live Review, timetable, and Ari defects.
   Top three is now one semantic form with aligned content and a distinct desktop/mobile action footer.
   Horizontal cards reserve up to three lines for the real title before optional module/location data;

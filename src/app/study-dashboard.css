@@ -1404,14 +1404,16 @@
 .study-day-agenda > header span { color: var(--study-blue); font-size: 10px; font-weight: 820; letter-spacing: .09em; text-transform: uppercase; }
 .study-day-agenda > header h2 { margin: 3px 0 0; font-family: var(--serif); font-size: 27px; font-weight: 470; }
 .study-day-agenda > header button { min-height: 39px; padding: 0 13px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 750; }
-.study-agenda-block { min-height: 92px; padding: 13px 18px; display: grid; grid-template-columns: 90px minmax(0, 1fr) 40px; align-items: center; gap: 14px; border-bottom: 1px solid color-mix(in srgb, var(--module-color) 24%, var(--line)); }
+.study-agenda-block { width: 100%; min-height: 92px; padding: 13px 18px; display: grid; grid-template-columns: 90px minmax(0, 1fr) 40px; align-items: center; gap: 14px; border-bottom: 1px solid color-mix(in srgb, var(--module-color) 24%, var(--line)); background: transparent; color: var(--ink); text-align: left; transition: background 140ms ease; }
+.study-agenda-block:hover { background: color-mix(in srgb, var(--module-color) 6%, var(--surface)); }
+.study-agenda-block:focus-visible { position: relative; z-index: 1; outline: 3px solid color-mix(in srgb, var(--study-blue) 52%, transparent); outline-offset: -3px; }
 .study-agenda-block time { display: grid; gap: 4px; font-size: 12px; font-weight: 780; font-variant-numeric: tabular-nums; }
 .study-agenda-block time span { color: var(--faint); font-size: 10px; font-weight: 550; }
 .study-agenda-block > div { min-width: 0; }
 .study-agenda-block > div > span { color: var(--module-color); font-size: 9px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
 .study-agenda-block h3 { margin: 4px 0; overflow: hidden; font-family: var(--serif); font-size: 22px; font-weight: 470; text-overflow: ellipsis; white-space: nowrap; }
 .study-agenda-block p { margin: 0; display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
-.study-agenda-block > button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); }
+.study-agenda-block-arrow { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
 .study-agenda-due { padding: 17px 18px 20px; display: grid; gap: 8px; background: var(--surface-soft); }
 .study-agenda-due > article { min-height: 68px; display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: stretch; border: 1px solid color-mix(in srgb, var(--module-color) 30%, var(--line)); background: var(--surface); }
 .study-agenda-due article > button:first-child { min-width: 0; padding: 10px 13px; display: grid; gap: 4px; background: transparent; color: var(--ink); text-align: left; }

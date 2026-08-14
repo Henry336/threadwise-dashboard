@@ -34,6 +34,29 @@ describe("Study UI regressions", () => {
     expect(analysis).not.toContain("<select");
   });
 
+  it("uses branded choice controls throughout the timetable block editor", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
+    const editor = component.slice(component.indexOf("function TimetableEditor"));
+
+    expect(editor).toContain('<StudyChoicePicker label="Module"');
+    expect(editor).toContain('<StudyChoicePicker label="Type"');
+    expect(editor).toContain('<StudyChoicePicker label="Day"');
+    expect(editor).toContain('<StudyTimePicker label="Starts"');
+    expect(editor).toContain('<StudyTimePicker label="Ends"');
+    expect(editor).toContain('<StudyChoicePicker label="Usual origin"');
+    expect(editor).not.toContain("<select");
+    expect(editor).not.toContain('type="time"');
+  });
+
+  it("opens day-agenda block details from the entire row", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
+    const agenda = component.slice(component.indexOf('className="study-day-agenda"'), component.indexOf("{panel.mode === \"details\""));
+
+    expect(agenda).toContain('<button className="study-agenda-block"');
+    expect(agenda).toContain('onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })}');
+    expect(agenda).not.toContain('<article className="study-agenda-block"');
+  });
+
   it("keeps the top-three plan at its content height", () => {
     const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
     const ruleStart = css.indexOf(".study-plan { grid-column: 2;");
