@@ -69,4 +69,20 @@ describe("Study UI regressions", () => {
     const planRules = css.slice(css.indexOf(".study-plan { grid-column: 2;"), css.indexOf(".study-search-box"));
     expect(planRules).not.toContain("padding-left: 46px");
   });
+
+  it("keeps weekly review chrome fixed while module signals scroll independently", () => {
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+    const overlay = css.slice(css.indexOf(".study-sheet-overlay {"), css.indexOf(".study-sheet {"));
+    const wideSheet = css.slice(css.lastIndexOf(".study-sheet.wide {", css.indexOf(".study-review-wizard")), css.indexOf(".study-review-wizard"));
+    const wizard = css.slice(css.indexOf(".study-review-wizard {"), css.indexOf(".study-review-progress {"));
+    const step = css.slice(css.indexOf(".study-review-step {"), css.indexOf(".study-review-step > div:first-child"));
+
+    expect(overlay).not.toContain("backdrop-filter");
+    expect(wideSheet).toContain("grid-template-rows: auto minmax(0, 1fr)");
+    expect(wideSheet).toContain("width: max(920px, 56vw)");
+    expect(wizard).toContain("grid-template-rows: auto minmax(0, 1fr) auto");
+    expect(step).toContain("overflow-y: auto");
+    expect(step).toContain("overscroll-behavior: contain");
+    expect(css).toContain(".study-review-wizard > footer");
+  });
 });
