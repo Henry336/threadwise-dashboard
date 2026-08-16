@@ -75,11 +75,12 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-16 (Codex, validated locally):** Weekly review now uses a uniform non-blurred scrim, a
+- **2026-08-16 (Codex, deployed):** Weekly review now uses a uniform non-blurred scrim, a
   zoom-resilient proportional wide sheet, and fixed header/progress/footer rows around one bounded
   scrollable step body. A fourteen-module browser fixture reaches the final row at both normal and
   expanded CSS viewports without moving the wizard chrome. All 88 tests, TypeScript, full ESLint,
-  optimized production build, and diff checks pass; commit/push and Vercel verification remain.
+  optimized production build, and diff checks pass. Runtime commit `d928ef9` is pushed to
+  `origin/main`; Vercel reports success and the canonical `/dashboard` route returns HTTP 200.
 
 - **2026-08-15 (Codex, validated locally):** Replaced every browser-native selector in the Study
   timetable block editor (module, type, day, start/end time, and usual origin) with the shared
