@@ -34,6 +34,19 @@ describe("Study UI regressions", () => {
     expect(analysis).not.toContain("<select");
   });
 
+  it("uses the branded module picker in Study Work without changing the persisted all value", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const work = component.slice(component.indexOf("function Work("), component.indexOf("function LibraryView("));
+
+    expect(work).toContain('<StudyChoicePicker');
+    expect(work).toContain('label="Module filter"');
+    expect(work).toContain('placeholder="All modules"');
+    expect(work).toContain('value={moduleFilter === "all" ? "" : moduleFilter}');
+    expect(work).toContain('onChange={(next) => onModuleFilter(next || "all")}');
+    expect(work).not.toContain("<ModuleSelect");
+    expect(work).not.toContain("<select");
+  });
+
   it("uses branded choice controls throughout the timetable block editor", () => {
     const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
     const editor = component.slice(component.indexOf("function TimetableEditor"));

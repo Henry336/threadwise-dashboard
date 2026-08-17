@@ -5,6 +5,12 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-17 (Codex):** Replaced the Study Work module filter's browser-native menu with the
+  existing accessible branded `StudyChoicePicker` on guarded branch
+  `codex/post-phase7-work-filter-audit`, preserving the internal `all` value and responsive layout.
+  Dashboard validation passes 119 tests, 52 focused security checks, 5 Playwright checks with one
+  intentional skip, typecheck/lint/build, secret scan, and both zero-finding dependency audits. The
+  paired backend report is `docs/POST_PHASE7_CODEBASE_AUDIT.md`; nothing was deployed.
 - **2026-08-17 (Codex):** Completed the Phase 7 public Study dashboard architecture boundary on
   guarded branch `codex/phase7-public-study-architecture` in commit `16687b3`, paired with backend
   architecture `77739bd`. It preserves the BFF as the credential-free browser boundary, treats the

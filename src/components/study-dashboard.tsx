@@ -371,7 +371,13 @@ function Work({ study, moduleFilter, onModuleFilter, onEdit, onAdd, onComplete, 
   return <section className="study-page">
     <PageHead title="Work" action={<button className="study-primary" onClick={onAdd}><Plus size={16} /> Add work</button>} />
     <div className="study-toolbar study-work-toolbar">
-      <ModuleSelect modules={study.modules} value={moduleFilter} onChange={onModuleFilter} />
+      <StudyChoicePicker
+        label="Module filter"
+        value={moduleFilter === "all" ? "" : moduleFilter}
+        placeholder="All modules"
+        options={study.modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))}
+        onChange={(next) => onModuleFilter(next || "all")}
+      />
       <div className="study-segmented" role="group" aria-label="Work status">{(["active", "done", "all"] as const).map((value) => <button key={value} aria-pressed={status === value} className={status === value ? "active" : ""} onClick={() => setStatus(value)}>{value === "active" ? "Open" : value[0].toUpperCase() + value.slice(1)}</button>)}</div>
       <label><Search size={16} /><span className="sr-only">Filter work</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter work" /></label>
     </div>
