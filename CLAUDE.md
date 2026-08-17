@@ -80,7 +80,9 @@ updates the Working log below** (newest first: date, who, what, current state).
   Write/Preview/Split editing, bounded version recovery, optimistic conflict protection, and `.md`
   import/export. Raw HTML/plugins/scripts remain disabled and Telegram receives a readable backend
   fallback. All 91 tests, non-incremental TypeScript, full ESLint, and an isolated optimized production
-  build pass. Publication commit is recorded here after push.
+  build pass. Runtime commit `14b691b` is pushed, GitHub reports its Vercel deployment successful,
+  and the canonical `/dashboard` route returns HTTP 200. Paired backend commit `13b2431` is live on
+  Render with its additive migration and HTTP 200 health.
 
 - **2026-08-16 (Codex, deployed):** Weekly review now uses a uniform non-blurred scrim, a
   zoom-resilient proportional wide sheet, and fixed header/progress/footer rows around one bounded
