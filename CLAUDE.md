@@ -5,6 +5,13 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-17 (Codex):** Completed the Phase 7 public Study dashboard architecture boundary on
+  guarded branch `codex/phase7-public-study-architecture` in commit `16687b3`, paired with backend
+  architecture `77739bd`. It preserves the BFF as the credential-free browser boundary, treats the
+  selected workspace as a candidate only, defines capability-driven public Study UX, OAuth-only
+  Canvas connection handling, tenant-scoped drafts/caches, multi-tenant validation, and founder
+  exclusion from cohort discovery. Documentation only; no runtime, deployment, or production state
+  changed.
 - **2026-08-17 (Codex):** Completed the guarded Phase 5 browser-hardening implementation:
   report-only nonce CSP with a documented enforcement gate, seven-day owner/workspace-scoped drafts
   and logout cleanup, explicit consent before loading remote Markdown images, bounded/deferred safe
@@ -88,6 +95,14 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-17 (Codex):** Phase 7 dashboard boundary commit `16687b3` is complete on
+  `codex/phase7-public-study-architecture`, paired with backend architecture `77739bd`.
+  `docs/PUBLIC_STUDY_DASHBOARD_BOUNDARY.md` keeps credentials server-only, backend authorization
+  authoritative, the workspace cookie non-authoritative, and the founder workspace absent from
+  public cohort discovery. F-02 replay control, F-03 rate limits, hosted synthetic staging, and
+  explicit Stage 7.1 approval remain required. No code, config, secret, bot, deployment, or
+  production state changed.
 
 - **2026-08-17 (Codex):** Phase 6 dashboard assurance commit `bf9c948` is pushed on
   `codex/phase6-security-assurance`: direct tests now cover session tampering/expiry, BFF
