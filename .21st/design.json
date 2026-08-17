@@ -38,7 +38,9 @@
       "single primary action",
       "dual-orientation desktop weekly timetable with a separate deadline lane",
       "horizontal timetable rows with one weekday label, bounded due rail, then time track",
-      "mobile day agenda with explicit schedule editing"
+      "mobile day agenda with explicit schedule editing",
+      "persisted collapsible Study sidebar on desktop with an independent mobile drawer",
+      "fit-to-window Study image viewer with an explicit natural-resolution inspection mode"
     ]
   },
   "constraints": {
@@ -83,6 +85,16 @@
       "date": "2026-08-11",
       "decision": "Use one direct title and no self-evident subtitle on operational pages; reserve one stable daily line for the personal Overview greeting.",
       "reason": "Repeated explanations made simple collections feel generated and increased visual noise. Direct labels preserve hierarchy, while one deterministic Overview line gives the home surface personality without creating layout churn."
+    },
+    {
+      "date": "2026-08-17",
+      "decision": "Let laptop and desktop Study users persistently collapse the navigation sidebar while keeping the mobile navigation as an independent drawer.",
+      "reason": "Study pages benefit from maximum reading and timetable width, but hiding navigation must remain an explicit reversible preference rather than a breakpoint side effect."
+    },
+    {
+      "date": "2026-08-17",
+      "decision": "Open saved Study images fitted to the viewer, then let either the image or a labelled action reveal the natural-resolution image in a full-viewport scrollable canvas.",
+      "reason": "Fit mode preserves orientation, while original-pixel inspection makes screenshots and lecture material legible without opening an unsafe external URL or permanently crowding the Library dialog."
     }
   ],
   "evidence": [
@@ -90,5 +102,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-05T15:00:00.000Z"
+  "generatedAt": "2026-08-17T22:30:00.000+08:00"
 }

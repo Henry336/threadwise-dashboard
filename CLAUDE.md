@@ -5,6 +5,12 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-17 (Codex):** Added an accessible, persisted laptop/desktop Study sidebar toggle and a
+  two-stage Library image viewer on guarded branch `codex/study-image-sidebar-coursemology`. Images
+  open fitted for orientation, then click or **Full size** reveals natural pixels in a full-viewport
+  scrollable canvas; Escape returns to fit before closing. Mobile keeps its independent drawer.
+  Validation passes 121 tests, typecheck, lint, build, secret/dependency scans, and Playwright
+  (5 passed, one intentional mobile skip). Nothing was deployed or merged.
 - **2026-08-17 (Codex):** Replaced the Study Work module filter's browser-native menu with the
   existing accessible branded `StudyChoicePicker` on guarded branch
   `codex/post-phase7-work-filter-audit`, preserving the internal `all` value and responsive layout.

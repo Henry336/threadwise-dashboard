@@ -61,6 +61,34 @@ describe("Study UI regressions", () => {
     expect(editor).not.toContain('type="time"');
   });
 
+  it("lets laptop users persistently collapse and restore the Study sidebar", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(component).toContain('usePersistentState("threadwise-study-desktop-sidebar-open", true)');
+    expect(component).toContain('id="study-sidebar"');
+    expect(component).toContain('aria-controls="study-sidebar"');
+    expect(component).toContain("aria-expanded={desktopSidebarOpen}");
+    expect(component).toContain('desktopSidebarOpen ? "" : " sidebar-collapsed"');
+    expect(css).toContain("@media (min-width: 861px)");
+    expect(css).toContain(".study-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }");
+    expect(css).toContain(".study-icon.desktop { display: none; }");
+  });
+
+  it("opens Study images at natural resolution and returns to fit mode before closing", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+    const viewer = component.slice(component.indexOf("function StudyImageViewer"), component.indexOf("function Review("));
+
+    expect(viewer).toContain("const [expanded, setExpanded] = useState(false)");
+    expect(viewer).toContain('expanded ? "Fit" : "Full size"');
+    expect(viewer).toContain('className="study-image-stage-toggle"');
+    expect(viewer).toContain('expanded ? "Fit image to window" : "View image at full resolution"');
+    expect(viewer).toContain("if (expanded) setExpanded(false)");
+    expect(css).toContain(".study-image-lightbox.is-expanded .study-image-stage-toggle > img");
+    expect(css).toContain("max-width: none; max-height: none;");
+  });
+
   it("opens day-agenda block details from the entire row", () => {
     const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
     const agenda = component.slice(component.indexOf('className="study-day-agenda"'), component.indexOf("{panel.mode === \"details\""));

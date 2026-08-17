@@ -10,6 +10,7 @@
   display: grid;
   grid-template-columns: 270px minmax(0, 1fr);
   background: var(--canvas);
+  transition: grid-template-columns 220ms cubic-bezier(.22, 1, .36, 1);
 }
 
 .study-shell button,
@@ -37,6 +38,7 @@
   gap: 18px;
   border-right: 1px solid var(--line);
   background: var(--surface);
+  transition: transform 220ms cubic-bezier(.22, 1, .36, 1), opacity 160ms ease;
 }
 
 .study-brand { min-height: 38px; display: flex; align-items: center; justify-content: space-between; }
@@ -194,6 +196,8 @@
   backdrop-filter: blur(16px);
 }
 .study-topbar > div { display: flex; align-items: center; gap: 9px; }
+.study-topbar-leading { min-width: 0; margin-right: auto; }
+.study-topbar-actions { flex: 0 0 auto; }
 .study-crumb { min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 11px; }
 .study-crumb b { overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
 .study-search-jump {
@@ -225,6 +229,7 @@
 }
 .study-icon:hover { background: var(--surface-soft); }
 .study-icon.mobile { display: none; }
+.study-icon.desktop { flex: 0 0 auto; }
 .study-owner { border: 0; background: var(--study-blue); color: white; font-size: 12px; font-weight: 800; }
 
 .study-content {
@@ -629,9 +634,17 @@
 .study-image-header-actions { display: flex; align-items: center; gap: 7px; }
 .study-image-lightbox > article > header button { min-width: 42px; height: 42px; padding: 0 12px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-soft); color: var(--ink); font-size: 11px; font-weight: 740; }
 .study-image-header-actions button:last-child { width: 42px; padding: 0; }
+.study-image-lightbox > article > header .study-image-size-toggle { display: inline-flex; align-items: center; gap: 7px; }
 .study-image-lightbox > article > header .study-danger-quiet { background: var(--danger-soft); color: var(--danger); }
 .study-image-stage { min-height: 240px; overflow: auto; display: grid; place-items: center; background: color-mix(in srgb, var(--canvas) 88%, #0b1716); }
-.study-image-stage > img { max-width: 100%; max-height: calc(92dvh - 170px); display: block; object-fit: contain; }
+.study-image-stage-toggle { width: 100%; min-height: 100%; padding: 0; display: grid; place-items: center; border: 0; background: transparent; cursor: zoom-in; }
+.study-image-stage-toggle > img { max-width: 100%; max-height: calc(92dvh - 170px); display: block; object-fit: contain; }
+.study-image-lightbox.is-expanded { padding: 0; }
+.study-image-lightbox.is-expanded > article { width: 100%; height: 100dvh; max-height: none; grid-template-rows: auto minmax(0, 1fr); border: 0; border-radius: 0; }
+.study-image-lightbox.is-expanded .study-image-stage { display: block; }
+.study-image-lightbox.is-expanded .study-image-stage-toggle { width: max-content; min-width: 100%; min-height: 100%; cursor: zoom-out; }
+.study-image-lightbox.is-expanded .study-image-stage-toggle > img { width: auto; height: auto; max-width: none; max-height: none; }
+.study-image-lightbox.is-expanded .study-image-context { display: none; }
 .study-image-stage > div { max-width: 430px; padding: 36px 24px; display: grid; justify-items: center; gap: 9px; color: var(--muted); text-align: center; }
 .study-image-stage > div > svg { color: var(--study-blue); }
 .study-image-stage > div b { color: var(--ink); font-size: 14px; }
@@ -993,6 +1006,11 @@
   .study-block-form button { grid-column: 3; }
 }
 
+@media (min-width: 861px) {
+  .study-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+  .study-shell.sidebar-collapsed .study-sidebar { transform: translateX(-100%); opacity: 0; visibility: hidden; pointer-events: none; }
+}
+
 @media (max-width: 860px) {
   .study-shell { display: block; }
   .study-sidebar { position: fixed; inset: 0 auto 0 0; width: min(360px, calc(100vw - 48px)); height: 100dvh; box-sizing: border-box; transform: translateX(-105%); transition: transform 220ms cubic-bezier(.22, 1, .36, 1); box-shadow: 18px 0 55px rgba(0, 0, 0, .18); }
@@ -1000,6 +1018,7 @@
   .study-brand > button { display: grid; place-items: center; }
   .study-nav-scrim { position: fixed; z-index: 35; inset: 0; display: block; background: rgba(0, 0, 0, .38); }
   .study-icon.mobile { display: inline-grid; }
+  .study-icon.desktop { display: none; }
   .study-topbar { padding: 0 17px; }
   .study-crumb { margin-right: auto; }
   .study-content { width: min(100% - 32px, 820px); padding-top: 32px; }

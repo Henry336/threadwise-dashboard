@@ -7,7 +7,7 @@ import {
   AlertCircle, AlertTriangle, Archive, ArrowRight, BookOpen, Brain, CalendarDays, Check,
   Bold, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, Code2, Columns2, Download, Eye, ExternalLink,
   File, FileText, FileUp, Heading2, History, Image as ImageIcon, Italic, Library, Link as LinkIcon, List, ListChecks, ListTodo,
-  LoaderCircle, MapPin, Menu, Moon, MoreHorizontal, Pin, Play, Plus,
+  LoaderCircle, MapPin, Maximize2, Menu, Minimize2, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pin, Play, Plus,
   RefreshCw, Search, Settings, Square, Sun, Target, TimerReset, Trash2, Undo2, X,
 } from "lucide-react";
 import { Ari, AriWorkspaceLoader } from "./ari";
@@ -79,6 +79,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [themeReady, setThemeReady] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = usePersistentState("threadwise-study-desktop-sidebar-open", true);
   const [workspaceMenu, setWorkspaceMenu] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [editor, setEditor] = useState<Editor>(null);
@@ -303,8 +304,8 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
     return updated;
   };
 
-  return <div className={`study-shell${activeSession ? " focus-active-session" : ""}`}>
-    <aside className={`study-sidebar ${mobileNav ? "open" : ""}`}>
+  return <div className={`study-shell${activeSession ? " focus-active-session" : ""}${desktopSidebarOpen ? "" : " sidebar-collapsed"}`}>
+    <aside id="study-sidebar" className={`study-sidebar ${mobileNav ? "open" : ""}`}>
       <div className="study-brand"><ThreadwiseMark /><button onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={19} /></button></div>
       <StudyWorkspaceSwitcher current={selectedWorkspace} workspaces={workspaces} open={workspaceMenu} setOpen={setWorkspaceMenu} />
       <div className="study-context"><span className="study-context-mark" aria-hidden="true"><BookOpen size={22} /></span><div><span>Private Study</span><b>{study.workspace.semesterName}</b><small>{studyWeekLabel(study)}</small></div></div>
@@ -316,9 +317,12 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
     {mobileNav && <button className="study-nav-scrim" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
     <main className="study-main">
       <header className="study-topbar">
-        <button className="study-icon mobile" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button>
-        <span className="study-crumb">{selectedWorkspace.name}<ChevronRight size={13} /><b>{activeLabel}</b></span>
-        <div><button className="study-search-jump" onClick={() => navigate("study-search")}><Search size={16} /><span>Search this semester</span><kbd>Ctrl K</kbd></button><button className="study-icon" onClick={() => setHelpOpen(true)} aria-label="Study Mode help"><CircleHelp size={18} /></button><button className="study-icon" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label={`Use ${theme === "light" ? "dark" : "light"} theme`}>{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button><span className="study-owner" aria-label={`${ownerName}'s private Study workspace`}>{ownerInitial}</span></div>
+        <div className="study-topbar-leading">
+          <button className="study-icon mobile" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button>
+          <button className="study-icon desktop" type="button" aria-controls="study-sidebar" aria-expanded={desktopSidebarOpen} aria-label={desktopSidebarOpen ? "Hide sidebar" : "Show sidebar"} title={desktopSidebarOpen ? "Hide sidebar" : "Show sidebar"} onClick={() => setDesktopSidebarOpen((open) => !open)}>{desktopSidebarOpen ? <PanelLeftClose size={19} /> : <PanelLeftOpen size={19} />}</button>
+          <span className="study-crumb">{selectedWorkspace.name}<ChevronRight size={13} /><b>{activeLabel}</b></span>
+        </div>
+        <div className="study-topbar-actions"><button className="study-search-jump" onClick={() => navigate("study-search")}><Search size={16} /><span>Search this semester</span><kbd>Ctrl K</kbd></button><button className="study-icon" onClick={() => setHelpOpen(true)} aria-label="Study Mode help"><CircleHelp size={18} /></button><button className="study-icon" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label={`Use ${theme === "light" ? "dark" : "light"} theme`}>{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button><span className="study-owner" aria-label={`${ownerName}'s private Study workspace`}>{ownerInitial}</span></div>
       </header>
       <div className="study-content" key={view}>
         {sync === "offline" && <section className="study-status-banner" role="alert"><AlertCircle size={18} /><div><b>Live sync is paused.</b><p>Your current view is preserved. Retry when the connection is ready.</p></div><button onClick={() => void refresh(false)}>Retry</button></section>}
@@ -422,6 +426,7 @@ function StudyNoteReader({ resource, timezone, onClose, onEdit, onOpenLinked }: 
 
 function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { resource: StudyResource; timezone: string; onEdit: () => void; onArchive: () => void; onClose: () => void }) {
   const [revision, setRevision] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<{ status: "loading" | "ready" | "error"; src?: string; message?: string; retryable?: boolean }>({ status: "loading" });
   const closeRef = useRef<HTMLButtonElement>(null);
   const caption = imageCaption(resource);
@@ -449,18 +454,23 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
   }, [resource.id, revision]);
 
   useEffect(() => {
-    const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (expanded) setExpanded(false);
+      else onClose();
+    };
     window.addEventListener("keydown", keydown);
-    closeRef.current?.focus();
     return () => window.removeEventListener("keydown", keydown);
-  }, [onClose]);
+  }, [expanded, onClose]);
 
-  return <div className="study-image-lightbox" role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  useEffect(() => { closeRef.current?.focus(); }, []);
+
+  return <div className={`study-image-lightbox${expanded ? " is-expanded" : ""}`} role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <article>
-      <header><div><span>{resource.module.code} · {resource.publicId}</span><h2 id="study-image-title">{caption || "Saved image"}</h2></div><div className="study-image-header-actions"><button onClick={onEdit}>Edit</button><button className="study-danger-quiet" onClick={onArchive}>Archive</button><button ref={closeRef} onClick={onClose} aria-label="Close image"><X size={20} /></button></div></header>
+      <header><div><span>{resource.module.code} · {resource.publicId}</span><h2 id="study-image-title">{caption || "Saved image"}</h2></div><div className="study-image-header-actions"><button type="button" className="study-image-size-toggle" aria-pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span>{expanded ? "Fit" : "Full size"}</span></button><button onClick={onEdit}>Edit</button><button className="study-danger-quiet" onClick={onArchive}>Archive</button><button ref={closeRef} onClick={onClose} aria-label="Close image"><X size={20} /></button></div></header>
       <div className="study-image-stage" aria-live="polite">
         {state.status === "loading" && <div><LoaderCircle className="spin" size={25} /><b>Loading image…</b></div>}
-        {state.status === "ready" && state.src && <img src={state.src} alt={resource.caption || resource.title} />}
+        {state.status === "ready" && state.src && <button type="button" className="study-image-stage-toggle" aria-label={expanded ? "Fit image to window" : "View image at full resolution"} title={expanded ? "Fit image to window" : "View image at full resolution"} onClick={() => setExpanded((value) => !value)}><img src={state.src} alt={resource.caption || resource.title} /></button>}
         {state.status === "error" && <div><AlertCircle size={25} /><b>Image unavailable</b><p>{state.message}</p><span className="study-image-error-actions">{state.retryable && <button className="study-secondary" onClick={() => { setState({ status: "loading" }); setRevision((value) => value + 1); }}><RefreshCw size={15} /> Try again</button>}<button className="study-secondary" onClick={onClose}>Close</button></span></div>}
       </div>
       <div className="study-image-context">
