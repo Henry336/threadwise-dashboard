@@ -89,13 +89,14 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-17 (Codex):** Phase 6 dashboard assurance is staged on
+- **2026-08-17 (Codex):** Phase 6 dashboard assurance commit `bf9c948` is pushed on
   `codex/phase6-security-assurance`: direct tests now cover session tampering/expiry, BFF
   path/method/origin/JSON/size boundaries, dangerous Markdown protocols, and Mermaid exhaustion.
   Focused assurance passed 52, the full suite passed 118, Chromium passed 5 with one intentional
   mobile skip, and TypeScript/ESLint/build/secret/dependency gates passed. Security behavior was
   only extracted into testable helpers; no production deploy occurred. The backend Phase 6 report
-  records the unresolved findings and hosted-staging boundary.
+  records the unresolved findings and hosted-staging boundary. No PR or deployment was created;
+  manual remote CI awaits GitHub CLI re-authentication.
 
 - **2026-08-17 (Codex):** Completed security remediation Phase 1B in runtime commit `5bf0ab4`.
   Next.js and its ESLint config moved from `16.2.10` to stable patch `16.2.12`; shipped Nano ID,
