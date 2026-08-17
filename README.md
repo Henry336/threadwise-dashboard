@@ -2,7 +2,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Documentation verified against both Threadwise repositories: **2026-08-11**
+Documentation verified against both Threadwise repositories: **2026-08-17**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
@@ -20,6 +20,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - One truthful weekday axis per Timetable orientation: Vertical keeps a week deadline shelf, while Horizontal puts a two-item Due rail beside each day and sends overflow to the day agenda
 - Explicit inactive-module review and restore controls; Canvas refreshes never decide which courses belong in the active semester
 - A visible ten-minute Telegram capture target plus a same-origin Study image lightbox with caption/search context and graceful retry, expiry, and sign-in states
+- Threadwise-native Study notes with safe GFM and Mermaid, `[[wiki links]]` and backlinks, local draft recovery, bounded history, and portable `.md` import/export
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates

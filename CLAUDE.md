@@ -75,6 +75,13 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-17 (Codex, validated locally):** Study Library notes now open as portable Markdown
+  documents with safe GFM/Mermaid rendering, wiki links/backlinks, local unsaved-draft recovery,
+  Write/Preview/Split editing, bounded version recovery, optimistic conflict protection, and `.md`
+  import/export. Raw HTML/plugins/scripts remain disabled and Telegram receives a readable backend
+  fallback. All 91 tests, non-incremental TypeScript, full ESLint, and an isolated optimized production
+  build pass. Publication commit is recorded here after push.
+
 - **2026-08-16 (Codex, deployed):** Weekly review now uses a uniform non-blurred scrim, a
   zoom-resilient proportional wide sheet, and fixed header/progress/footer rows around one bounded
   scrollable step body. A fourteen-module browser fixture reaches the final row at both normal and

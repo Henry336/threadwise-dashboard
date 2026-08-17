@@ -78,6 +78,12 @@ Study image capture is intentional: the bot saves no image or OCR result until t
 The Library opens images in a same-origin lightbox rather than navigating to an API response. Loading,
 retryable failure, permanent expiry, and expired-session states must each have a direct next action.
 
+Study notes are quiet working documents, not a miniature IDE or an Obsidian clone. The reader gives
+the note most of the sheet and keeps connections, backlinks, and bounded history in a secondary rail.
+Editing offers Write, Preview, and Split modes, compact formatting aids, and an honest local-draft
+signal; the source always remains portable Markdown. Mermaid earns space only when the learner writes
+a diagram. Raw HTML, plugins, graph theatrics, and vault chrome do not enter the interface.
+
 ## Identity system
 
 - The faceless threaded-path mark represents Threadwise as a product. It is one optically centered vector with identical geometry in light and dark themes; only its theme token changes.

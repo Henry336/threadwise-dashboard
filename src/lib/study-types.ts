@@ -102,6 +102,17 @@ export type StudyResource = {
   hasMoreBody?: boolean;
   hasMoreOcr?: boolean;
   module: { id: string; code: string; name: string; color?: string | null };
+  noteMeta?: {
+    outgoingLinks: Array<{
+      target: string;
+      label: string;
+      resolved: boolean;
+      resource?: { id: string; publicId: string; title: string; moduleCode: string };
+    }>;
+    backlinks: Array<{ id: string; publicId: string; title: string; moduleCode: string }>;
+    revisions: Array<{ id: string; title: string; body: string; tags: string[]; source: string; createdAt: string }>;
+    revisionLimit: number;
+  };
 };
 
 export type StudyMistake = {

@@ -1,6 +1,6 @@
 # Dashboard architecture
 
-Updated: 2026-08-13
+Updated: 2026-08-17
 
 Current dashboard release: v0.9.0; paired backend release: v0.32.0
 
@@ -72,6 +72,8 @@ Timetable can also import a canonical NUSMods semester share link through the sa
 Destination search crosses the trust boundary through the same protected BFF, using `GET /api/threadwise/study/places`. The backend owns aliases, canonical ids, coordinates, type, ambiguity, and nearby-stop ranking; the dashboard owns only the debounced accessible combobox state. Stale browser requests are aborted. Selecting a suggestion stores its canonical id with the schedule block. Unresolved labels remain visible for editing but are not treated as routable and therefore cannot enable a proactive class-travel reminder.
 
 Study images remain behind the same owner/group gate. The browser requests media through the same-origin Vercel proxy and receives an object URL only inside the Library lightbox; object URLs are revoked on close. The backend resolves fresh Telegram metadata, so the dashboard distinguishes missing media, expired authorization, and retryable provider failure without exposing a Telegram file id or bot token.
+
+Study notes remain canonical backend `StudyResource` records rather than becoming browser-owned documents. The Library detail request returns one authorization-scoped note plus bounded revisions and workspace-local link metadata. The specialized editor keeps an unsaved draft in workspace/note-scoped local storage, sends the observed `updatedAt` value to prevent silent overwrite, and clears that draft only after a successful server save. Import accepts at most one bounded `.md` file and parses only conservative frontmatter; export writes portable Markdown metadata. Rendering uses GFM with raw HTML disabled. Mermaid loads only when a diagram is present, runs in strict mode, and its SVG is sanitized before insertion. `[[wiki links]]` are converted only outside code fences and inline code, and unresolved targets stay visibly inert instead of navigating to guessed records.
 
 The snapshot separates active `modules` from `inactiveModules`. Operational arrays contain only
 active-module data; the latter exists solely for owner Restore/Activate controls. Horizontal week
