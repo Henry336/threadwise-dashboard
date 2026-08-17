@@ -3,6 +3,15 @@
 Entry point for any AI or human contributor. Model-agnostic. Read this first, then the
 pointers below. **Ground answers in the live code and deployment, not in this file.**
 
+## Latest implementation checkpoint
+
+- **2026-08-17 (Codex):** Completed the guarded Phase 5 browser-hardening implementation:
+  report-only nonce CSP with a documented enforcement gate, seven-day owner/workspace-scoped drafts
+  and logout cleanup, explicit consent before loading remote Markdown images, bounded/deferred safe
+  Mermaid rendering, CI secret/dependency scans, and production Chromium desktop/mobile smoke tests.
+  Final validation passed all 99 tests, TypeScript, ESLint, build, five browser checks with one
+  intentional mobile skip, and zero-finding full/production audits. Nothing was deployed.
+
 ## What this is
 
 The calm web surface for Threadwise — scanning, editing, and coordinating captured work.
@@ -19,8 +28,13 @@ The backend/bot lives in the sibling repo `Henry336/threadwise`
 ```bash
 npm run dev     # next dev (http://localhost:3000)
 npm test        # vitest run
+npm run typecheck
 npm run lint    # eslint
 npm run build   # next build
+npm run test:browser
+npm run security:scan-secrets
+npm run security:audit
+npm run security:audit:all
 ```
 
 `/dashboard?demo=1` runs a realistic interactive demo with no credentials. Real accounts

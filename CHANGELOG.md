@@ -4,6 +4,13 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Phase 5 browser hardening and maintainability
+- Added a nonce-bearing Content Security Policy staged in report-only mode, with no broad inline/eval allowances and a preview-first enforcement runbook.
+- Scoped crash-safe drafts to their owner, workspace, and resource; added seven-day expiry plus workspace/logout cleanup.
+- Made third-party Markdown images explicit click-to-load disclosures and bounded, deferred, serialized, and sanitized Mermaid rendering.
+- Split security-sensitive Markdown media from the generic renderer and added pull-request/main CI, tracked-file secret scanning, dependency audits, 99 passing tests, and Chromium desktop/mobile smoke coverage.
+- Kept production untouched; CSP enforcement remains blocked until report-only inline-style findings are eliminated in preview.
+
 ### Server-backed Study analysis availability
 - Updated the module-review unavailable state to recognize the deployed Gemini provider instead of assuming a laptop worker. Cached results remain visible when the provider is unavailable.
 - Kept all provider credentials and execution behind the authenticated same-origin Study proxy; the browser contract remains a small async job/status/result payload.

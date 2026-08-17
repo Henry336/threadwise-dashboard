@@ -45,6 +45,7 @@ import type {
 } from "@/lib/types";
 import { dailyOverviewLine } from "@/lib/dashboard-copy";
 import { clampInteger } from "@/lib/numeric-input";
+import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -262,6 +263,11 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     expenses: { page: 1, hasMore: initialData.expenses.length >= 50, loading: false },
     images: { page: 1, hasMore: initialData.images.length >= 50, loading: false },
   });
+
+  useEffect(() => {
+    try { clearThreadwiseDrafts(window.localStorage, initialData.workspace.id); } catch { /* Storage can be unavailable. */ }
+  }, [initialData.workspace.id]);
+
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
   const refreshInFlight = useRef(false);
