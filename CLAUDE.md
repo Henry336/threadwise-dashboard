@@ -75,6 +75,14 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-17 (Codex):** Completed security remediation Phase 1B in runtime commit `5bf0ab4`.
+  Next.js and its ESLint config moved from `16.2.10` to stable patch `16.2.12`; shipped Nano ID,
+  PostCSS, and Sharp paths are pinned to patched versions. The production audit moved from four
+  high findings to zero. Focused proxy/access/schema tests pass 35/35; all 91 tests, TypeScript,
+  ESLint, isolated optimized build, Vercel exact-commit deployment, and canonical `/dashboard`
+  HTTP 200 pass. Two development-only audit findings remain outside the shipped graph and were not
+  force-overridden across incompatible ranges. The paired backend Phase 1A runtime is `5630f1e`.
+
 - **2026-08-17 (Codex):** The paired backend now tracks the planning-only cross-repository security
   remediation sequence in `D:\CodexProjects\Threadwise\docs\SECURITY_REMEDIATION_ROADMAP.md`,
   linked from its `PROJECT_CONTEXT.md`. It defines seven phases, validation/rollback and handoff
