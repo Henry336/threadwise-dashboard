@@ -75,6 +75,12 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-17 (Codex):** The paired backend now tracks the planning-only cross-repository security
+  remediation sequence in `D:\CodexProjects\Threadwise\docs\SECURITY_REMEDIATION_ROADMAP.md`,
+  linked from its `PROJECT_CONTEXT.md`. It defines seven phases, validation/rollback and handoff
+  gates, staging-first active testing, bounded production inspection, and cost-conscious model
+  routing. No dashboard code, dependency, configuration, deployment, or remediation phase changed.
+
 - **2026-08-17 (Codex, validated locally):** Study Library notes now open as portable Markdown
   documents with safe GFM/Mermaid rendering, wiki links/backlinks, local unsaved-draft recovery,
   Write/Preview/Split editing, bounded version recovery, optimistic conflict protection, and `.md`
