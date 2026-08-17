@@ -1,6 +1,7 @@
 name: Dashboard CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main]
@@ -32,6 +33,8 @@ jobs:
         run: npm run security:audit
       - name: Audit the complete development dependency graph
         run: npm run security:audit:all
+      - name: Run the bounded adversarial assurance matrix
+        run: npm run security:assurance
       - name: Run tests
         run: npm test
       - name: Typecheck

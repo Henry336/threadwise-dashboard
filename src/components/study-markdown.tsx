@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ExternalLink } from "lucide-react";
 import { markdownWithThreadwiseLinks } from "@/lib/study-markdown";
+import { safeMarkdownLink } from "@/lib/study-markdown-security";
 import { MarkdownImage, MermaidDiagram } from "./study-markdown-media";
 
 export function StudyMarkdown({ source, onOpenNote }: { source: string; onOpenNote?: (target: string) => void }) {
@@ -12,7 +13,7 @@ export function StudyMarkdown({ source, onOpenNote }: { source: string; onOpenNo
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       skipHtml
-      urlTransform={(url) => url.startsWith("threadwise-note:") ? url : safeUrl(url)}
+      urlTransform={(url) => url.startsWith("threadwise-note:") ? url : safeMarkdownLink(url)}
       components={{
         a: ({ href, children }) => {
           if (href?.startsWith("threadwise-note:")) {
@@ -36,14 +37,4 @@ export function StudyMarkdown({ source, onOpenNote }: { source: string; onOpenNo
       }}
     >{markdownWithThreadwiseLinks(source)}</ReactMarkdown>
   </div>;
-}
-
-function safeUrl(value: string): string {
-  if (value.startsWith("/") || value.startsWith("#")) return value;
-  try {
-    const url = new URL(value);
-    return ["https:", "http:", "mailto:"].includes(url.protocol) ? value : "";
-  } catch {
-    return "";
-  }
 }
