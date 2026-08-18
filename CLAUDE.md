@@ -5,6 +5,15 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-18 (Codex, deployed):** Dashboard PR #2 merged as
+  `b00a3d15660a5714852a7a4096387f6995127845` after the paired backend and all 60 production
+  migrations were healthy. Vercel reported the production deployment complete and the canonical
+  `/dashboard?demo=1` route returned HTTP 200. The released stack includes the guarded Phase 3-7
+  work plus the branded Work picker, desktop sidebar/image-viewer improvements, theme-aware Study
+  scrollbars, and the release test-discovery correction. Paired backend production commit is
+  `0699835d8ffe2132e8ce29dd03496d8fada71538`. Historical Canvas-token rotation remains an operator
+  follow-up; CSP intentionally remains report-only and destructive privacy backfill/retention did
+  not run.
 - **2026-08-18 (Codex):** Full guarded-stack release is authorized and dashboard PR #2 is open.
   GitHub's Linux validate job revealed that Vitest's default discovery included the Playwright
   `e2e` spec even though browser checks have a separate job. The unit-test command now explicitly
