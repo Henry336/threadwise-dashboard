@@ -1,0 +1,65 @@
+name: Dashboard CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install the locked dependency graph
+        run: npm ci
+      - name: Scan tracked files for credential signatures
+        run: npm run security:scan-secrets
+      - name: Audit production dependencies
+        run: npm run security:audit
+      - name: Audit the complete development dependency graph
+        run: npm run security:audit:all
+      - name: Run the bounded adversarial assurance matrix
+        run: npm run security:assurance
+      - name: Run tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build the production application
+        run: npm run build
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install the locked dependency graph
+        run: npm ci
+      - name: Install the bounded browser runtime
+        run: npx playwright install --with-deps chromium
+      - name: Build the production application for browser checks
+        run: npm run build
+      - name: Run authentication, focus, scroll, CSP, and responsive browser checks
+        run: npm run test:browser

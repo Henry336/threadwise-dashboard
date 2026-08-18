@@ -3,6 +3,47 @@
 Entry point for any AI or human contributor. Model-agnostic. Read this first, then the
 pointers below. **Ground answers in the live code and deployment, not in this file.**
 
+## Latest implementation checkpoint
+
+- **2026-08-18 (Codex):** Full guarded-stack release is authorized and dashboard PR #2 is open.
+  GitHub's Linux validate job revealed that Vitest's default discovery included the Playwright
+  `e2e` spec even though browser checks have a separate job. The unit-test command now explicitly
+  excludes `e2e/**`; locally all 122 Vitest tests and the independent Playwright suite (5 passed,
+  one intentional mobile skip) pass. Hosted CI rerun and the paired backend Gate 3A recovery proof
+  remain required before merge/deployment.
+- **2026-08-18 (Codex):** Replaced the browser-default Study sidebar and horizontal-timetable
+  scrollbars with scoped, theme-adaptive Threadwise styling on guarded branch
+  `codex/study-image-sidebar-coursemology`. The native overflow model remains intact; Firefox and
+  WebKit receive rounded token-derived thumbs and transparent tracks, while the mobile drawer still
+  hides its scrollbar. Validation passes 122 tests, typecheck, lint, build, secret scan, and
+  Playwright (5 passed, one intentional mobile skip). The Impeccable detector reported only two
+  unrelated pre-existing side-border warnings. Nothing was deployed or merged.
+- **2026-08-17 (Codex):** Added an accessible, persisted laptop/desktop Study sidebar toggle and a
+  two-stage Library image viewer on guarded branch `codex/study-image-sidebar-coursemology`. Images
+  open fitted for orientation, then click or **Full size** reveals natural pixels in a full-viewport
+  scrollable canvas; Escape returns to fit before closing. Mobile keeps its independent drawer.
+  Validation passes 121 tests, typecheck, lint, build, secret/dependency scans, and Playwright
+  (5 passed, one intentional mobile skip). Nothing was deployed or merged.
+- **2026-08-17 (Codex):** Replaced the Study Work module filter's browser-native menu with the
+  existing accessible branded `StudyChoicePicker` on guarded branch
+  `codex/post-phase7-work-filter-audit`, preserving the internal `all` value and responsive layout.
+  Dashboard validation passes 119 tests, 52 focused security checks, 5 Playwright checks with one
+  intentional skip, typecheck/lint/build, secret scan, and both zero-finding dependency audits. The
+  paired backend report is `docs/POST_PHASE7_CODEBASE_AUDIT.md`; nothing was deployed.
+- **2026-08-17 (Codex):** Completed the Phase 7 public Study dashboard architecture boundary on
+  guarded branch `codex/phase7-public-study-architecture` in commit `16687b3`, paired with backend
+  architecture `77739bd`. It preserves the BFF as the credential-free browser boundary, treats the
+  selected workspace as a candidate only, defines capability-driven public Study UX, OAuth-only
+  Canvas connection handling, tenant-scoped drafts/caches, multi-tenant validation, and founder
+  exclusion from cohort discovery. Documentation only; no runtime, deployment, or production state
+  changed.
+- **2026-08-17 (Codex):** Completed the guarded Phase 5 browser-hardening implementation:
+  report-only nonce CSP with a documented enforcement gate, seven-day owner/workspace-scoped drafts
+  and logout cleanup, explicit consent before loading remote Markdown images, bounded/deferred safe
+  Mermaid rendering, CI secret/dependency scans, and production Chromium desktop/mobile smoke tests.
+  Final validation passed all 99 tests, TypeScript, ESLint, build, five browser checks with one
+  intentional mobile skip, and zero-finding full/production audits. Nothing was deployed.
+
 ## What this is
 
 The calm web surface for Threadwise — scanning, editing, and coordinating captured work.
@@ -19,8 +60,13 @@ The backend/bot lives in the sibling repo `Henry336/threadwise`
 ```bash
 npm run dev     # next dev (http://localhost:3000)
 npm test        # vitest run
+npm run typecheck
 npm run lint    # eslint
 npm run build   # next build
+npm run test:browser
+npm run security:scan-secrets
+npm run security:audit
+npm run security:audit:all
 ```
 
 `/dashboard?demo=1` runs a realistic interactive demo with no credentials. Real accounts
@@ -74,6 +120,23 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-17 (Codex):** Phase 7 dashboard boundary commit `16687b3` is complete on
+  `codex/phase7-public-study-architecture`, paired with backend architecture `77739bd`.
+  `docs/PUBLIC_STUDY_DASHBOARD_BOUNDARY.md` keeps credentials server-only, backend authorization
+  authoritative, the workspace cookie non-authoritative, and the founder workspace absent from
+  public cohort discovery. F-02 replay control, F-03 rate limits, hosted synthetic staging, and
+  explicit Stage 7.1 approval remain required. No code, config, secret, bot, deployment, or
+  production state changed.
+
+- **2026-08-17 (Codex):** Phase 6 dashboard assurance commit `bf9c948` is pushed on
+  `codex/phase6-security-assurance`: direct tests now cover session tampering/expiry, BFF
+  path/method/origin/JSON/size boundaries, dangerous Markdown protocols, and Mermaid exhaustion.
+  Focused assurance passed 52, the full suite passed 118, Chromium passed 5 with one intentional
+  mobile skip, and TypeScript/ESLint/build/secret/dependency gates passed. Security behavior was
+  only extracted into testable helpers; no production deploy occurred. The backend Phase 6 report
+  records the unresolved findings and hosted-staging boundary. No PR or deployment was created;
+  manual remote CI awaits GitHub CLI re-authentication.
 
 - **2026-08-17 (Codex):** Completed security remediation Phase 1B in runtime commit `5bf0ab4`.
   Next.js and its ESLint config moved from `16.2.10` to stable patch `16.2.12`; shipped Nano ID,

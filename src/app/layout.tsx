@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import Script from "next/script";
 import { PwaRegistration } from "@/components/pwa-registration";
+import { BrowserPrivacyLifecycle } from "@/components/browser-privacy-lifecycle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,12 +32,14 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body>
-        <Script src="https://telegram.org/js/telegram-web-app.js?63" strategy="beforeInteractive" />
+        <Script src="https://telegram.org/js/telegram-web-app.js?63" strategy="beforeInteractive" nonce={nonce} />
         {children}
+        <BrowserPrivacyLifecycle />
         <PwaRegistration />
       </body>
     </html>

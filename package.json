@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run --exclude=e2e/**",
+    "test:browser": "playwright test",
+    "typecheck": "tsc --noEmit --incremental false",
+    "security:scan-secrets": "node scripts/scan-tracked-secrets.mjs",
+    "security:audit": "npm audit --omit=dev --audit-level=high",
+    "security:audit:all": "npm audit --audit-level=high",
+    "security:assurance": "vitest run src/lib/auth.test.ts src/lib/proxy-allowlist.test.ts src/lib/proxy-security.test.ts src/app/api/threadwise/study-proxy.test.ts src/lib/content-security-policy.test.ts src/lib/study-markdown-security.test.ts src/lib/study-mermaid.test.ts src/lib/browser-drafts.test.ts src/lib/study-access.test.ts"
   },
   "dependencies": {
     "dompurify": "^3.4.13",
@@ -22,6 +28,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

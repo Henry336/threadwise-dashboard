@@ -50,8 +50,13 @@ Open `http://localhost:3000`. The demo works without credentials. Real accounts 
 
 ```bash
 npm test
+npm run typecheck
 npm run lint
 npm run build
+npm run test:browser
+npm run security:scan-secrets
+npm run security:audit
+npm run security:audit:all
 ```
 
 The main interaction paths are also checked in a real Chromium browser at desktop and mobile widths before production releases.

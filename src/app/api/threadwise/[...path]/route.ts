@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSelectedWorkspace, getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { isAllowedThreadwiseProxyMethod, isAllowedThreadwiseProxyPath } from "@/lib/proxy-allowlist";
+import {
+  hasAllowedProxyOrigin,
+  proxyBodyIsJson,
+  proxyBodyIsTooLarge,
+  THREADWISE_PROXY_MAX_RESPONSE_BYTES,
+} from "@/lib/proxy-security";
 import { threadwiseFetch } from "@/lib/threadwise-api";
 
 export const dynamic = "force-dynamic";
 
 const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
-const MAX_BODY_BYTES = 192_000;
 function noStore(response: NextResponse) {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Pragma", "no-cache");
@@ -20,17 +25,12 @@ function reject(status: number, error: string, message?: string) {
 }
 
 function hasSameOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    const actual = new URL(origin).origin;
-    const configured = process.env.NEXT_PUBLIC_APP_URL
-      ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin
-      : request.nextUrl.origin;
-    return actual === configured || (process.env.NODE_ENV === "development" && actual === request.nextUrl.origin);
-  } catch {
-    return false;
-  }
+  return hasAllowedProxyOrigin({
+    origin: request.headers.get("origin"),
+    configuredAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+    requestOrigin: request.nextUrl.origin,
+    development: process.env.NODE_ENV === "development",
+  });
 }
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> }) {
@@ -45,16 +45,13 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
   const path = segments.map(decodeURIComponent).join("/");
   if (!isAllowedThreadwiseProxyPath(path) || !isAllowedThreadwiseProxyMethod(method, path)) return reject(404, "not_found");
 
-  const declaredLength = Number(request.headers.get("content-length") ?? 0);
-  if (declaredLength > MAX_BODY_BYTES) return reject(413, "payload_too_large");
+  if (proxyBodyIsTooLarge(request.headers.get("content-length"))) return reject(413, "payload_too_large");
 
   let body: string | undefined;
   if (method === "POST" || method === "PATCH" || method === "DELETE") {
     body = await request.text();
-    if (body.length > MAX_BODY_BYTES) return reject(413, "payload_too_large");
-    if (body) {
-      try { JSON.parse(body); } catch { return reject(400, "invalid_json"); }
-    }
+    if (proxyBodyIsTooLarge(null, body.length)) return reject(413, "payload_too_large");
+    if (!proxyBodyIsJson(body)) return reject(400, "invalid_json");
   }
 
   try {
@@ -84,7 +81,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
 
     const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
     const payload = await upstream.arrayBuffer();
-    if (payload.byteLength > 20_000_000) return reject(502, "upstream_response_too_large");
+    if (payload.byteLength > THREADWISE_PROXY_MAX_RESPONSE_BYTES) return reject(502, "upstream_response_too_large");
     const response = new NextResponse(payload, { status: upstream.status });
     response.headers.set("Content-Type", contentType);
     const disposition = upstream.headers.get("content-disposition");

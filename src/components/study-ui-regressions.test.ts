@@ -34,6 +34,19 @@ describe("Study UI regressions", () => {
     expect(analysis).not.toContain("<select");
   });
 
+  it("uses the branded module picker in Study Work without changing the persisted all value", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const work = component.slice(component.indexOf("function Work("), component.indexOf("function LibraryView("));
+
+    expect(work).toContain('<StudyChoicePicker');
+    expect(work).toContain('label="Module filter"');
+    expect(work).toContain('placeholder="All modules"');
+    expect(work).toContain('value={moduleFilter === "all" ? "" : moduleFilter}');
+    expect(work).toContain('onChange={(next) => onModuleFilter(next || "all")}');
+    expect(work).not.toContain("<ModuleSelect");
+    expect(work).not.toContain("<select");
+  });
+
   it("uses branded choice controls throughout the timetable block editor", () => {
     const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
     const editor = component.slice(component.indexOf("function TimetableEditor"));
@@ -46,6 +59,48 @@ describe("Study UI regressions", () => {
     expect(editor).toContain('<StudyChoicePicker label="Usual origin"');
     expect(editor).not.toContain("<select");
     expect(editor).not.toContain('type="time"');
+  });
+
+  it("lets laptop users persistently collapse and restore the Study sidebar", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(component).toContain('usePersistentState("threadwise-study-desktop-sidebar-open", true)');
+    expect(component).toContain('id="study-sidebar"');
+    expect(component).toContain('aria-controls="study-sidebar"');
+    expect(component).toContain("aria-expanded={desktopSidebarOpen}");
+    expect(component).toContain('desktopSidebarOpen ? "" : " sidebar-collapsed"');
+    expect(css).toContain("@media (min-width: 861px)");
+    expect(css).toContain(".study-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }");
+    expect(css).toContain(".study-icon.desktop { display: none; }");
+  });
+
+  it("uses theme-aware Threadwise scrollbars for Study navigation and the horizontal timetable", () => {
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(css).toContain("--study-scrollbar-thumb:");
+    expect(css).toContain("--study-scrollbar-thumb-hover:");
+    expect(css).toContain('[data-theme="dark"] .study-shell');
+    expect(css).toContain(".study-sidebar nav::-webkit-scrollbar { width: 10px; }");
+    expect(css).toContain(".study-horizontal-grid::-webkit-scrollbar { height: 10px; }");
+    expect(css).toContain("scrollbar-color: var(--study-scrollbar-thumb) transparent;");
+    expect(css).toContain("background-clip: padding-box;");
+    expect(css).toContain(".study-horizontal-grid::-webkit-scrollbar-button { display: none;");
+    expect(css).toContain(".study-sidebar nav::-webkit-scrollbar { display: none; }");
+  });
+
+  it("opens Study images at natural resolution and returns to fit mode before closing", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+    const viewer = component.slice(component.indexOf("function StudyImageViewer"), component.indexOf("function Review("));
+
+    expect(viewer).toContain("const [expanded, setExpanded] = useState(false)");
+    expect(viewer).toContain('expanded ? "Fit" : "Full size"');
+    expect(viewer).toContain('className="study-image-stage-toggle"');
+    expect(viewer).toContain('expanded ? "Fit image to window" : "View image at full resolution"');
+    expect(viewer).toContain("if (expanded) setExpanded(false)");
+    expect(css).toContain(".study-image-lightbox.is-expanded .study-image-stage-toggle > img");
+    expect(css).toContain("max-width: none; max-height: none;");
   });
 
   it("opens day-agenda block details from the entire row", () => {
