@@ -75,6 +75,20 @@ describe("Study UI regressions", () => {
     expect(css).toContain(".study-icon.desktop { display: none; }");
   });
 
+  it("uses theme-aware Threadwise scrollbars for Study navigation and the horizontal timetable", () => {
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(css).toContain("--study-scrollbar-thumb:");
+    expect(css).toContain("--study-scrollbar-thumb-hover:");
+    expect(css).toContain('[data-theme="dark"] .study-shell');
+    expect(css).toContain(".study-sidebar nav::-webkit-scrollbar { width: 10px; }");
+    expect(css).toContain(".study-horizontal-grid::-webkit-scrollbar { height: 10px; }");
+    expect(css).toContain("scrollbar-color: var(--study-scrollbar-thumb) transparent;");
+    expect(css).toContain("background-clip: padding-box;");
+    expect(css).toContain(".study-horizontal-grid::-webkit-scrollbar-button { display: none;");
+    expect(css).toContain(".study-sidebar nav::-webkit-scrollbar { display: none; }");
+  });
+
   it("opens Study images at natural resolution and returns to fit mode before closing", () => {
     const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
     const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");

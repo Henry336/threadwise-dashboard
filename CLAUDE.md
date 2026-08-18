@@ -5,6 +5,13 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-18 (Codex):** Replaced the browser-default Study sidebar and horizontal-timetable
+  scrollbars with scoped, theme-adaptive Threadwise styling on guarded branch
+  `codex/study-image-sidebar-coursemology`. The native overflow model remains intact; Firefox and
+  WebKit receive rounded token-derived thumbs and transparent tracks, while the mobile drawer still
+  hides its scrollbar. Validation passes 122 tests, typecheck, lint, build, secret scan, and
+  Playwright (5 passed, one intentional mobile skip). The Impeccable detector reported only two
+  unrelated pre-existing side-border warnings. Nothing was deployed or merged.
 - **2026-08-17 (Codex):** Added an accessible, persisted laptop/desktop Study sidebar toggle and a
   two-stage Library image viewer on guarded branch `codex/study-image-sidebar-coursemology`. Images
   open fitted for orientation, then click or **Full size** reveals natural pixels in a full-viewport

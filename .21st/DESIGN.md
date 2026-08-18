@@ -48,3 +48,5 @@ Study Work cards prioritize action, identity, and deadline. Do not expose provid
 On laptop and desktop widths, expose one persistent sidebar toggle in the Study top bar. Collapsing navigation gives timetable, Library, and review work the full viewport without changing routes or workspace state. Mobile keeps its existing overlay drawer and does not inherit the desktop preference.
 
 Saved Library images open fitted to the available viewer for orientation. A labelled **Full size** action and clicking the image both switch to a full-viewport, natural-resolution scrollable canvas; **Fit**, clicking again, or pressing Escape returns to fit mode. Pressing Escape from fit mode closes the viewer.
+
+Primary Study overflow controls are part of the visual system. On desktop, the sidebar navigation and horizontal timetable use slim rounded thumbs derived from theme tokens, transparent tracks, and a restrained Study-blue hover state. Preserve native scrolling and Firefox/WebKit support; the mobile drawer continues to hide its scrollbar.
