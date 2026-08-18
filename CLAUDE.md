@@ -5,6 +5,12 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-18 (Codex):** Full guarded-stack release is authorized and dashboard PR #2 is open.
+  GitHub's Linux validate job revealed that Vitest's default discovery included the Playwright
+  `e2e` spec even though browser checks have a separate job. The unit-test command now explicitly
+  excludes `e2e/**`; locally all 122 Vitest tests and the independent Playwright suite (5 passed,
+  one intentional mobile skip) pass. Hosted CI rerun and the paired backend Gate 3A recovery proof
+  remain required before merge/deployment.
 - **2026-08-18 (Codex):** Replaced the browser-default Study sidebar and horizontal-timetable
   scrollbars with scoped, theme-adaptive Threadwise styling on guarded branch
   `codex/study-image-sidebar-coursemology`. The native overflow model remains intact; Firefox and
