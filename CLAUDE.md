@@ -5,12 +5,12 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-21 (Codex, release candidate):** Added an accessible Overview quote manager to personal
+- **2026-08-21 (Codex, deployed):** Added an accessible Overview quote manager to personal
   Settings → General. Personal lines with optional attribution join the built-in deterministic
   daily rotation; the UI supports explicit add/remove/save, responsive desktop/mobile layouts, and
   a 40-entry limit. All 125 tests, typecheck, lint, production build, 52 security checks, secret
-  scan, dependency audits, and real-browser desktop/mobile QA pass. Paired backend migration and
-  production release remain.
+  scan, dependency audits, and real-browser desktop/mobile QA pass. Dashboard runtime `fc2cf64`
+  completed its Vercel production deployment after paired backend runtime `3860db8` became live.
 - **2026-08-18 (Codex, deployed):** Dashboard PR #2 merged as
   `b00a3d15660a5714852a7a4096387f6995127845` after the paired backend and all 60 production
   migrations were healthy. Vercel reported the production deployment complete and the canonical
@@ -140,7 +140,8 @@ updates the Working log below** (newest first: date, who, what, current state).
   `codex/personal-overview-quotes`. The two owner-supplied attributed lines join the built-in set;
   saved personal lines use the paired backend `overviewQuotes` setting and remain stable for each
   local date. The UI passed desktop and 390×844 browser QA plus all unit, type, lint, build, secret,
-  security, and dependency gates. Commit/backend-first deployment/live verification remain.
+  security, and dependency gates. Backend runtime `3860db8` and dashboard runtime `fc2cf64`
+  are deployed; only this documentation-only release record follows them.
 
 - **2026-08-17 (Codex):** Phase 7 dashboard boundary commit `16687b3` is complete on
   `codex/phase7-public-study-architecture`, paired with backend architecture `77739bd`.
