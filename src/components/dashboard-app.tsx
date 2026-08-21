@@ -41,7 +41,7 @@ import {
 import type {
   DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, DashboardSettings,
   DashboardSnapshot, DashboardTask, EntityKind, IdeaStatus, IntegrationStatus, SearchResult,
-  CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace,
+  CaptureKind, CapturePreview, IdeaBrief, DashboardWorkspace, DashboardOverviewQuote,
 } from "@/lib/types";
 import { dailyOverviewLine } from "@/lib/dashboard-copy";
 import { clampInteger } from "@/lib/numeric-input";
@@ -54,6 +54,7 @@ type PaginationState = Record<"tasks" | "notes" | "ideas" | "expenses" | "images
 type IdeaBriefState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
 const ACCENTS = { iris: "#168b83", coral: "#dc6a52", mint: "#2aa889" } as const;
+const OVERVIEW_QUOTE_LIMIT = 40;
 const PERSONAL_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "today", label: "Today", icon: Inbox },
   { id: "tasks", label: "Tasks", icon: ListChecks },
@@ -723,7 +724,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         </header>
 
         <div className="tw-content" key={activeView}>
-          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
+          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} overviewQuotes={data.settings.overviewQuotes} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
           {activeView === "today" && (data.workspace.kind === "GROUP"
             ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} />
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
@@ -896,12 +897,12 @@ function WorkspaceSwitcher({ current, workspaces, disabled }: { current: Dashboa
   </div>;
 }
 
-function PageHeading({ view, workspace, name, timezone, generatedAt, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; generatedAt: string; onAdd: () => void }) {
+function PageHeading({ view, workspace, name, timezone, generatedAt, overviewQuotes, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; generatedAt: string; overviewQuotes: readonly DashboardOverviewQuote[]; onAdd: () => void }) {
   const now = new Date(generatedAt);
   const hour = Number(new Intl.DateTimeFormat("en-SG", { hour: "2-digit", hour12: false, timeZone: timezone }).format(now));
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const copy: Record<DashboardView, [string, string]> = {
-    today: workspace.kind === "GROUP" ? [workspace.name, ""] : [`${greeting}, ${name}.`, dailyOverviewLine(now, timezone)], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", ""],
+    today: workspace.kind === "GROUP" ? [workspace.name, ""] : [`${greeting}, ${name}.`, dailyOverviewLine(now, timezone, overviewQuotes)], tasks: [workspace.kind === "GROUP" ? "Work" : "Tasks", ""],
     schedule: ["Find a time", ""],
     people: ["People", ""],
     progress: ["Progress", ""],
@@ -1175,6 +1176,8 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
   const [saving, setSaving] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [integrationAction, setIntegrationAction] = useState<"calendar" | "excel" | null>(null);
+  const [quoteText, setQuoteText] = useState("");
+  const [quoteAuthor, setQuoteAuthor] = useState("");
 
   useEffect(() => {
     const requested = new URL(window.location.href).searchParams.get("tab");
@@ -1220,6 +1223,22 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
       setSettings((current) => ({ ...current, [provider === "calendar" ? "calendarAutoSync" : "excelAutoSync"]: enabled }));
     });
   };
+  const addOverviewQuote = () => {
+    const text = quoteText.replace(/\s+/g, " ").trim();
+    const author = quoteAuthor.replace(/\s+/g, " ").trim();
+    if (!text) { announce("Write a quote before adding it."); return; }
+    if (settings.overviewQuotes.length >= OVERVIEW_QUOTE_LIMIT) { announce(`You can save up to ${OVERVIEW_QUOTE_LIMIT} personal quotes.`); return; }
+    const key = `${text.toLocaleLowerCase("en")}\u0000${author.toLocaleLowerCase("en")}`;
+    const duplicate = settings.overviewQuotes.some((quote) => `${quote.text.toLocaleLowerCase("en")}\u0000${quote.author?.toLocaleLowerCase("en") ?? ""}` === key);
+    if (duplicate) { announce("That quote is already in your personal rotation."); return; }
+    setSettings((current) => ({ ...current, overviewQuotes: [...current.overviewQuotes, { text, ...(author ? { author } : {}) }] }));
+    setQuoteText("");
+    setQuoteAuthor("");
+    announce("Quote added. Save changes to keep it.");
+  };
+  const removeOverviewQuote = (index: number) => {
+    setSettings((current) => ({ ...current, overviewQuotes: current.overviewQuotes.filter((_, quoteIndex) => quoteIndex !== index) }));
+  };
   const exportData = async () => {
     try {
       let blob: Blob;
@@ -1245,7 +1264,28 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
   return <section className="tw-settings-workspace">
     <nav className="tw-settings-tabs" aria-label="Settings sections">{tabs.map(({ id, label, icon: Icon }) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}><Icon size={18} /><span>{label}</span><ChevronRight size={15} /></button>)}</nav>
     <div className="tw-settings-panel">
-      {tab === "general" && <><header><span>General</span><h2>Your Threadwise defaults</h2><p>Shared instantly by the dashboard and Telegram bot.</p></header><form onSubmit={save}><label>Timezone<input value={settings.timezone} onChange={(event) => setSettings({ ...settings, timezone: event.target.value })} /></label><label>Image text languages<input value={settings.ocrLanguages} onChange={(event) => setSettings({ ...settings, ocrLanguages: event.target.value })} /><small>Language codes used when making saved images searchable.</small></label><fieldset className="tw-appearance-field"><legend>Accent</legend><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button type="button" key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`}><Check size={14} /></button>)}</div></fieldset>{saveButton}</form></>}
+      {tab === "general" && <>
+        <header><span>General</span><h2>Your Threadwise defaults</h2><p>Personal settings for the dashboard and Telegram.</p></header>
+        <form onSubmit={save}>
+          <label>Timezone<input value={settings.timezone} onChange={(event) => setSettings({ ...settings, timezone: event.target.value })} /></label>
+          <label>Image text languages<input value={settings.ocrLanguages} onChange={(event) => setSettings({ ...settings, ocrLanguages: event.target.value })} /><small>Language codes used when making saved images searchable.</small></label>
+          <fieldset className="tw-appearance-field"><legend>Accent</legend><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button type="button" key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`}><Check size={14} /></button>)}</div></fieldset>
+          <fieldset className="tw-quote-manager">
+            <legend>Overview quotes</legend>
+            <p>Add lines that can appear beneath your personal welcome message. They rotate with Threadwise&apos;s built-in lines and stay stable for the day.</p>
+            {settings.overviewQuotes.length > 0
+              ? <div className="tw-quote-list">{settings.overviewQuotes.map((quote, index) => <article key={`${quote.text}-${quote.author ?? ""}-${index}`}><blockquote><p>{quote.text}</p>{quote.author && <cite>— {quote.author}</cite>}</blockquote><button type="button" onClick={() => removeOverviewQuote(index)} aria-label={`Remove quote: ${quote.text}`}><Trash2 size={16} /></button></article>)}</div>
+              : <div className="tw-quote-empty"><Sparkles size={18} /><span>Your personal rotation is empty. Threadwise&apos;s built-in lines will still appear.</span></div>}
+            <div className="tw-quote-composer">
+              <label><span>Quote</span><textarea rows={3} maxLength={280} value={quoteText} onChange={(event) => setQuoteText(event.target.value)} placeholder="Write the words without quotation marks" /></label>
+              <label><span>Author <em>optional</em></span><input maxLength={120} value={quoteAuthor} onChange={(event) => setQuoteAuthor(event.target.value)} placeholder="Who said it?" /></label>
+              <button type="button" className="tw-secondary" onClick={addOverviewQuote} disabled={!quoteText.trim() || settings.overviewQuotes.length >= OVERVIEW_QUOTE_LIMIT}><Plus size={16} /> Add quote</button>
+              <small>{settings.overviewQuotes.length}/{OVERVIEW_QUOTE_LIMIT} personal quotes · Add it to the list, then save your changes.</small>
+            </div>
+          </fieldset>
+          {saveButton}
+        </form>
+      </>}
       {tab === "reminders" && <>
         <header className="tw-settings-ari-header">
           <div><span>Reminders</span><p>Set regular follow-ups separately from the faster warnings sent just before a deadline.</p></div>

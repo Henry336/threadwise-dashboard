@@ -158,6 +158,10 @@ export const DashboardSnapshotSchema = z.object({
     directNudgesEnabled: z.boolean(),
     calendarAutoSync: z.boolean().default(false),
     excelAutoSync: z.boolean().default(false),
+    overviewQuotes: z.array(z.object({
+      text: text(280),
+      author: optionalText(120),
+    }).strict()).max(40).default([]),
   }).optional(),
   collaboration: z.object({
     viewerTelegramId: z.string().regex(/^[1-9]\d{0,19}$/),

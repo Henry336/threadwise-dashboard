@@ -41,7 +41,8 @@
       "mobile day agenda with explicit schedule editing",
       "persisted collapsible Study sidebar on desktop with an independent mobile drawer",
       "fit-to-window Study image viewer with an explicit natural-resolution inspection mode",
-      "theme-aware restrained scrollbars on primary Study navigation and timetable overflow"
+      "theme-aware restrained scrollbars on primary Study navigation and timetable overflow",
+      "bounded personal Overview quote manager with explicit add, remove, and save actions"
     ]
   },
   "constraints": {
@@ -101,6 +102,11 @@
       "date": "2026-08-18",
       "decision": "Style desktop Study navigation and horizontal timetable scrollbars with adaptive Threadwise tokens while preserving native scrolling behavior and hiding the drawer scrollbar on mobile.",
       "reason": "These persistent overflow controls are part of the operating surface. Subtle rounded thumbs and brand-tinted hover states keep them legible in both themes without competing with timetable content."
+    },
+    {
+      "date": "2026-08-21",
+      "decision": "Let personal users manage a bounded quote-and-optional-author list in General settings and rotate those entries with the stable daily Overview line.",
+      "reason": "Settings provides the clearest persistent place to add, attribute, inspect, and remove personal lines. Explicit add/remove/save actions preserve the existing form model, while bounded storage and same-day selection prevent visual churn."
     }
   ],
   "evidence": [
@@ -108,5 +114,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-18T00:15:00.000+08:00"
+  "generatedAt": "2026-08-21T19:45:00.000+08:00"
 }

@@ -5,6 +5,12 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-21 (Codex, release candidate):** Added an accessible Overview quote manager to personal
+  Settings → General. Personal lines with optional attribution join the built-in deterministic
+  daily rotation; the UI supports explicit add/remove/save, responsive desktop/mobile layouts, and
+  a 40-entry limit. All 125 tests, typecheck, lint, production build, 52 security checks, secret
+  scan, dependency audits, and real-browser desktop/mobile QA pass. Paired backend migration and
+  production release remain.
 - **2026-08-18 (Codex, deployed):** Dashboard PR #2 merged as
   `b00a3d15660a5714852a7a4096387f6995127845` after the paired backend and all 60 production
   migrations were healthy. Vercel reported the production deployment complete and the canonical
@@ -129,6 +135,12 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-21 (Codex):** Personal Overview quote manager is implementation-complete on
+  `codex/personal-overview-quotes`. The two owner-supplied attributed lines join the built-in set;
+  saved personal lines use the paired backend `overviewQuotes` setting and remain stable for each
+  local date. The UI passed desktop and 390×844 browser QA plus all unit, type, lint, build, secret,
+  security, and dependency gates. Commit/backend-first deployment/live verification remain.
 
 - **2026-08-17 (Codex):** Phase 7 dashboard boundary commit `16687b3` is complete on
   `codex/phase7-public-study-architecture`, paired with backend architecture `77739bd`.

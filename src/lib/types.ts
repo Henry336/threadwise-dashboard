@@ -195,6 +195,12 @@ export type DashboardSettings = {
   directNudgesEnabled: boolean;
   calendarAutoSync: boolean;
   excelAutoSync: boolean;
+  overviewQuotes: DashboardOverviewQuote[];
+};
+
+export type DashboardOverviewQuote = {
+  text: string;
+  author?: string;
 };
 
 export type SearchResult = {

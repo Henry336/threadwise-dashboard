@@ -226,6 +226,7 @@ export function getDemoSnapshot(): DashboardSnapshot {
       directNudgesEnabled: false,
       calendarAutoSync: true,
       excelAutoSync: true,
+      overviewQuotes: [],
     },
   };
 }

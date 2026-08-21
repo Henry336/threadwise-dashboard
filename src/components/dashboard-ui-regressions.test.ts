@@ -29,4 +29,16 @@ describe("dashboard UI regressions", () => {
     expect(css).toContain(".tw-settings-panel .tw-form-row { align-items: start; }");
     expect(css).toContain("align-content: start; display: grid");
   });
+
+  it("keeps the personal quote library in the existing Settings and Overview flow", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
+
+    expect(component).toContain("Overview quotes");
+    expect(component).toContain("Add quote");
+    expect(component).toContain("overviewQuotes={data.settings.overviewQuotes}");
+    expect(component).toContain("dailyOverviewLine(now, timezone, overviewQuotes)");
+    expect(css).toContain(".tw-quote-manager {");
+    expect(css).toContain(".tw-quote-composer {");
+  });
 });

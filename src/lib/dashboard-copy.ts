@@ -1,15 +1,19 @@
-const DAILY_OVERVIEW_LINES = [
-  "Pick one thing. Start there.",
-  "Make the next move obvious.",
-  "Clear one loose end.",
-  "Small progress still counts.",
-  "Future you says thanks.",
-  "Today has enough tabs open.",
-  "Start small. Momentum can do the rest.",
-  "One useful thing at a time.",
+import type { DashboardOverviewQuote } from "./types";
+
+export const BUILT_IN_OVERVIEW_QUOTES: readonly DashboardOverviewQuote[] = [
+  { text: "Pick one thing. Start there." },
+  { text: "Make the next move obvious." },
+  { text: "Clear one loose end." },
+  { text: "Small progress still counts." },
+  { text: "Future you says thanks." },
+  { text: "Today has enough tabs open." },
+  { text: "Start small. Momentum can do the rest." },
+  { text: "One useful thing at a time." },
+  { text: "Life does not get better by chance. It gets better by change", author: "Jim Rohn" },
+  { text: "To exist is to change, to change is to mature, to mature is to keep creating oneself endlessly", author: "Henry Bergson" },
 ] as const;
 
-export function dailyOverviewLine(now: Date | string, timezone: string): string {
+export function dailyOverviewLine(now: Date | string, timezone: string, personalQuotes: readonly DashboardOverviewQuote[] = []): string {
   const date = typeof now === "string" ? new Date(now) : now;
   const parts = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -24,6 +28,8 @@ export function dailyOverviewLine(now: Date | string, timezone: string): string 
     return value;
   }, 0);
 
-  return DAILY_OVERVIEW_LINES[numericDate % DAILY_OVERVIEW_LINES.length]!;
+  const quotes = [...BUILT_IN_OVERVIEW_QUOTES, ...personalQuotes];
+  const quote = quotes[numericDate % quotes.length]!;
+  return `${quote.text}${quote.author ? ` — ${quote.author}` : ""}`;
 }
 

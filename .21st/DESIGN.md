@@ -3,7 +3,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Context verified: **2026-08-10**
+Context verified: **2026-08-21**
 
 ## Product
 
@@ -35,7 +35,7 @@ Telegram review links must select the authorized workspace and open the exact re
 
 ## Decision: direct operational copy
 
-Use one direct title on collection and settings pages. Do not add a subtitle that restates an obvious page name. Search names tasks, notes, ideas, and images in the heading itself. Reserve one short, deterministic daily line for the personal Overview greeting, where a small amount of personality supports orientation without competing with work.
+Use one direct title on collection and settings pages. Do not add a subtitle that restates an obvious page name. Search names tasks, notes, ideas, and images in the heading itself. Reserve one short, deterministic daily line for the personal Overview greeting, where a small amount of personality supports orientation without competing with work. Personal lines are managed in General settings as a bounded quote-and-optional-author list; use explicit add/remove/save actions and keep the responsive editor within the existing form system.
 
 ## Decision: compact Study mobile surfaces
 
