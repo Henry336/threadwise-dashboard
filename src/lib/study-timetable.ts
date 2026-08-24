@@ -199,10 +199,11 @@ export function buildTimetableDays(study: StudySnapshot, weekStart: string): Tim
       .filter((block) => academicWeek === null || academicWeek === 0 || (
         (block.startWeek == null || academicWeek >= block.startWeek)
         && (block.endWeek == null || academicWeek <= block.endWeek)
+        && !block.excludedWeeks.includes(academicWeek)
       ))
       .sort((left, right) => left.startTime.localeCompare(right.startTime));
     const dueItems = study.items
-      .filter((item) => item.status !== "SKIPPED" && item.status !== "DONE" && item.dueAt)
+      .filter((item) => item.status !== "SKIPPED" && item.status !== "DONE" && item.dueAt && item.deadlineStatus !== "NEEDS_CONFIRMATION")
       .filter((item) => dateKeyInZone(item.dueAt!, study.workspace.timezone) === key)
       .sort((left, right) => String(left.dueAt).localeCompare(String(right.dueAt)));
     const date = new Date(`${key}T12:00:00Z`);

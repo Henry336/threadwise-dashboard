@@ -39,7 +39,7 @@ type Props = {
   busy: boolean;
   onAddBlock: (body: unknown) => Promise<unknown>;
   onUpdateBlock: (id: string, body: unknown) => Promise<unknown>;
-  onDeleteBlock: (id: string) => Promise<unknown>;
+  onDeleteBlock: (id: string, body: { scope: "occurrence" | "future" | "series"; weekNumber?: number }) => Promise<unknown>;
   onImportNusmods: (url: string) => Promise<unknown>;
   onEditItem: (item: StudyItem) => void;
   onFocusItem: (item: StudyItem) => void;
@@ -58,6 +58,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const orientationReady = useRef(false);
   const [panel, dispatchPanel] = useReducer(timetablePanelReducer, { mode: "closed" });
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const verticalScrollRef = useRef<HTMLElement>(null);
   const horizontalScrollRef = useRef<HTMLElement>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
@@ -210,11 +211,16 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       busy={busy}
       onClose={() => dispatchPanel({ type: "close" })}
       onEdit={() => dispatchPanel({ type: "edit" })}
-      onDelete={async () => {
-        const confirmed = window.confirm(`Remove ${panelBlock.label} from every scheduled week? This recurring block will be removed.`);
-        if (!confirmed) return;
-        const saved = await onDeleteBlock(panelBlock.id);
-        if (saved !== undefined) dispatchPanel({ type: "close" });
+      onDelete={() => { setDeleteOpen(true); return Promise.resolve(); }}
+    />}
+    {deleteOpen && panelBlock && <ScheduleDeleteDialog
+      block={panelBlock}
+      weekNumber={academicWeek && academicWeek > 0 ? academicWeek : undefined}
+      busy={busy}
+      onClose={() => setDeleteOpen(false)}
+      onDelete={async (body) => {
+        const saved = await onDeleteBlock(panelBlock.id, body);
+        if (saved !== undefined) { setDeleteOpen(false); dispatchPanel({ type: "close" }); }
       }}
     />}
     {(panel.mode === "create" || (panel.mode === "edit" && panelBlock)) && <TimetableEditor
@@ -438,8 +444,32 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
           {block.venueName && <div><dt>Venue</dt><dd>{block.venueName}</dd></div>}
         </dl>
         {travelConfigured && <section className="study-timetable-detail-travel"><span><MapPin size={16} /> Travel reminder</span><p>{block.defaultOrigin?.name ? `From ${block.defaultOrigin.name}` : "Uses your current or default origin"}</p><small>{block.travelBufferMinutes} min buffer · {block.reminderLeadMinutes} min reminder lead</small></section>}
+        {block.reminderReadiness && <section className="study-timetable-reminder-readiness" data-status={block.reminderReadiness.status}><span><Clock3 size={16} /> Reminder status</span><b>{block.reminderReadiness.status === "READY" ? "Ready to send" : block.reminderReadiness.status === "OUT_OF_RANGE" ? "Not scheduled this week" : "Needs attention"}</b>{block.reminderReadiness.reasons.map((reason) => <p key={reason}>{reason}</p>)}</section>}
       </div>
       <footer><button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete()}><Trash2 size={16} /> Delete</button><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Close</button><button type="button" className="study-primary" disabled={busy} onClick={onEdit}><Pencil size={16} /> Edit</button></div></footer>
+    </section>
+  </TimetableOverlay>;
+}
+
+function ScheduleDeleteDialog({ block, weekNumber, busy, onClose, onDelete }: {
+  block: ScheduleBlock;
+  weekNumber?: number;
+  busy: boolean;
+  onClose: () => void;
+  onDelete: (body: { scope: "occurrence" | "future" | "series"; weekNumber?: number }) => Promise<void>;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(dialogRef, busy, onClose);
+  const [scope, setScope] = useState<"occurrence" | "future" | "series">(weekNumber ? "occurrence" : "series");
+  return <TimetableOverlay busy={busy} onClose={onClose} className="delete-overlay">
+    <section ref={dialogRef} className="study-schedule-delete" role="alertdialog" aria-modal="true" aria-labelledby="schedule-delete-title" tabIndex={-1}>
+      <header><span>Remove timetable block</span><h2 id="schedule-delete-title">How much of “{block.label}”?</h2><p>Choose the smallest scope that matches what changed. Other weeks stay intact.</p></header>
+      <div role="radiogroup" aria-label="Deletion scope">
+        {weekNumber && <label><input type="radio" name="delete-scope" value="occurrence" checked={scope === "occurrence"} onChange={() => setScope("occurrence")} /><span><b>This week only</b><small>Skip Week {weekNumber}; keep the rest of the series.</small></span></label>}
+        {weekNumber && <label><input type="radio" name="delete-scope" value="future" checked={scope === "future"} onChange={() => setScope("future")} /><span><b>This and future weeks</b><small>Keep earlier occurrences and end the series before Week {weekNumber}.</small></span></label>}
+        <label><input type="radio" name="delete-scope" value="series" checked={scope === "series"} onChange={() => setScope("series")} /><span><b>Entire series</b><small>Remove every scheduled occurrence.</small></span></label>
+      </div>
+      <footer><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete({ scope, ...(scope !== "series" && weekNumber ? { weekNumber } : {}) })}><Trash2 size={16} /> Remove</button></footer>
     </section>
   </TimetableOverlay>;
 }

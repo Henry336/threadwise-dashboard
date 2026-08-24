@@ -136,6 +136,16 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-25 (Codex):** Implemented the paired Phase 1 trust UI on
+  `codex/phase1-reliability-foundation`. Work remains the canonical complete assignment view and
+  now labels suspicious Canvas deadlines for confirmation; quarantined deadlines stay out of the
+  timetable. Block details expose reminder readiness and reasons. Recurring deletion offers this
+  week, this-and-future, or the entire series. Personal and Group destructive actions share one
+  accessible branded confirmation provider, and no runtime native confirm/alert remains. Added
+  regression detection and timetable exclusion tests. Typecheck, lint, isolated production build,
+  secret scan, focused tests, and all 127 tests pass. Final documentation and push remain in
+  progress.
+
 - **2026-08-21 (Codex):** Personal Overview quote manager is implementation-complete on
   `codex/personal-overview-quotes`. The two owner-supplied attributed lines join the built-in set;
   saved personal lines use the paired backend `overviewQuotes` setting and remain stable for each

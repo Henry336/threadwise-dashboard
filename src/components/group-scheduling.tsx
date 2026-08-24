@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Ari } from "@/components/ari";
 import type { AvailabilityPoll } from "@/lib/types";
+import { useConfirmation } from "./confirmation-dialog";
 
 type Props = {
   polls: AvailabilityPoll[];
@@ -101,6 +102,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
   mutate: (work: () => Promise<AvailabilityPoll>, success: string) => Promise<void>;
   announce: (message: string) => void;
 }) {
+  const confirm = useConfirmation();
   const [timezone, setTimezone] = useState(poll.viewerResponse?.timezone ?? viewerTimezone);
   const [selected, setSelected] = useState(() => new Set(poll.viewerResponse?.availableStarts ?? []));
   const [wantsCalendar, setWantsCalendar] = useState(poll.viewerResponse?.wantsCalendar ?? false);
@@ -170,13 +172,13 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
       {manager && <section className="tw-organizer-bar"><div><b>Organizer controls</b><small>Only group owners and admins can use these.</small></div><button disabled={busy || !poll.pendingMembers.length} onClick={() => mutate(async () => {
         const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/remind`, "POST", {});
         return result.poll;
-      }, poll.pendingMembers.length ? "Reminder posted in Telegram." : "Everyone has responded.")}><Send size={16} /> Remind pending</button><button className="danger" disabled={busy} onClick={() => {
-        if (!window.confirm("Close this availability poll? Responses will remain visible.")) return;
+      }, poll.pendingMembers.length ? "Reminder posted in Telegram." : "Everyone has responded.")}><Send size={16} /> Remind pending</button><button className="danger" disabled={busy} onClick={() => void (async () => {
+        if (!await confirm({ title: "Close this poll?", message: "Responses will remain visible, but members will no longer be able to submit availability.", confirmLabel: "Close poll", tone: "danger" })) return;
         void mutate(async () => {
           const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/cancel`, "POST", { expectedRevision: poll.revision });
           return result.poll;
         }, "Poll closed.");
-      }}><X size={16} /> Close poll</button></section>}
+      })()}><X size={16} /> Close poll</button></section>}
     </>}
   </article>;
 }

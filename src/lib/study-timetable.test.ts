@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FULL_DAY_END_MINUTE,
   FULL_DAY_START_MINUTE,
+  buildTimetableDays,
   preferredTimetableMinute,
   timetableIndicatorOffset,
   timetableBlockBounds,
@@ -11,6 +12,7 @@ import {
   timetableHorizontalBlockWidth,
   timetablePanelReducer,
 } from "./study-timetable";
+import type { StudySnapshot } from "./study-types";
 
 describe("Study timetable day bounds", () => {
   it("models the complete midnight-to-midnight day", () => {
@@ -98,5 +100,20 @@ describe("Study timetable day bounds", () => {
     expect(details).toEqual({ mode: "details", blockId: "block-1" });
     expect(timetablePanelReducer(details, { type: "edit" })).toEqual({ mode: "edit", blockId: "block-1" });
     expect(timetablePanelReducer(details, { type: "close" })).toEqual({ mode: "closed" });
+  });
+
+  it("hides excluded occurrences and quarantined deadlines from the timetable", () => {
+    const study = {
+      generatedAt: "2026-08-18T04:00:00.000Z",
+      workspace: { timezone: "Asia/Singapore", semesterStartDate: "2026-08-10T00:00:00.000Z" },
+      scheduleBlocks: [{ id: "block-1", active: true, dayOfWeek: 2, startTime: "10:00", endTime: "11:00", label: "Tutorial", blockType: "tutorial", excludedWeeks: [2] }],
+      items: [
+        { id: "trusted", status: "OPEN", dueAt: "2026-08-18T12:00:00.000+08:00", deadlineStatus: "TRUSTED", plannedMinutes: 30, module: { color: null } },
+        { id: "suspect", status: "OPEN", dueAt: "2026-08-18T12:00:00.000+08:00", deadlineStatus: "NEEDS_CONFIRMATION", plannedMinutes: 30, module: { color: null } },
+      ],
+    } as unknown as StudySnapshot;
+    const tuesday = buildTimetableDays(study, "2026-08-17")[1]!;
+    expect(tuesday.blocks).toHaveLength(0);
+    expect(tuesday.dueItems.map((item) => item.id)).toEqual(["trusted"]);
   });
 });

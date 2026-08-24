@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Lets CI/recovery validation avoid a locked local dev build directory on Windows.
+  distDir: process.env.THREADWISE_NEXT_DIST_DIR || ".next",
   async headers() {
     return [
       {
