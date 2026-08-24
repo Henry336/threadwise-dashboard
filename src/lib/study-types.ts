@@ -324,9 +324,13 @@ export type StudySnapshot = {
     endTime: string;
     label: string;
     blockType: string;
+    customTypeLabel?: string | null;
     startWeek?: number | null;
     endWeek?: number | null;
     excludedWeeks: number[];
+    recurrenceStartDate?: string | null;
+    recurrenceEndDate?: string | null;
+    excludedDates: string[];
     venueId?: string | null;
     venueName?: string | null;
     destinationStopId?: string | null;
@@ -341,6 +345,21 @@ export type StudySnapshot = {
       mode: "TRAVEL" | "BLOCK";
       reasons: string[];
     };
+    travelStates?: Array<{
+      id: string;
+      occurrenceDate: string;
+      status: string;
+      scheduledFor?: string | null;
+      leaveAt?: string | null;
+      originName?: string | null;
+      boardingStop?: string | null;
+      services: string[];
+      live: boolean;
+      lastError?: string | null;
+      sentAt?: string | null;
+      arrivedAt?: string | null;
+      mutedAt?: string | null;
+    }>;
   }>;
   reminderDiagnostics?: {
     lastCheckedAt?: string | null;

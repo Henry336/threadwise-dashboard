@@ -26,8 +26,10 @@ export type TimetableBlockDraft = {
   endTime: string;
   label: string;
   blockType: string;
-  startWeek: string;
-  endWeek: string;
+  customTypeLabel: string;
+  recurrenceMode: "once" | "weekly";
+  recurrenceStartDate: string;
+  recurrenceEndDate: string;
   destination: string;
   destinationPlaceId: string | null;
   defaultOriginId: string;
@@ -36,20 +38,20 @@ export type TimetableBlockDraft = {
 
 export type TimetablePanelState =
   | { mode: "closed" }
-  | { mode: "details"; blockId: string }
-  | { mode: "edit"; blockId: string }
-  | { mode: "create"; day: number };
+  | { mode: "details"; blockId: string; occurrenceDate: string }
+  | { mode: "edit"; blockId: string; occurrenceDate: string }
+  | { mode: "create"; day: number; occurrenceDate: string };
 
 export type TimetablePanelAction =
-  | { type: "open-details"; blockId: string }
+  | { type: "open-details"; blockId: string; occurrenceDate: string }
   | { type: "edit" }
-  | { type: "create"; day: number }
+  | { type: "create"; day: number; occurrenceDate: string }
   | { type: "close" };
 
 export function timetablePanelReducer(state: TimetablePanelState, action: TimetablePanelAction): TimetablePanelState {
-  if (action.type === "open-details") return { mode: "details", blockId: action.blockId };
-  if (action.type === "create") return { mode: "create", day: action.day };
-  if (action.type === "edit" && state.mode === "details") return { mode: "edit", blockId: state.blockId };
+  if (action.type === "open-details") return { mode: "details", blockId: action.blockId, occurrenceDate: action.occurrenceDate };
+  if (action.type === "create") return { mode: "create", day: action.day, occurrenceDate: action.occurrenceDate };
+  if (action.type === "edit" && state.mode === "details") return { mode: "edit", blockId: state.blockId, occurrenceDate: state.occurrenceDate };
   if (action.type === "close") return { mode: "closed" };
   return state;
 }
@@ -74,8 +76,11 @@ export function timetableBlockPayload(draft: TimetableBlockDraft, editing: boole
     endTime: draft.endTime,
     label: draft.label,
     blockType: draft.blockType,
-    startWeek: draft.startWeek ? Number(draft.startWeek) : null,
-    endWeek: draft.endWeek ? Number(draft.endWeek) : null,
+    customTypeLabel: draft.blockType === "other" ? draft.customTypeLabel.trim() : null,
+    recurrenceStartDate: draft.recurrenceStartDate,
+    recurrenceEndDate: draft.recurrenceMode === "once" ? draft.recurrenceStartDate : draft.recurrenceEndDate || null,
+    startWeek: null,
+    endWeek: null,
     defaultOriginId: draft.defaultOriginId || null,
     travelBufferMinutes: draft.travelBufferMinutes,
   };
@@ -196,11 +201,19 @@ export function buildTimetableDays(study: StudySnapshot, weekStart: string): Tim
     const weekday = index + 1;
     const blocks = study.scheduleBlocks
       .filter((block) => block.active && block.dayOfWeek === weekday)
-      .filter((block) => academicWeek === null || academicWeek === 0 || (
-        (block.startWeek == null || academicWeek >= block.startWeek)
-        && (block.endWeek == null || academicWeek <= block.endWeek)
-        && !block.excludedWeeks.includes(academicWeek)
-      ))
+      .filter((block) => {
+        const hasCalendarRecurrence = Boolean(block.recurrenceStartDate || block.recurrenceEndDate || block.excludedDates?.length);
+        if (hasCalendarRecurrence) {
+          return (!block.recurrenceStartDate || key >= block.recurrenceStartDate.slice(0, 10))
+            && (!block.recurrenceEndDate || key <= block.recurrenceEndDate.slice(0, 10))
+            && !(block.excludedDates ?? []).some((date) => date.slice(0, 10) === key);
+        }
+        return academicWeek === null || academicWeek === 0 || (
+          (block.startWeek == null || academicWeek >= block.startWeek)
+          && (block.endWeek == null || academicWeek <= block.endWeek)
+          && !block.excludedWeeks.includes(academicWeek)
+        );
+      })
       .sort((left, right) => left.startTime.localeCompare(right.startTime));
     const dueItems = study.items
       .filter((item) => item.status !== "SKIPPED" && item.status !== "DONE" && item.dueAt && item.deadlineStatus !== "NEEDS_CONFIRMATION")

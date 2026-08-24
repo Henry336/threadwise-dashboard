@@ -34,7 +34,7 @@ import {
   sessionCustomMethod, sessionElapsedSeconds, sessionMethodSummary, sessionResourceIds,
 } from "@/lib/study-session";
 
-type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string };
+type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string; initialItem?: string; initialItemKind?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
 type Toast = {
   message: string;
@@ -74,7 +74,7 @@ const MOBILE_NAV = NAV.filter((item) => ["study-overview", "study-timetable", "s
 const ITEM_TYPES: StudyItemType[] = ["LECTURE", "TUTORIAL", "LAB", "ASSIGNMENT", "PROJECT", "REVISION", "TIMED_PRACTICE", "READING", "ADMINISTRATIVE"];
 const MASTERY: StudyTrafficLight[] = ["GREEN", "AMBER", "RED", "UNASSESSED"];
 
-export function StudyDashboardApp({ initialData, workspaces, initialView }: Props) {
+export function StudyDashboardApp({ initialData, workspaces, initialView, initialItem, initialItemKind }: Props) {
   const [study, setStudy] = useState<StudySnapshot | null>(null);
   const [view, setView] = useState<StudyView>(validView(initialView));
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -98,6 +98,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
   const hasSnapshot = useRef(false);
   const navChord = useRef(0);
   const toastTimer = useRef<number | null>(null);
+  const initialTargetOpened = useRef(false);
 
   useEffect(() => {
     try { clearThreadwiseDrafts(window.localStorage, initialData.workspace.id); } catch { /* Storage can be unavailable. */ }
@@ -161,6 +162,38 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
       announce(error instanceof Error ? error.message : "That note could not be opened.", "error");
     }
   }, [announce]);
+
+  useEffect(() => {
+    if (!study || initialTargetOpened.current || !initialItem || !initialItemKind) return;
+    const timer = window.setTimeout(() => {
+      initialTargetOpened.current = true;
+      void (async () => {
+        try {
+          if (initialItemKind === "study-item") {
+            const existing = study.items.find((candidate) => candidate.id === initialItem || candidate.publicId === initialItem.toUpperCase());
+            const item = existing ?? (await studyApi<{ item: StudyItem }>(`study/items/${encodeURIComponent(initialItem)}`)).item;
+            if (!existing) setStudy((current) => current ? { ...current, items: [item, ...current.items.filter((candidate) => candidate.id !== item.id)] } : current);
+            setModuleFilter(item.moduleId);
+            setView("study-work");
+            setEditor({ kind: "item", value: item });
+            return;
+          }
+          if (initialItemKind === "study-resource") {
+            const existing = study.resources.find((candidate) => candidate.id === initialItem || candidate.publicId === initialItem.toUpperCase());
+            const resource = existing ?? (await studyApi<{ resource: StudyResource }>(`study/resources/${encodeURIComponent(initialItem)}`)).resource;
+            if (!existing) setStudy((current) => current ? { ...current, resources: [resource, ...current.resources.filter((candidate) => candidate.id !== resource.id)] } : current);
+            setModuleFilter(resource.moduleId);
+            setView("study-library");
+            if (resource.kind === "NOTE") setOpenNote(resource);
+            else setEditor({ kind: "resource", value: resource });
+          }
+        } catch (error) {
+          announce(error instanceof Error ? error.message : "That saved item could not be opened.", "error");
+        }
+      })();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [announce, initialItem, initialItemKind, setModuleFilter, study]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void refresh(false), 0);

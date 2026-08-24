@@ -53,8 +53,10 @@ describe("Study timetable day bounds", () => {
       endTime: "11:00",
       label: "Hackathon",
       blockType: "other",
-      startWeek: "2",
-      endWeek: "2",
+      customTypeLabel: "Competition",
+      recurrenceMode: "once" as const,
+      recurrenceStartDate: "2026-08-16",
+      recurrenceEndDate: "",
       destination: "",
       destinationPlaceId: null,
       defaultOriginId: "",
@@ -62,6 +64,13 @@ describe("Study timetable day bounds", () => {
     };
     expect(timetableBlockPayload(draft, false)).not.toHaveProperty("destinationPlaceId");
     expect(timetableBlockPayload(draft, false)).not.toHaveProperty("destination");
+    expect(timetableBlockPayload(draft, false)).toMatchObject({
+      customTypeLabel: "Competition",
+      recurrenceStartDate: "2026-08-16",
+      recurrenceEndDate: "2026-08-16",
+      startWeek: null,
+      endWeek: null,
+    });
     expect(timetableBlockPayload(draft, true)).toMatchObject({ destination: null, destinationPlaceId: null });
     expect(timetableBlockPayload({ ...draft, destination: "  Kent Ridge MRT  " }, false)).toMatchObject({ destination: "Kent Ridge MRT" });
     expect(timetableBlockPayload({ ...draft, destination: "COM3", destinationPlaceId: "venue:COM3" }, false)).toMatchObject({ destination: "COM3", destinationPlaceId: "venue:COM3" });
@@ -96,9 +105,9 @@ describe("Study timetable day bounds", () => {
   });
 
   it("moves a selected block from details to edit and closes cleanly", () => {
-    const details = timetablePanelReducer({ mode: "closed" }, { type: "open-details", blockId: "block-1" });
-    expect(details).toEqual({ mode: "details", blockId: "block-1" });
-    expect(timetablePanelReducer(details, { type: "edit" })).toEqual({ mode: "edit", blockId: "block-1" });
+    const details = timetablePanelReducer({ mode: "closed" }, { type: "open-details", blockId: "block-1", occurrenceDate: "2026-08-16" });
+    expect(details).toEqual({ mode: "details", blockId: "block-1", occurrenceDate: "2026-08-16" });
+    expect(timetablePanelReducer(details, { type: "edit" })).toEqual({ mode: "edit", blockId: "block-1", occurrenceDate: "2026-08-16" });
     expect(timetablePanelReducer(details, { type: "close" })).toEqual({ mode: "closed" });
   });
 

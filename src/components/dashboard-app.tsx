@@ -228,7 +228,7 @@ export function DashboardApp(props: DashboardAppProps) {
 
 function DashboardAppContent(props: DashboardAppProps) {
   if (props.initialData.workspace.mode === "STUDY") {
-    return <StudyDashboardApp initialData={props.initialData} workspaces={props.workspaces} initialView={props.initialView} />;
+    return <StudyDashboardApp initialData={props.initialData} workspaces={props.workspaces} initialView={props.initialView} initialItem={props.initialItem} initialItemKind={props.initialItemKind} />;
   }
   return <StandardDashboardApp {...props} />;
 }
@@ -278,6 +278,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
   const refreshInFlight = useRef(false);
+  const initialEntityOpened = useRef(Boolean(initialTarget));
 
   const announce = (message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -293,6 +294,57 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     window.history.replaceState(null, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const openSearchResult = async (result: SearchResult) => {
+    const view: DashboardView = result.kind === "task" ? "tasks" : result.kind === "expense" ? "expenses" : `${result.kind}s` as DashboardView;
+    const collection = result.kind === "task" ? data.tasks
+      : result.kind === "note" ? data.notes
+        : result.kind === "idea" ? data.ideas
+          : result.kind === "image" ? data.images
+            : data.expenses;
+    let item = collection.find((candidate) => candidate.id === result.id || candidate.publicId === result.publicId);
+    if (!item && !isDemo && result.kind !== "expense") {
+      try {
+        if (result.kind === "task") {
+          const response = await api<{ task: DashboardTask }>(`tasks/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.task;
+          setData((current) => ({ ...current, tasks: uniq([response.task, ...current.tasks]) }));
+        } else if (result.kind === "note") {
+          const response = await api<{ note: DashboardNote }>(`notes/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.note;
+          setData((current) => ({ ...current, notes: uniq([response.note, ...current.notes]) }));
+        } else if (result.kind === "idea") {
+          const response = await api<{ idea: DashboardIdea }>(`ideas/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.idea;
+          setData((current) => ({ ...current, ideas: uniq([response.idea, ...current.ideas]) }));
+        } else {
+          const response = await api<{ image: DashboardImage }>(`images/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.image;
+          setData((current) => ({ ...current, images: uniq([response.image, ...current.images]) }));
+        }
+      } catch (error) {
+        announce(error instanceof Error ? error.message : "That result could not be opened.");
+        return;
+      }
+    }
+    navigate(view);
+    if (!item) {
+      announce("That result is no longer in the current workspace.");
+      return;
+    }
+    if (result.kind === "task" && data.workspace.kind === "GROUP") setCollaborationTask(item as DashboardTask);
+    else setEditor({ kind: result.kind as EditableKind, item: item as EditorState["item"] });
+    const url = new URL(window.location.href);
+    url.searchParams.set("kind", result.kind);
+    url.searchParams.set("item", item.id);
+    window.history.replaceState(null, "", url);
+  };
+  useEffect(() => {
+    if (initialEntityOpened.current || !initialItem || !initialItemKind || !["task", "note", "idea", "image"].includes(initialItemKind)) return;
+    initialEntityOpened.current = true;
+    void openSearchResult({ id: initialItem, publicId: initialItem.toUpperCase(), kind: initialItemKind as SearchResult["kind"], title: "" });
+    // This is a one-shot hydration of the URL target; later collection refreshes must not reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialItem, initialItemKind]);
   const closeTaskImport = useCallback(() => {
     setTaskImportId(undefined);
     const url = new URL(window.location.href);
@@ -748,7 +800,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
           {activeView === "library" && (data.workspace.kind === "GROUP"
             ? <GroupResources data={data} onOpen={(view) => navigate(view)} onAdd={() => setCaptureOpen(true)} />
             : <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />)}
-          {activeView === "search" && <SearchView data={data} isDemo={isDemo} allowExpenses={false} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "today" : `${kind}s` as DashboardView)} announce={announce} />}
+          {activeView === "search" && <SearchView data={data} isDemo={isDemo} allowExpenses={false} onOpen={openSearchResult} announce={announce} />}
           {activeView === "settings" && (data.workspace.kind === "GROUP"
             ? <GroupSettingsView data={data} workspace={data.workspace} onSave={(settings) => setData((current) => ({ ...current, settings }))} announce={announce} />
             : <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onConnect={connectIntegration} onSyncCalendar={syncCalendarTasks} onSyncExcel={syncExpenses} onCreateExcel={createExcelWorkbook} onAutoSync={setIntegrationAutoSync} onRefresh={() => refreshSnapshot()} announce={announce} />)}
@@ -1090,7 +1142,7 @@ function LibraryView({ data, tab, onTab, onNavigate, isDemo }: { data: Dashboard
   return <section className="tw-library"><div className="tw-library-tabs">{(["notes", "ideas", "images"] as const).map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => onTab(item)}>{item === "notes" ? <FileText size={16} /> : item === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}{item}<span>{data[item].length}</span></button>)}</div>{tab === "images" ? <div className="tw-library-photo-strip">{data.images.slice(0, 8).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={imageSrc(image, isDemo, index)} alt={image.caption ?? "Saved image"} /><span>{image.caption ?? image.fileName}</span></button>)}</div> : <div className="tw-library-rows">{(tab === "notes" ? data.notes : data.ideas).slice(0, 20).map((item) => <button key={item.id} onClick={() => onNavigate(tab)}><span>{tab === "notes" ? <FileText size={16} /> : <Lightbulb size={16} />}</span><div><b>{item.title}</b><small>{"summary" in item ? item.summary : item.concept}</small></div><time>{formatDate(item.createdAt, data.user.timezone)}</time><ChevronRight size={16} /></button>)}</div>}<button className="tw-library-all" onClick={() => onNavigate(tab)}>Open all {tab}<ArrowRight size={15} /></button></section>;
 }
 
-function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; allowExpenses: boolean; onOpen: (kind: SearchResult["kind"]) => void; announce: (message: string) => void }) {
+function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; allowExpenses: boolean; onOpen: (result: SearchResult) => void; announce: (message: string) => void }) {
   const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false); const [kind, setKind] = useState<"all" | SearchResult["kind"]>("all"); const searchRequest = useRef(0);
   const local = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
     ...data.tasks.map((item) => ({ id: item.id, publicId: item.publicId, kind: "task" as const, title: item.title, excerpt: item.description })),
@@ -1122,7 +1174,7 @@ function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: D
   return <section className="tw-search-view tw-search-live">
     <div className="tw-search-live-box"><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search while you type…" />{loading ? <LoaderCircle className="spin" size={18} /> : query ? <span>{shown.length} {shown.length === 1 ? "match" : "matches"}</span> : null}</div>
     <div className="tw-search-filters" aria-label="Filter search results">{filters.map((filter) => <button key={filter} className={kind === filter ? "active" : ""} onClick={() => setKind(filter)}>{filter === "all" ? "Everything" : `${filter}s`}</button>)}</div>
-    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Search size={28} /><h2>Start typing to search.</h2></div>}</div>
+    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.publicId} · Open</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Search size={28} /><h2>Start typing to search.</h2></div>}</div>
   </section>;
 }
 
