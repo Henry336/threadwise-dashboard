@@ -46,6 +46,7 @@ import type {
 import { dailyOverviewLine } from "@/lib/dashboard-copy";
 import { clampInteger } from "@/lib/numeric-input";
 import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
+import { ConfirmationProvider, useConfirmation } from "./confirmation-dialog";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -222,13 +223,18 @@ class ClientApiError extends Error {
 type DashboardAppProps = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; initialItem?: string; initialItemKind?: string; openScheduleCreate?: boolean };
 
 export function DashboardApp(props: DashboardAppProps) {
+  return <ConfirmationProvider><DashboardAppContent {...props} /></ConfirmationProvider>;
+}
+
+function DashboardAppContent(props: DashboardAppProps) {
   if (props.initialData.workspace.mode === "STUDY") {
-    return <StudyDashboardApp initialData={props.initialData} workspaces={props.workspaces} initialView={props.initialView} />;
+    return <StudyDashboardApp initialData={props.initialData} workspaces={props.workspaces} initialView={props.initialView} initialItem={props.initialItem} initialItemKind={props.initialItemKind} />;
   }
   return <StandardDashboardApp {...props} />;
 }
 
 function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, initialItem, initialItemKind, openScheduleCreate }: DashboardAppProps) {
+  const confirm = useConfirmation();
   const initialTarget = initialItem && initialItemKind
     ? initialData[initialItemKind === "task" ? "tasks" : initialItemKind === "note" ? "notes" : initialItemKind === "idea" ? "ideas" : "images"]
       .find((item) => item.id === initialItem || item.publicId === initialItem.toUpperCase())
@@ -272,6 +278,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
   const refreshInFlight = useRef(false);
+  const initialEntityOpened = useRef(Boolean(initialTarget));
 
   const announce = (message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -287,6 +294,57 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     window.history.replaceState(null, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const openSearchResult = async (result: SearchResult) => {
+    const view: DashboardView = result.kind === "task" ? "tasks" : result.kind === "expense" ? "expenses" : `${result.kind}s` as DashboardView;
+    const collection = result.kind === "task" ? data.tasks
+      : result.kind === "note" ? data.notes
+        : result.kind === "idea" ? data.ideas
+          : result.kind === "image" ? data.images
+            : data.expenses;
+    let item = collection.find((candidate) => candidate.id === result.id || candidate.publicId === result.publicId);
+    if (!item && !isDemo && result.kind !== "expense") {
+      try {
+        if (result.kind === "task") {
+          const response = await api<{ task: DashboardTask }>(`tasks/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.task;
+          setData((current) => ({ ...current, tasks: uniq([response.task, ...current.tasks]) }));
+        } else if (result.kind === "note") {
+          const response = await api<{ note: DashboardNote }>(`notes/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.note;
+          setData((current) => ({ ...current, notes: uniq([response.note, ...current.notes]) }));
+        } else if (result.kind === "idea") {
+          const response = await api<{ idea: DashboardIdea }>(`ideas/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.idea;
+          setData((current) => ({ ...current, ideas: uniq([response.idea, ...current.ideas]) }));
+        } else {
+          const response = await api<{ image: DashboardImage }>(`images/${encodeURIComponent(result.id || result.publicId)}`);
+          item = response.image;
+          setData((current) => ({ ...current, images: uniq([response.image, ...current.images]) }));
+        }
+      } catch (error) {
+        announce(error instanceof Error ? error.message : "That result could not be opened.");
+        return;
+      }
+    }
+    navigate(view);
+    if (!item) {
+      announce("That result is no longer in the current workspace.");
+      return;
+    }
+    if (result.kind === "task" && data.workspace.kind === "GROUP") setCollaborationTask(item as DashboardTask);
+    else setEditor({ kind: result.kind as EditableKind, item: item as EditorState["item"] });
+    const url = new URL(window.location.href);
+    url.searchParams.set("kind", result.kind);
+    url.searchParams.set("item", item.id);
+    window.history.replaceState(null, "", url);
+  };
+  useEffect(() => {
+    if (initialEntityOpened.current || !initialItem || !initialItemKind || !["task", "note", "idea", "image"].includes(initialItemKind)) return;
+    initialEntityOpened.current = true;
+    void openSearchResult({ id: initialItem, publicId: initialItem.toUpperCase(), kind: initialItemKind as SearchResult["kind"], title: "" });
+    // This is a one-shot hydration of the URL target; later collection refreshes must not reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialItem, initialItemKind]);
   const closeTaskImport = useCallback(() => {
     setTaskImportId(undefined);
     const url = new URL(window.location.href);
@@ -431,7 +489,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     const action = kind === "note" ? "Delete" : archives ? "Archive" : "Delete";
     const label = "title" in item ? item.title : "caption" in item ? item.caption ?? item.publicId : "description" in item ? item.description : item.publicId;
     const recovery = kind === "note" ? " It will move to Archive and can be restored later." : "";
-    if (!window.confirm(`${action} “${label}”?${recovery}`)) return false;
+    if (!await confirm({ title: `${action} ${kind}`, message: `${action} “${label}”?${recovery}`, confirmLabel: action, tone: "danger" })) return false;
     setBusy(true);
     const plural = `${kind}s` as "tasks" | "notes" | "ideas" | "expenses" | "images";
     try {
@@ -445,7 +503,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     finally { setBusy(false); }
   };
   const removeImages = async (images: DashboardImage[]) => {
-    if (!images.length || !window.confirm(`Delete ${images.length} selected ${images.length === 1 ? "image" : "images"}?`)) return false;
+    if (!images.length || !await confirm({ title: "Delete selected images?", message: `Delete ${images.length} selected ${images.length === 1 ? "image" : "images"}?`, confirmLabel: "Delete", tone: "danger" })) return false;
     setBusy(true);
     try {
       if (!isDemo) await Promise.all(images.map((image) => api(`images/${image.id}`, "DELETE")));
@@ -457,7 +515,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     finally { setBusy(false); }
   };
   const removeNotes = async (notes: DashboardNote[]) => {
-    if (!notes.length || !window.confirm(`Delete ${notes.length} selected ${notes.length === 1 ? "note" : "notes"}? They will move to Archive and can be restored later.`)) return false;
+    if (!notes.length || !await confirm({ title: "Archive selected notes?", message: `Delete ${notes.length} selected ${notes.length === 1 ? "note" : "notes"}? They will move to Archive and can be restored later.`, confirmLabel: "Archive", tone: "danger" })) return false;
     setBusy(true);
     try {
       if (!isDemo) await Promise.all(notes.map((note) => api(`notes/${note.id}`, "DELETE")));
@@ -638,7 +696,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       await connectIntegration("calendar", task.id);
       return;
     }
-    if (action === "remove" && !window.confirm(`Remove “${task.title}” from Google Calendar? The Threadwise task will stay here.`)) return;
+    if (action === "remove" && !await confirm({ title: "Remove calendar event?", message: `Remove “${task.title}” from Google Calendar? The Threadwise task will stay here.`, confirmLabel: "Remove", tone: "danger" })) return;
     if (isDemo) {
       const patch = action === "sync" ? { calendarEventId: `demo-${task.id}`, calendarSyncedAt: new Date().toISOString() } : { calendarEventId: undefined, calendarEventUrl: undefined, calendarSyncedAt: undefined };
       setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? { ...entry, ...patch } : entry) }));
@@ -742,7 +800,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
           {activeView === "library" && (data.workspace.kind === "GROUP"
             ? <GroupResources data={data} onOpen={(view) => navigate(view)} onAdd={() => setCaptureOpen(true)} />
             : <LibraryView data={data} tab={libraryTab} onTab={setLibraryTab} onNavigate={navigate} isDemo={isDemo} />)}
-          {activeView === "search" && <SearchView data={data} isDemo={isDemo} allowExpenses={false} onOpen={(kind) => navigate(kind === "task" ? "tasks" : kind === "image" ? "images" : kind === "expense" ? "today" : `${kind}s` as DashboardView)} announce={announce} />}
+          {activeView === "search" && <SearchView data={data} isDemo={isDemo} allowExpenses={false} onOpen={openSearchResult} announce={announce} />}
           {activeView === "settings" && (data.workspace.kind === "GROUP"
             ? <GroupSettingsView data={data} workspace={data.workspace} onSave={(settings) => setData((current) => ({ ...current, settings }))} announce={announce} />
             : <SettingsView data={data} isDemo={isDemo} accent={accent} onAccent={setAccent} onSave={(settings) => setData((current) => ({ ...current, settings }))} onConnect={connectIntegration} onSyncCalendar={syncCalendarTasks} onSyncExcel={syncExpenses} onCreateExcel={createExcelWorkbook} onAutoSync={setIntegrationAutoSync} onRefresh={() => refreshSnapshot()} announce={announce} />)}
@@ -1084,7 +1142,7 @@ function LibraryView({ data, tab, onTab, onNavigate, isDemo }: { data: Dashboard
   return <section className="tw-library"><div className="tw-library-tabs">{(["notes", "ideas", "images"] as const).map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => onTab(item)}>{item === "notes" ? <FileText size={16} /> : item === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}{item}<span>{data[item].length}</span></button>)}</div>{tab === "images" ? <div className="tw-library-photo-strip">{data.images.slice(0, 8).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={imageSrc(image, isDemo, index)} alt={image.caption ?? "Saved image"} /><span>{image.caption ?? image.fileName}</span></button>)}</div> : <div className="tw-library-rows">{(tab === "notes" ? data.notes : data.ideas).slice(0, 20).map((item) => <button key={item.id} onClick={() => onNavigate(tab)}><span>{tab === "notes" ? <FileText size={16} /> : <Lightbulb size={16} />}</span><div><b>{item.title}</b><small>{"summary" in item ? item.summary : item.concept}</small></div><time>{formatDate(item.createdAt, data.user.timezone)}</time><ChevronRight size={16} /></button>)}</div>}<button className="tw-library-all" onClick={() => onNavigate(tab)}>Open all {tab}<ArrowRight size={15} /></button></section>;
 }
 
-function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; allowExpenses: boolean; onOpen: (kind: SearchResult["kind"]) => void; announce: (message: string) => void }) {
+function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; allowExpenses: boolean; onOpen: (result: SearchResult) => void; announce: (message: string) => void }) {
   const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false); const [kind, setKind] = useState<"all" | SearchResult["kind"]>("all"); const searchRequest = useRef(0);
   const local = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
     ...data.tasks.map((item) => ({ id: item.id, publicId: item.publicId, kind: "task" as const, title: item.title, excerpt: item.description })),
@@ -1116,7 +1174,7 @@ function SearchView({ data, isDemo, allowExpenses, onOpen, announce }: { data: D
   return <section className="tw-search-view tw-search-live">
     <div className="tw-search-live-box"><Search size={22} /><input autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setResults([]); }} placeholder="Search while you type…" />{loading ? <LoaderCircle className="spin" size={18} /> : query ? <span>{shown.length} {shown.length === 1 ? "match" : "matches"}</span> : null}</div>
     <div className="tw-search-filters" aria-label="Filter search results">{filters.map((filter) => <button key={filter} className={kind === filter ? "active" : ""} onClick={() => setKind(filter)}>{filter === "all" ? "Everything" : `${filter}s`}</button>)}</div>
-    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result.kind)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.kind}</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Search size={28} /><h2>Start typing to search.</h2></div>}</div>
+    <div className="tw-search-results" aria-live="polite">{query && shown.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => onOpen(result)}><span className={result.kind}>{result.kind === "task" ? <ListChecks size={18} /> : result.kind === "note" ? <FileText size={18} /> : result.kind === "idea" ? <Lightbulb size={18} /> : result.kind === "image" ? <ImageIcon size={18} /> : <CircleDollarSign size={18} />}</span><div><b>{result.title}</b><small>{result.excerpt || result.publicId}</small></div><em>{result.publicId} · Open</em><ArrowRight size={17} /></button>)}{query && shown.length === 0 && !loading && <Empty icon={Search} title="Nothing matched." copy="Try fewer words, a filename, a tag, or text from an image." />}{!query && <div className="tw-search-prompt"><Search size={28} /><h2>Start typing to search.</h2></div>}</div>
   </section>;
 }
 
@@ -1126,7 +1184,7 @@ function LegacySettingsView({ data, isDemo, accent, onAccent, onSave, onDisconne
   const save = async (event: React.FormEvent) => { event.preventDefault(); setSaving(true); try { const payload = { ...settings, quietHoursStart: settings.quietHoursStart || null, quietHoursEnd: settings.quietHoursEnd || null }; const saved = isDemo ? settings : asPayload<DashboardSettings>(await api("settings", "PATCH", payload), "settings"); onSave(saved); announce("Settings saved."); } catch (error) { announce(error instanceof Error ? error.message : "Could not save settings."); } finally { setSaving(false); } };
   const disconnect = async (provider: "gmail" | "calendar" | "excel") => { try { if (!isDemo) await api(`integrations/${provider}/disconnect`, "POST", {}); onDisconnect(provider); announce(isDemo ? "Disconnected in this demo." : `${provider} disconnected.`); } catch (error) { announce(error instanceof Error ? error.message : "Could not disconnect."); } };
   const exportData = async () => { try { if (isDemo) { const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "threadwise-demo-export.json"; a.click(); URL.revokeObjectURL(url); } else { const response = await fetch("/api/threadwise/privacy/export", { cache: "no-store" }); if (!response.ok) throw new Error("Export could not be prepared."); const blob = await response.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "threadwise-export.json"; a.click(); URL.revokeObjectURL(url); } announce("Your export is ready."); } catch (error) { announce(error instanceof Error ? error.message : "Could not export data."); } };
-  const deleteAccount = async () => { if (confirmation !== "DELETE MY THREADWISE DATA") return; if (!window.confirm("This permanently deletes your Threadwise account and saved content. Continue?")) return; try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); } catch (error) { announce(error instanceof Error ? error.message : "Could not delete account."); } };
+  const deleteAccount = async () => { if (confirmation !== "DELETE MY THREADWISE DATA") return; try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); } catch (error) { announce(error instanceof Error ? error.message : "Could not delete account."); } };
   return <div className="tw-settings-grid"><section className="tw-settings-main"><div className="tw-settings-section"><div><span>Preferences</span><h2>How Threadwise works</h2><p>These settings apply in Telegram and on the web.</p></div><form onSubmit={save}><label>Timezone<input value={settings.timezone} onChange={(e) => setSettings({ ...settings, timezone: e.target.value })} /></label><div className="tw-form-row"><label>Default reminder interval<select value={settings.reminderIntervalMinutes} onChange={(e) => setSettings({ ...settings, reminderIntervalMinutes: Number(e.target.value) })}><option value="60">1 hour</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="1440">1 day</option></select></label><label>Reminder style<select value={settings.reminderMode} onChange={(e) => setSettings({ ...settings, reminderMode: e.target.value as DashboardSettings["reminderMode"] })}><option value="INDIVIDUAL">Individual</option><option value="DIGEST">Digest</option></select></label></div><div className="tw-form-row"><label>Quiet hours start<input type="time" value={settings.quietHoursStart ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursStart: e.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(e) => setSettings({ ...settings, quietHoursEnd: e.target.value || undefined })} /></label></div><label className="tw-switch"><span><b>Private assignee nudges</b><small>Send direct reminders only to the private chat of someone assigned to a task.</small></span><input type="checkbox" checked={settings.directNudgesEnabled} onChange={(e) => setSettings({ ...settings, directNudgesEnabled: e.target.checked })} /></label><button className="tw-primary" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />} Save preferences</button></form></div><div className="tw-settings-section"><div><span>Integrations</span><h2>Connected services</h2><p>Provider tokens are encrypted before storage.</p></div><div className="tw-integration-list">{data.integrations.map((item) => { const provider = (item.provider ?? item.name.toLowerCase()) as "gmail" | "calendar" | "excel"; return <article key={item.name}><span>{item.name[0]}</span><div><b>{item.name}</b><small>{item.detail}</small></div><em className={item.state}>{item.state}</em>{item.state === "connected" ? <button onClick={() => disconnect(provider)}><Unplug size={15} /> Disconnect</button> : item.connectUrl ? <a href={item.connectUrl}>Connect <ExternalLink size={14} /></a> : <button disabled>Connect in Telegram</button>}</article>; })}</div></div><div className="tw-settings-section tw-danger-zone"><div><span>Data &amp; privacy</span><h2>Your data, your decision</h2><p>Export a readable copy or permanently remove your account.</p></div><button className="tw-secondary" onClick={exportData}><Download size={16} /> Export my data</button><label>To delete everything, type <b>DELETE MY THREADWISE DATA</b><input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></label><button className="tw-danger" disabled={confirmation !== "DELETE MY THREADWISE DATA"} onClick={deleteAccount}><Trash2 size={16} /> Delete account and data</button></div></section><aside className="tw-settings-side"><section><span>Appearance</span><h3>Make it yours</h3><div className="tw-accent-row">{(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((color) => <button key={color} className={accent === color ? "active" : ""} style={{ background: ACCENTS[color] }} onClick={() => onAccent(color)} aria-label={`Use ${color} accent`} />)}</div></section><section className="tw-privacy-card"><ShieldCheck size={23} /><h3>What “private” means here</h3><p>Telegram authenticates you; Threadwise never receives your Telegram password. Every request is scoped to your Telegram account.</p><p>Your content is <b>not end-to-end encrypted</b>. A small number of authorized production operators can technically access stored content when needed to run or secure the service.</p><p>OAuth tokens are encrypted before storage. If you use AI features, only the relevant content may be sent to the configured AI provider.</p><a href="/privacy">Read the full privacy explanation <ArrowRight size={14} /></a></section><form action="/api/auth/logout" method="post"><button className="tw-secondary" type="submit"><LogOut size={16} /> Sign out</button></form></aside></div>;
 }
 
@@ -1170,6 +1228,7 @@ function GroupSettingsView({ data, workspace, onSave, announce }: { data: Dashbo
 }
 
 function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyncCalendar, onSyncExcel, onCreateExcel, onAutoSync, onRefresh, announce }: { data: DashboardSnapshot; isDemo: boolean; accent: keyof typeof ACCENTS; onAccent: (value: keyof typeof ACCENTS) => void; onSave: (value: DashboardSettings) => void; onConnect: (provider: "calendar" | "excel") => Promise<void>; onSyncCalendar: () => Promise<void>; onSyncExcel: () => Promise<void>; onCreateExcel: () => Promise<void>; onAutoSync: (provider: "calendar" | "excel", enabled: boolean) => Promise<void>; onRefresh: () => Promise<void>; announce: (message: string) => void }) {
+  const confirm = useConfirmation();
   type SettingsTab = "general" | "reminders" | "connections" | "privacy";
   const [settings, setSettings] = useState(data.settings);
   const [tab, setTab] = useState<SettingsTab>("general");
@@ -1210,7 +1269,7 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
   };
   const disconnect = async (provider: "calendar" | "excel") => {
     const label = provider === "calendar" ? "Google Calendar" : "Excel";
-    if (!window.confirm(`Disconnect ${label}? Your Threadwise data and existing ${provider === "calendar" ? "calendar events" : "workbook"} will stay intact.`)) return;
+    if (!await confirm({ title: `Disconnect ${label}?`, message: `Your Threadwise data and existing ${provider === "calendar" ? "calendar events" : "workbook"} will stay intact.`, confirmLabel: "Disconnect", tone: "danger" })) return;
     await runIntegration(provider, async () => {
       if (!isDemo) await api(`integrations/${provider}/disconnect`, "POST", {});
       await onRefresh();
@@ -1248,7 +1307,7 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
     } catch (error) { announce(error instanceof Error ? error.message : "Could not export data."); }
   };
   const deleteAccount = async () => {
-    if (confirmation !== "DELETE MY THREADWISE DATA" || !window.confirm("This permanently deletes your Threadwise account and saved content. Continue?")) return;
+    if (confirmation !== "DELETE MY THREADWISE DATA" || !await confirm({ title: "Permanently delete your account?", message: "This permanently deletes your Threadwise account and saved content. This cannot be undone.", confirmLabel: "Delete permanently", tone: "danger" })) return;
     try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); }
     catch (error) { announce(error instanceof Error ? error.message : "Could not delete account."); }
   };

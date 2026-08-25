@@ -61,6 +61,8 @@ export type StudyItem = {
   status: StudyItemStatus;
   priority: StudyPriority;
   dueAt?: string | null;
+  deadlineStatus?: "TRUSTED" | "NEEDS_CONFIRMATION" | "UNDATED";
+  deadlineIssue?: string | null;
   plannedMinutes?: number | null;
   actualMinutes: number;
   mastery: StudyTrafficLight;
@@ -288,6 +290,8 @@ export type StudySnapshot = {
         dueAt?: string;
         plannedMinutes?: number;
         priority: StudyPriority;
+        deadlineStatus?: "TRUSTED" | "NEEDS_CONFIRMATION" | "UNDATED";
+        deadlineIssue?: string;
       }>;
       overdue: number;
       dueToday: number;
@@ -320,8 +324,13 @@ export type StudySnapshot = {
     endTime: string;
     label: string;
     blockType: string;
+    customTypeLabel?: string | null;
     startWeek?: number | null;
     endWeek?: number | null;
+    excludedWeeks: number[];
+    recurrenceStartDate?: string | null;
+    recurrenceEndDate?: string | null;
+    excludedDates: string[];
     venueId?: string | null;
     venueName?: string | null;
     destinationStopId?: string | null;
@@ -331,7 +340,32 @@ export type StudySnapshot = {
     active: boolean;
     module?: { id: string; code: string; name: string } | null;
     defaultOrigin?: { id: string; name: string } | null;
+    reminderReadiness?: {
+      status: "READY" | "BLOCKED" | "OUT_OF_RANGE";
+      mode: "TRAVEL" | "BLOCK";
+      reasons: string[];
+    };
+    travelStates?: Array<{
+      id: string;
+      occurrenceDate: string;
+      status: string;
+      scheduledFor?: string | null;
+      leaveAt?: string | null;
+      originName?: string | null;
+      boardingStop?: string | null;
+      services: string[];
+      live: boolean;
+      lastError?: string | null;
+      sentAt?: string | null;
+      arrivedAt?: string | null;
+      mutedAt?: string | null;
+    }>;
   }>;
+  reminderDiagnostics?: {
+    lastCheckedAt?: string | null;
+    status: string;
+    summary?: Record<string, unknown> | null;
+  };
   canvas: {
     configured: boolean;
     state?: {
@@ -343,6 +377,8 @@ export type StudySnapshot = {
       lastError?: string | null;
       lastSummary?: {
         courses?: number;
+        coursesReturned?: number;
+        coursesSkippedOutOfTerm?: number;
         assignmentsSeen?: number;
         imported?: number;
         updated?: number;
@@ -352,6 +388,14 @@ export type StudySnapshot = {
         materialsSeen?: number;
         pagesCached?: number;
         filesIndexed?: number;
+        courseDiagnostics?: Array<{
+          canvasCourseId: string;
+          moduleCode: string;
+          termName?: string;
+          termScope: "CURRENT" | "UNKNOWN" | "OUTSIDE";
+          skippedReason?: string;
+          assignmentsReturned: number;
+        }>;
       } | null;
       consecutiveFailures: number;
       updatedAt: string;

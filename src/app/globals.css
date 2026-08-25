@@ -1501,3 +1501,18 @@ kbd { font-family: var(--sans); }
 @media (prefers-reduced-motion: reduce) {
   .tw-import-sheet { animation: none; }
 }
+
+/* Shared destructive confirmation for Personal, Group, and Study modes. */
+.threadwise-confirm-overlay { position: fixed; z-index: 500; inset: 0; padding: 22px; display: grid; place-items: center; background: color-mix(in srgb, #10100e 58%, transparent); backdrop-filter: blur(7px); }
+.threadwise-confirm-dialog { width: min(460px, 100%); padding: 25px; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 18px; box-shadow: 0 28px 80px rgba(0, 0, 0, .25); }
+.threadwise-confirm-icon { width: 42px; height: 42px; display: grid; place-items: center; color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--line)); border-radius: 12px; }
+.threadwise-confirm-kicker { margin: 1px 0 7px; color: var(--danger); font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.threadwise-confirm-dialog h2 { margin: 0; font-family: var(--serif); font-size: 27px; font-weight: 500; letter-spacing: -.025em; }
+.threadwise-confirm-dialog > div > p:last-child { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.threadwise-confirm-dialog footer { grid-column: 1 / -1; margin-top: 9px; display: flex; justify-content: flex-end; gap: 9px; }
+.threadwise-confirm-dialog footer button { min-height: 44px; padding: 0 16px; border-radius: 10px; font-weight: 760; }
+.threadwise-confirm-cancel { color: var(--ink); background: var(--surface); border: 1px solid var(--line); }
+.threadwise-confirm-submit { color: var(--surface); background: var(--ink); border: 1px solid var(--ink); }
+.threadwise-confirm-submit.danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+.threadwise-confirm-dialog button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+@media (max-width: 560px) { .threadwise-confirm-overlay { padding: 12px; place-items: end center; } .threadwise-confirm-dialog { padding: 20px 17px max(18px, env(safe-area-inset-bottom)); border-radius: 18px; } .threadwise-confirm-dialog footer button { flex: 1; } }

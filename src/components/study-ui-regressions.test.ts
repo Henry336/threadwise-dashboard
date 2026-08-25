@@ -108,7 +108,7 @@ describe("Study UI regressions", () => {
     const agenda = component.slice(component.indexOf('className="study-day-agenda"'), component.indexOf("{panel.mode === \"details\""));
 
     expect(agenda).toContain('<button className="study-agenda-block"');
-    expect(agenda).toContain('onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })}');
+    expect(agenda).toContain('onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: activeDay.key })}');
     expect(agenda).not.toContain('<article className="study-agenda-block"');
   });
 

@@ -17,6 +17,7 @@ import { StudyTimetable } from "./study-timetable";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 import { StudyChoicePicker } from "./study-choice-picker";
 import { StudyMarkdown } from "./study-markdown";
+import { useConfirmation } from "./confirmation-dialog";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
 import type {
   StudyAnalysisEvidence, StudyAnalysisFinding, StudyAnalysisMode, StudyAnalysisQuizItem, StudyItem, StudyItemType, StudyMistake, StudyModule, StudyModuleAnalysisResponse, StudyNoteEditSuggestion,
@@ -33,7 +34,7 @@ import {
   sessionCustomMethod, sessionElapsedSeconds, sessionMethodSummary, sessionResourceIds,
 } from "@/lib/study-session";
 
-type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string };
+type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string; initialItem?: string; initialItemKind?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
 type Toast = {
   message: string;
@@ -73,7 +74,7 @@ const MOBILE_NAV = NAV.filter((item) => ["study-overview", "study-timetable", "s
 const ITEM_TYPES: StudyItemType[] = ["LECTURE", "TUTORIAL", "LAB", "ASSIGNMENT", "PROJECT", "REVISION", "TIMED_PRACTICE", "READING", "ADMINISTRATIVE"];
 const MASTERY: StudyTrafficLight[] = ["GREEN", "AMBER", "RED", "UNASSESSED"];
 
-export function StudyDashboardApp({ initialData, workspaces, initialView }: Props) {
+export function StudyDashboardApp({ initialData, workspaces, initialView, initialItem, initialItemKind }: Props) {
   const [study, setStudy] = useState<StudySnapshot | null>(null);
   const [view, setView] = useState<StudyView>(validView(initialView));
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -97,6 +98,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
   const hasSnapshot = useRef(false);
   const navChord = useRef(0);
   const toastTimer = useRef<number | null>(null);
+  const initialTargetOpened = useRef(false);
 
   useEffect(() => {
     try { clearThreadwiseDrafts(window.localStorage, initialData.workspace.id); } catch { /* Storage can be unavailable. */ }
@@ -160,6 +162,38 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
       announce(error instanceof Error ? error.message : "That note could not be opened.", "error");
     }
   }, [announce]);
+
+  useEffect(() => {
+    if (!study || initialTargetOpened.current || !initialItem || !initialItemKind) return;
+    const timer = window.setTimeout(() => {
+      initialTargetOpened.current = true;
+      void (async () => {
+        try {
+          if (initialItemKind === "study-item") {
+            const existing = study.items.find((candidate) => candidate.id === initialItem || candidate.publicId === initialItem.toUpperCase());
+            const item = existing ?? (await studyApi<{ item: StudyItem }>(`study/items/${encodeURIComponent(initialItem)}`)).item;
+            if (!existing) setStudy((current) => current ? { ...current, items: [item, ...current.items.filter((candidate) => candidate.id !== item.id)] } : current);
+            setModuleFilter(item.moduleId);
+            setView("study-work");
+            setEditor({ kind: "item", value: item });
+            return;
+          }
+          if (initialItemKind === "study-resource") {
+            const existing = study.resources.find((candidate) => candidate.id === initialItem || candidate.publicId === initialItem.toUpperCase());
+            const resource = existing ?? (await studyApi<{ resource: StudyResource }>(`study/resources/${encodeURIComponent(initialItem)}`)).resource;
+            if (!existing) setStudy((current) => current ? { ...current, resources: [resource, ...current.resources.filter((candidate) => candidate.id !== resource.id)] } : current);
+            setModuleFilter(resource.moduleId);
+            setView("study-library");
+            if (resource.kind === "NOTE") setOpenNote(resource);
+            else setEditor({ kind: "resource", value: resource });
+          }
+        } catch (error) {
+          announce(error instanceof Error ? error.message : "That saved item could not be opened.", "error");
+        }
+      })();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [announce, initialItem, initialItemKind, setModuleFilter, study]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void refresh(false), 0);
@@ -327,14 +361,14 @@ export function StudyDashboardApp({ initialData, workspaces, initialView }: Prop
       <div className="study-content" key={view}>
         {sync === "offline" && <section className="study-status-banner" role="alert"><AlertCircle size={18} /><div><b>Live sync is paused.</b><p>Your current view is preserved. Retry when the connection is ready.</p></div><button onClick={() => void refresh(false)}>Retry</button></section>}
         {view === "study-overview" && <Overview study={study} ownerName={ownerName} onOpenModule={openModule} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onComplete={(item) => void completeItem(item)} onFocus={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
-        {view === "study-timetable" && <StudyTimetable study={study} busy={busy} onImportNusmods={(url) => mutate("study/nusmods/import", "POST", { url }, "NUSMods timetable imported.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Timetable updated.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Timetable updated.")} onDeleteBlock={(id) => mutate(`study/schedule/${id}`, "DELETE", undefined, "Schedule block removed.")} onEditItem={(item) => setEditor({ kind: "item", value: item })} onFocusItem={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
+        {view === "study-timetable" && <StudyTimetable study={study} busy={busy} onImportNusmods={(url) => mutate("study/nusmods/import", "POST", { url }, "NUSMods timetable imported.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Timetable updated.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Timetable updated.")} onDeleteBlock={(id, body) => mutate(`study/schedule/${id}`, "DELETE", body, "Schedule block removed.")} onEditItem={(item) => setEditor({ kind: "item", value: item })} onFocusItem={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
         {view === "study-modules" && <Modules study={study} onOpen={openModule} onEdit={(module) => setEditor({ kind: "module", value: module })} onAdd={() => setEditor({ kind: "module" })} onArchive={(module) => confirmAction(`Archive ${module.code}? Canvas sync will keep it archived until you restore it.`, () => { void (async () => { const saved = await mutate(`study/modules/${module.id}`, "PATCH", { active: false }); if (saved !== undefined) announce(`${module.code} archived.`, "success", { label: "Undo", run: () => void mutate(`study/modules/${module.id}`, "PATCH", { active: true }, `${module.code} restored.`) }); })(); })} onRestore={(module) => void mutate(`study/modules/${module.id}`, "PATCH", { active: true }, `${module.code} restored.`)} />}
         {view === "study-work" && <Work study={study} moduleFilter={moduleFilter} onModuleFilter={setModuleFilter} onEdit={(item) => setEditor({ kind: "item", value: item })} onAdd={() => setEditor({ kind: "item" })} onComplete={(item) => void completeItem(item)} onArchive={(item) => confirmAction(`Archive ${item.publicId}?`, () => mutate(`study/items/${item.id}`, "DELETE", undefined, "Work item archived."))} />}
         {view === "study-library" && <LibraryView study={study} moduleFilter={moduleFilter} activeSession={activeSession} onModuleFilter={setModuleFilter} onAdd={(kind) => setEditor({ kind: "resource", resourceKind: kind })} onOpenNote={(resource) => void openStudyNote(resource.id)} onEdit={async (resource) => { const detail = await studyApi<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} onPin={(resource) => void mutate(`study/resources/${resource.id}`, "PATCH", { pinned: !resource.pinnedAt }, resource.pinnedAt ? "Unpinned." : "Pinned.")} onArchive={(resource) => confirmAction(`Archive “${resource.title}”?`, () => mutate(`study/resources/${resource.id}`, "DELETE", undefined, "Resource archived."))} onToggleSessionResource={(resource) => { if (!activeSession) return; const current = sessionResourceIds(activeSession); const resourceIds = current.includes(resource.id) ? current.filter((id) => id !== resource.id) : [...current, resource.id]; void updateSession(activeSession.id, { resourceIds }); }} />}
         {view === "study-review" && <Review ownerId={initialData.user.telegramId} study={study} busy={busy} onMastery={(module, mastery, reason) => void mutate(`study/modules/${module.id}`, "PATCH", { mastery, masteryReason: reason }, `${module.code} updated.`)} onResolveMistake={(mistake) => void mutate(`study/mistakes/${mistake.id}/resolve`, "POST", {}, "Mistake resolved.")} onAddMistake={() => setEditor({ kind: "mistake" })} onSavePlan={(body) => mutate("study/weekly-plan", "PATCH", body, "Week plan saved.")} onSaveReview={(body) => mutate("study/review", "POST", body, "Weekly review saved.")} />}
         {view === "study-search" && <StudySearch study={study} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onEditResource={async (resource) => { if (resource.kind === "NOTE") { await openStudyNote(resource.id); return; } const detail = await studyApi<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} />}
         {view === "study-focus" && <DeepWorkPhaseOne key={focusItemId || "module-session"} study={study} busy={busy} initialItemId={focusItemId} activeSession={activeSession} outcome={focusOutcome} onDismissOutcome={() => setFocusOutcome(null)} onStart={(body) => mutate("study/sessions/start", "POST", body, "Session started.")} onStop={stopSession} onUpdate={updateSession} onArchive={async (session) => { const archived = await mutate<{ session: StudySession }>(`study/sessions/${session.id}`, "DELETE", undefined, "Session removed."); if (archived && focusOutcome?.id === session.id) setFocusOutcome(null); return archived; }} onComplete={(item) => completeItem(item)} onRecordMistake={(item) => setEditor({ kind: "mistake", item })} onOpenLibrary={(id) => { setModuleFilter(id); navigate("study-library"); }} />}
-        {view === "study-settings" && <StudySettings study={study} busy={busy} onSave={(body) => mutate("study/settings", "PATCH", body, "Study settings saved.")} onSync={() => mutate("study/canvas/sync", "POST", {}, "Canvas sync complete.")} onCanvasReview={(id, action) => mutate(`study/canvas/assignments/${id}`, "PATCH", { action }, action === "keep" ? "Assignment kept." : "Assignment archived.")} onAddOrigin={(body) => mutate("study/origins", "POST", body, "Origin saved.")} onOrigin={(id, body) => mutate(`study/origins/${id}`, "PATCH", body, "Origin updated.")} onDeleteOrigin={(id) => mutate(`study/origins/${id}`, "DELETE", undefined, "Origin removed.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Schedule block saved.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Class travel updated.")} onDeleteBlock={(id) => mutate(`study/schedule/${id}`, "DELETE", undefined, "Schedule block removed.")} />}
+        {view === "study-settings" && <StudySettings study={study} busy={busy} onSave={(body) => mutate("study/settings", "PATCH", body, "Study settings saved.")} onSync={() => mutate("study/canvas/sync", "POST", {}, "Canvas sync complete.")} onCanvasReview={(id, action) => mutate(`study/canvas/assignments/${id}`, "PATCH", { action }, action === "keep" ? "Assignment kept." : "Assignment archived.")} onAddOrigin={(body) => mutate("study/origins", "POST", body, "Origin saved.")} onOrigin={(id, body) => mutate(`study/origins/${id}`, "PATCH", body, "Origin updated.")} onDeleteOrigin={(id) => mutate(`study/origins/${id}`, "DELETE", undefined, "Origin removed.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Schedule block saved.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Class travel updated.")} onDeleteBlock={(id) => mutate(`study/schedule/${id}`, "DELETE", { scope: "series" }, "Schedule block removed.")} />}
       </div>
     </main>
     <nav className="study-mobile-dock" aria-label="Primary Study navigation">{MOBILE_NAV.map(({ id, label, icon: Icon }) => <button key={id} aria-current={view === id ? "page" : undefined} className={view === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={19} /><span>{label === "Deep Work" ? "Focus" : label}</span></button>)}<button aria-expanded={mobileNav} onClick={() => setMobileNav(true)}><MoreHorizontal size={20} /><span>More</span></button></nav>
@@ -385,7 +419,7 @@ function Work({ study, moduleFilter, onModuleFilter, onEdit, onAdd, onComplete, 
       <div className="study-segmented" role="group" aria-label="Work status">{(["active", "done", "all"] as const).map((value) => <button key={value} aria-pressed={status === value} className={status === value ? "active" : ""} onClick={() => setStatus(value)}>{value === "active" ? "Open" : value[0].toUpperCase() + value.slice(1)}</button>)}</div>
       <label><Search size={16} /><span className="sr-only">Filter work</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter work" /></label>
     </div>
-    <div className="study-work-list">{visible.map((item) => <article key={item.id} className={item.status === "DONE" ? "done" : ""}><button className="study-work-check" onClick={() => onComplete(item)} aria-label={`Complete ${item.title}`}><Check size={17} /></button><button className="study-work-copy" onClick={() => onEdit(item)}><span><b>{item.module.code}</b><em>{item.publicId}</em><i>{humanize(item.type)}</i>{item.source === "CANVAS" && <i>Canvas</i>}</span><h3>{item.title}</h3><p>{item.source === "CANVAS" ? attentionCopy(item) : item.notes || attentionCopy(item)}</p></button><div className="study-work-date"><b>{item.dueAt ? formatDate(item.dueAt, study.workspace.timezone) : "No date"}</b><small>{item.dueAt ? formatTime(item.dueAt, study.workspace.timezone) : "Add one when useful"}</small></div><button className="study-row-menu study-archive-action" onClick={() => onArchive(item)} aria-label={`Archive ${item.title}`}><Archive size={17} /></button></article>)}{!visible.length && <Empty title="Nothing in this view." copy="Change the filters or add work." />}</div>
+    <div className="study-work-list">{visible.map((item) => <article key={item.id} className={`${item.status === "DONE" ? "done" : ""}${item.deadlineStatus === "NEEDS_CONFIRMATION" ? " deadline-review" : ""}`}><button className="study-work-check" onClick={() => onComplete(item)} aria-label={`Complete ${item.title}`}><Check size={17} /></button><button className="study-work-copy" onClick={() => onEdit(item)}><span><b>{item.module.code}</b><em>{item.publicId}</em><i>{humanize(item.type)}</i>{item.source === "CANVAS" && <i>Canvas</i>}{item.deadlineStatus === "NEEDS_CONFIRMATION" && <i className="warning">Confirm deadline</i>}</span><h3>{item.title}</h3><p>{item.deadlineStatus === "NEEDS_CONFIRMATION" ? item.deadlineIssue ?? "Confirm this Canvas deadline before relying on it." : item.source === "CANVAS" ? attentionCopy(item) : item.notes || attentionCopy(item)}</p></button><div className="study-work-date"><b>{item.deadlineStatus === "NEEDS_CONFIRMATION" ? "Needs review" : item.dueAt ? formatDate(item.dueAt, study.workspace.timezone) : "No date"}</b><small>{item.dueAt ? formatTime(item.dueAt, study.workspace.timezone) : "Add one when useful"}</small></div><button className="study-row-menu study-archive-action" onClick={() => onArchive(item)} aria-label={`Archive ${item.title}`}><Archive size={17} /></button></article>)}{!visible.length && <Empty title="Nothing in this view." copy="Change the filters or add work." />}</div>
   </section>;
 }
 
@@ -930,11 +964,14 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
           <div className="study-settings-callout"><Cloud size={19} /><div><b>Read-only by design</b><p>Threadwise imports coursework and status. It never submits or edits Canvas work.</p></div></div>
           {canvasSummary && <div className="study-canvas-health" aria-label="Latest Canvas sync coverage">
             <div><b>{canvasSummary.courses ?? 0}</b><span>courses scanned</span></div>
+            <div><b>{canvasSummary.coursesSkippedOutOfTerm ?? 0}</b><span>old-term courses skipped</span></div>
             <div><b>{canvasSummary.assignmentsSeen ?? 0}</b><span>assignments found</span></div>
             <div><b>{canvasSummary.courseModulesSeen ?? 0}</b><span>course modules</span></div>
             <div><b>{canvasSummary.materialsSeen ?? 0}</b><span>materials indexed</span></div>
             {(canvasSummary.ignoredInactive ?? 0) > 0 && <p><AlertTriangle size={15} /> {canvasSummary.ignoredInactive} open assignment{canvasSummary.ignoredInactive === 1 ? " is" : "s are"} waiting for its course to be activated in Modules.</p>}
+            {canvasSummary.courseDiagnostics?.some((course) => course.termScope === "OUTSIDE") && <details className="study-canvas-diagnostics"><summary>Why courses were skipped</summary>{canvasSummary.courseDiagnostics.filter((course) => course.termScope === "OUTSIDE").map((course) => <p key={course.canvasCourseId}><b>{course.moduleCode}</b>{course.termName ? ` · ${course.termName}` : ""} — {course.skippedReason ?? "Outside the configured semester."}</p>)}</details>}
           </div>}
+          {study.reminderDiagnostics && <div className="study-reminder-health" data-status={study.reminderDiagnostics.status}><Clock3 size={18} /><div><b>Reminder delivery: {humanize(study.reminderDiagnostics.status)}</b><p>{study.reminderDiagnostics.lastCheckedAt ? `Last checked ${formatDateTime(study.reminderDiagnostics.lastCheckedAt, study.workspace.timezone)}.` : "The reminder worker has not recorded a check yet."}</p></div></div>}
           {study.canvas.missingAssignments.length === 0 ? <Empty title="Nothing needs review" copy="Missing Canvas assignments will appear here before anything is archived." /> : study.canvas.missingAssignments.map((assignment) => <article className="study-canvas-review" key={assignment.id}><AlertTriangle size={18} /><div><b>{assignment.module.code} · {assignment.item.publicId}</b><p>{assignment.title}</p></div><button onClick={() => void onCanvasReview(assignment.id, "keep")}>Keep local</button><button onClick={() => void onCanvasReview(assignment.id, "archive")}>Archive</button></article>)}
         </section>}
 
@@ -1006,10 +1043,13 @@ function ScheduleTravelEditor({ block, origins, busy, onCancel, onSave }: { bloc
 function StudyDialog({ kicker, title, dirty = false, wide = false, onClose, children }: { kicker: string; title: string; dirty?: boolean; wide?: boolean; onClose: () => void; children: (requestClose: () => void) => React.ReactNode }) {
   const dialogRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const confirm = useConfirmation();
   const requestClose = useCallback(() => {
-    if (dirty && !window.confirm("Discard your unsaved changes?")) return;
-    onClose();
-  }, [dirty, onClose]);
+    void (async () => {
+      if (dirty && !await confirm({ title: "Discard unsaved changes?", message: "Your changes in this editor will be lost.", confirmLabel: "Discard", tone: "danger" })) return;
+      onClose();
+    })();
+  }, [confirm, dirty, onClose]);
 
   useEffect(() => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;

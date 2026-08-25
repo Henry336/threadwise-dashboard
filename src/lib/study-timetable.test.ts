@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FULL_DAY_END_MINUTE,
   FULL_DAY_START_MINUTE,
+  buildTimetableDays,
   preferredTimetableMinute,
   timetableIndicatorOffset,
   timetableBlockBounds,
@@ -11,6 +12,7 @@ import {
   timetableHorizontalBlockWidth,
   timetablePanelReducer,
 } from "./study-timetable";
+import type { StudySnapshot } from "./study-types";
 
 describe("Study timetable day bounds", () => {
   it("models the complete midnight-to-midnight day", () => {
@@ -51,8 +53,10 @@ describe("Study timetable day bounds", () => {
       endTime: "11:00",
       label: "Hackathon",
       blockType: "other",
-      startWeek: "2",
-      endWeek: "2",
+      customTypeLabel: "Competition",
+      recurrenceMode: "once" as const,
+      recurrenceStartDate: "2026-08-16",
+      recurrenceEndDate: "",
       destination: "",
       destinationPlaceId: null,
       defaultOriginId: "",
@@ -60,6 +64,13 @@ describe("Study timetable day bounds", () => {
     };
     expect(timetableBlockPayload(draft, false)).not.toHaveProperty("destinationPlaceId");
     expect(timetableBlockPayload(draft, false)).not.toHaveProperty("destination");
+    expect(timetableBlockPayload(draft, false)).toMatchObject({
+      customTypeLabel: "Competition",
+      recurrenceStartDate: "2026-08-16",
+      recurrenceEndDate: "2026-08-16",
+      startWeek: null,
+      endWeek: null,
+    });
     expect(timetableBlockPayload(draft, true)).toMatchObject({ destination: null, destinationPlaceId: null });
     expect(timetableBlockPayload({ ...draft, destination: "  Kent Ridge MRT  " }, false)).toMatchObject({ destination: "Kent Ridge MRT" });
     expect(timetableBlockPayload({ ...draft, destination: "COM3", destinationPlaceId: "venue:COM3" }, false)).toMatchObject({ destination: "COM3", destinationPlaceId: "venue:COM3" });
@@ -94,9 +105,24 @@ describe("Study timetable day bounds", () => {
   });
 
   it("moves a selected block from details to edit and closes cleanly", () => {
-    const details = timetablePanelReducer({ mode: "closed" }, { type: "open-details", blockId: "block-1" });
-    expect(details).toEqual({ mode: "details", blockId: "block-1" });
-    expect(timetablePanelReducer(details, { type: "edit" })).toEqual({ mode: "edit", blockId: "block-1" });
+    const details = timetablePanelReducer({ mode: "closed" }, { type: "open-details", blockId: "block-1", occurrenceDate: "2026-08-16" });
+    expect(details).toEqual({ mode: "details", blockId: "block-1", occurrenceDate: "2026-08-16" });
+    expect(timetablePanelReducer(details, { type: "edit" })).toEqual({ mode: "edit", blockId: "block-1", occurrenceDate: "2026-08-16" });
     expect(timetablePanelReducer(details, { type: "close" })).toEqual({ mode: "closed" });
+  });
+
+  it("hides excluded occurrences and quarantined deadlines from the timetable", () => {
+    const study = {
+      generatedAt: "2026-08-18T04:00:00.000Z",
+      workspace: { timezone: "Asia/Singapore", semesterStartDate: "2026-08-10T00:00:00.000Z" },
+      scheduleBlocks: [{ id: "block-1", active: true, dayOfWeek: 2, startTime: "10:00", endTime: "11:00", label: "Tutorial", blockType: "tutorial", excludedWeeks: [2] }],
+      items: [
+        { id: "trusted", status: "OPEN", dueAt: "2026-08-18T12:00:00.000+08:00", deadlineStatus: "TRUSTED", plannedMinutes: 30, module: { color: null } },
+        { id: "suspect", status: "OPEN", dueAt: "2026-08-18T12:00:00.000+08:00", deadlineStatus: "NEEDS_CONFIRMATION", plannedMinutes: 30, module: { color: null } },
+      ],
+    } as unknown as StudySnapshot;
+    const tuesday = buildTimetableDays(study, "2026-08-17")[1]!;
+    expect(tuesday.blocks).toHaveLength(0);
+    expect(tuesday.dueItems.map((item) => item.id)).toEqual(["trusted"]);
   });
 });

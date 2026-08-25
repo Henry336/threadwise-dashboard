@@ -17,7 +17,7 @@ import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientati
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 import { StudyChoicePicker, StudyTimePicker } from "./study-choice-picker";
 import { IntegerInput } from "./integer-input";
-import { clampInteger, normalizeIntegerDraft } from "@/lib/numeric-input";
+import { clampInteger } from "@/lib/numeric-input";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
 type WeekOrientation = StudyOrientation;
@@ -39,7 +39,7 @@ type Props = {
   busy: boolean;
   onAddBlock: (body: unknown) => Promise<unknown>;
   onUpdateBlock: (id: string, body: unknown) => Promise<unknown>;
-  onDeleteBlock: (id: string) => Promise<unknown>;
+  onDeleteBlock: (id: string, body: { scope: "occurrence" | "future" | "series"; weekNumber?: number; occurrenceDate?: string }) => Promise<unknown>;
   onImportNusmods: (url: string) => Promise<unknown>;
   onEditItem: (item: StudyItem) => void;
   onFocusItem: (item: StudyItem) => void;
@@ -58,6 +58,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const orientationReady = useRef(false);
   const [panel, dispatchPanel] = useReducer(timetablePanelReducer, { mode: "closed" });
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const verticalScrollRef = useRef<HTMLElement>(null);
   const horizontalScrollRef = useRef<HTMLElement>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
@@ -119,7 +120,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       <div><span>Study Mode</span><h1>Timetable</h1></div>
       <div className="study-timetable-actions">
         <button className="study-secondary" onClick={() => setImportOpen(true)}><Upload size={16} /> Import NUSMods</button>
-        <button className="study-primary" onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={16} /> Add block</button>
+        <button className="study-primary" onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday, occurrenceDate: activeDay.key })}><Plus size={16} /> Add block</button>
       </div>
     </header>
 
@@ -170,7 +171,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
               "--block-top": `${(bounds.start - gridStart) * VERTICAL_MINUTE_SCALE}px`,
               "--block-height": `${Math.max(42, (bounds.end - bounds.start) * VERTICAL_MINUTE_SCALE - 4)}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
-            } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })}>
+            } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: day.key })}>
               <b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
             </button>; })}
           </div>)}
@@ -190,13 +191,13 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         onOpenDay={(key) => { setSelectedDay(key); setMode("day"); }}
         onOpenDueOverflow={(key) => { setSelectedDay(key); setMode("day"); }}
         onEditItem={onEditItem}
-        onOpenBlock={(block) => dispatchPanel({ type: "open-details", blockId: block.id })}
+        onOpenBlock={(block, occurrenceDate) => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate })}
       />}
 
       <section className="study-day-agenda" aria-label={`${activeDay.longLabel} agenda`}>
-        <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday })}><Plus size={15} /> Add block</button></header>
+        <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday, occurrenceDate: activeDay.key })}><Plus size={15} /> Add block</button></header>
         {activeDay.blocks.length === 0 && activeDay.dueItems.length === 0 ? <div className="study-agenda-empty"><CalendarDays size={23} /><b>Nothing scheduled.</b><p>Keep the space open or add a study block.</p></div> : <>
-          {activeDay.blocks.map((block) => <button className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id })} aria-label={`View ${block.label}`}>
+          {activeDay.blocks.map((block) => <button className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: activeDay.key })} aria-label={`View ${block.label}`}>
             <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div><span className="study-agenda-block-arrow" aria-hidden="true"><ChevronRight size={17} /></span>
           </button>)}
           {activeDay.dueItems.length > 0 && <div className="study-agenda-due"><span>Deadlines</span>{activeDay.dueItems.map((item) => <article key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties}><button onClick={() => onEditItem(item)}><small>{item.module.code} · {item.plannedMinutes ? `${item.plannedMinutes} min` : "unestimated"}</small><b>{item.title}</b></button><button onClick={() => onFocusItem(item)} aria-label={`Focus on ${item.title}`}><Focus size={16} /></button></article>)}</div>}
@@ -210,11 +211,17 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       busy={busy}
       onClose={() => dispatchPanel({ type: "close" })}
       onEdit={() => dispatchPanel({ type: "edit" })}
-      onDelete={async () => {
-        const confirmed = window.confirm(`Remove ${panelBlock.label} from every scheduled week? This recurring block will be removed.`);
-        if (!confirmed) return;
-        const saved = await onDeleteBlock(panelBlock.id);
-        if (saved !== undefined) dispatchPanel({ type: "close" });
+      onDelete={() => { setDeleteOpen(true); return Promise.resolve(); }}
+    />}
+    {deleteOpen && panelBlock && <ScheduleDeleteDialog
+      block={panelBlock}
+      occurrenceDate={panel.mode === "details" || panel.mode === "edit" ? panel.occurrenceDate : undefined}
+      weekNumber={academicWeek && academicWeek > 0 ? academicWeek : undefined}
+      busy={busy}
+      onClose={() => setDeleteOpen(false)}
+      onDelete={async (body) => {
+        const saved = await onDeleteBlock(panelBlock.id, body);
+        if (saved !== undefined) { setDeleteOpen(false); dispatchPanel({ type: "close" }); }
       }}
     />}
     {(panel.mode === "create" || (panel.mode === "edit" && panelBlock)) && <TimetableEditor
@@ -222,6 +229,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       study={study}
       block={panel.mode === "edit" ? panelBlock : undefined}
       defaultDay={panel.mode === "create" ? panel.day : panelBlock?.dayOfWeek ?? activeDay.weekday}
+      defaultDate={panel.mode === "create" || panel.mode === "edit" ? panel.occurrenceDate : activeDay.key}
       busy={busy}
       onClose={() => dispatchPanel({ type: "close" })}
       onSave={async (body) => {
@@ -281,7 +289,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
   onOpenDay: (key: string) => void;
   onOpenDueOverflow: (key: string) => void;
   onEditItem: (item: StudyItem) => void;
-  onOpenBlock: (block: ScheduleBlock) => void;
+  onOpenBlock: (block: ScheduleBlock, occurrenceDate: string) => void;
 }) {
   const timelineWidth = (gridEnd - gridStart) * HORIZONTAL_MINUTE_SCALE + 48;
   const horizontalNowOffset = timetableIndicatorOffset(nowMinutes - gridStart, HORIZONTAL_MINUTE_SCALE, timelineWidth - 48, 20);
@@ -342,7 +350,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
               "--block-top": `${5 + (layout.lanes.get(block.id) ?? 0) * (blockHeight + laneGap)}px`,
               "--block-height": `${blockHeight}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
-            } as CSSProperties} onClick={() => onOpenBlock(block)} aria-label={label} title={label}>
+            } as CSSProperties} onClick={() => onOpenBlock(block, day.key)} aria-label={label} title={label}>
               <b>{block.label}</b>
               {density !== "narrow" && <span>{block.module?.code ?? block.blockType}</span>}
               {density === "full" && block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
@@ -410,6 +418,31 @@ function TimetableOverlay({ children, busy, onClose, className = "" }: {
   </div>, document.body);
 }
 
+function formatCalendarDate(value: string): string {
+  return new Intl.DateTimeFormat("en-SG", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+    .format(new Date(`${value.slice(0, 10)}T12:00:00.000Z`));
+}
+
+function legacyBlockDate(semesterStart: string | null | undefined, week: number | null | undefined, dayOfWeek: number): string | null {
+  if (!semesterStart || !week) return null;
+  return addDays(startOfWeek(semesterStart.slice(0, 10)), (week - 1) * 7 + dayOfWeek - 1);
+}
+
+function weekdayForCalendarDate(value: string): number {
+  const day = new Date(`${value}T12:00:00.000Z`).getUTCDay();
+  return day === 0 ? 7 : day;
+}
+
+function scheduleRecurrenceLabel(block: ScheduleBlock): string {
+  const start = block.recurrenceStartDate?.slice(0, 10);
+  const end = block.recurrenceEndDate?.slice(0, 10);
+  if (start && end && start === end) return `Once · ${formatCalendarDate(start)}`;
+  if (start || end) return `Weekly${start ? ` from ${formatCalendarDate(start)}` : ""}${end ? ` through ${formatCalendarDate(end)}` : ""}`;
+  if (block.startWeek == null && block.endWeek == null) return "Every week";
+  if (block.startWeek === block.endWeek) return `Week ${block.startWeek}`;
+  return `Weeks ${block.startWeek ?? 1}–${block.endWeek ?? "end"}`;
+}
+
 function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
   block: ScheduleBlock;
   busy: boolean;
@@ -419,12 +452,9 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   useDialogFocus(dialogRef, busy, onClose);
-  const weeks = block.startWeek == null && block.endWeek == null
-    ? "Every week"
-    : block.startWeek === block.endWeek
-      ? `Week ${block.startWeek}`
-      : `Weeks ${block.startWeek ?? 1}–${block.endWeek ?? "end"}`;
+  const recurrence = scheduleRecurrenceLabel(block);
   const travelConfigured = Boolean(block.venueName || block.defaultOrigin?.name || block.defaultOriginId);
+  const travelState = block.travelStates?.[0];
 
   return <TimetableOverlay busy={busy} onClose={onClose} className="detail-overlay">
     <section ref={dialogRef} className="study-timetable-detail" role="dialog" aria-modal="true" aria-labelledby="timetable-details-title" tabIndex={-1}>
@@ -432,22 +462,51 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
       <div className="study-timetable-detail-body">
         <dl>
           {block.module && <div><dt>Module</dt><dd>{block.module.code} · {block.module.name}</dd></div>}
-          <div><dt>Type</dt><dd>{block.blockType.replace(/_/g, " ")}</dd></div>
+          <div><dt>Type</dt><dd>{block.blockType === "other" && block.customTypeLabel ? block.customTypeLabel : block.blockType.replace(/_/g, " ")}</dd></div>
           <div><dt>Time</dt><dd>{DAY_NAMES[block.dayOfWeek - 1]} · {formatClock(block.startTime)}–{formatClock(block.endTime)}</dd></div>
-          <div><dt>Repeats</dt><dd>{weeks}</dd></div>
+          <div><dt>Repeats</dt><dd>{recurrence}</dd></div>
           {block.venueName && <div><dt>Venue</dt><dd>{block.venueName}</dd></div>}
         </dl>
         {travelConfigured && <section className="study-timetable-detail-travel"><span><MapPin size={16} /> Travel reminder</span><p>{block.defaultOrigin?.name ? `From ${block.defaultOrigin.name}` : "Uses your current or default origin"}</p><small>{block.travelBufferMinutes} min buffer · {block.reminderLeadMinutes} min reminder lead</small></section>}
+        {travelState && <section className="study-timetable-detail-travel" data-status={travelState.status}><span><Clock3 size={16} /> Latest journey · {travelState.status.toLowerCase()}</span><p>{travelState.lastError || [travelState.originName, travelState.boardingStop, travelState.services.join(" → ")].filter(Boolean).join(" · ") || "Travel state recorded."}</p><small>{travelState.live ? "Live bus data" : "Estimated route"} · {formatCalendarDate(travelState.occurrenceDate.slice(0, 10))}</small></section>}
+        {block.reminderReadiness && <section className="study-timetable-reminder-readiness" data-status={block.reminderReadiness.status}><span><Clock3 size={16} /> Reminder status</span><b>{block.reminderReadiness.status === "READY" ? "Ready to send" : block.reminderReadiness.status === "OUT_OF_RANGE" ? "Not scheduled this week" : "Needs attention"}</b>{block.reminderReadiness.reasons.map((reason) => <p key={reason}>{reason}</p>)}</section>}
       </div>
       <footer><button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete()}><Trash2 size={16} /> Delete</button><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Close</button><button type="button" className="study-primary" disabled={busy} onClick={onEdit}><Pencil size={16} /> Edit</button></div></footer>
     </section>
   </TimetableOverlay>;
 }
 
-function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
+function ScheduleDeleteDialog({ block, occurrenceDate, weekNumber, busy, onClose, onDelete }: {
+  block: ScheduleBlock;
+  occurrenceDate?: string;
+  weekNumber?: number;
+  busy: boolean;
+  onClose: () => void;
+  onDelete: (body: { scope: "occurrence" | "future" | "series"; weekNumber?: number; occurrenceDate?: string }) => Promise<void>;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(dialogRef, busy, onClose);
+  const occurrenceLabel = occurrenceDate ? formatCalendarDate(occurrenceDate) : weekNumber ? `Week ${weekNumber}` : "this occurrence";
+  const canScopeOccurrence = Boolean(occurrenceDate || weekNumber);
+  const [scope, setScope] = useState<"occurrence" | "future" | "series">(canScopeOccurrence ? "occurrence" : "series");
+  return <TimetableOverlay busy={busy} onClose={onClose} className="delete-overlay">
+    <section ref={dialogRef} className="study-schedule-delete" role="alertdialog" aria-modal="true" aria-labelledby="schedule-delete-title" tabIndex={-1}>
+      <header><span>Remove timetable block</span><h2 id="schedule-delete-title">How much of “{block.label}”?</h2><p>Choose the smallest scope that matches what changed. Other weeks stay intact.</p></header>
+      <div role="radiogroup" aria-label="Deletion scope">
+        {canScopeOccurrence && <label><input type="radio" name="delete-scope" value="occurrence" checked={scope === "occurrence"} onChange={() => setScope("occurrence")} /><span><b>This date only</b><small>Skip {occurrenceLabel}; keep the rest of the series.</small></span></label>}
+        {canScopeOccurrence && <label><input type="radio" name="delete-scope" value="future" checked={scope === "future"} onChange={() => setScope("future")} /><span><b>This and future dates</b><small>Keep earlier occurrences and end the series before {occurrenceLabel}.</small></span></label>}
+        <label><input type="radio" name="delete-scope" value="series" checked={scope === "series"} onChange={() => setScope("series")} /><span><b>Entire series</b><small>Remove every scheduled occurrence.</small></span></label>
+      </div>
+      <footer><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button type="button" className="study-danger" disabled={busy} onClick={() => void onDelete({ scope, ...(scope !== "series" && occurrenceDate ? { occurrenceDate } : scope !== "series" && weekNumber ? { weekNumber } : {}) })}><Trash2 size={16} /> Remove</button></footer>
+    </section>
+  </TimetableOverlay>;
+}
+
+function TimetableEditor({ study, block, defaultDay, defaultDate, busy, onClose, onSave }: {
   study: StudySnapshot;
   block?: ScheduleBlock;
   defaultDay: number;
+  defaultDate: string;
   busy: boolean;
   onClose: () => void;
   onSave: (body: unknown) => Promise<void>;
@@ -459,8 +518,14 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
   const [end, setEnd] = useState(block?.endTime ?? "11:00");
   const [label, setLabel] = useState(block?.label ?? "");
   const [blockType, setBlockType] = useState(block?.blockType ?? "class");
-  const [startWeek, setStartWeek] = useState(block?.startWeek?.toString() ?? "");
-  const [endWeek, setEndWeek] = useState(block?.endWeek?.toString() ?? "");
+  const [customTypeLabel, setCustomTypeLabel] = useState(block?.customTypeLabel ?? "");
+  const legacyStart = block ? legacyBlockDate(study.workspace.semesterStartDate, block.startWeek ?? 1, block.dayOfWeek) : null;
+  const legacyEnd = block ? legacyBlockDate(study.workspace.semesterStartDate, block.endWeek, block.dayOfWeek) : null;
+  const initialStartDate = block?.recurrenceStartDate?.slice(0, 10) ?? legacyStart ?? defaultDate;
+  const initialEndDate = block?.recurrenceEndDate?.slice(0, 10) ?? legacyEnd ?? "";
+  const [recurrenceMode, setRecurrenceMode] = useState<"once" | "weekly">(initialEndDate && initialEndDate === initialStartDate ? "once" : "weekly");
+  const [recurrenceStartDate, setRecurrenceStartDate] = useState(initialStartDate);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(initialEndDate);
   const [destination, setDestination] = useState(block?.venueName ?? "");
   const [destinationPlaceId, setDestinationPlaceId] = useState<string | null>(block ? scheduleBlockPlaceId(block) : null);
   const [originId, setOriginId] = useState(block?.defaultOriginId ?? "");
@@ -472,13 +537,15 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
     event.preventDefault();
     void onSave(timetableBlockPayload({
       moduleId,
-      dayOfWeek: day,
+      dayOfWeek: recurrenceMode === "once" ? weekdayForCalendarDate(recurrenceStartDate) : day,
       startTime: start,
       endTime: end,
       label,
       blockType,
-      startWeek,
-      endWeek,
+      customTypeLabel,
+      recurrenceMode,
+      recurrenceStartDate,
+      recurrenceEndDate,
       destination,
       destinationPlaceId,
       defaultOriginId: originId,
@@ -493,10 +560,12 @@ function TimetableEditor({ study, block, defaultDay, busy, onClose, onSave }: {
         <label className="wide">Label<input autoFocus required maxLength={200} value={label} onChange={(event) => setLabel(event.target.value)} placeholder="CS2100 lecture" /></label>
         <StudyChoicePicker label="Module" value={moduleId} placeholder="No module" searchable options={study.modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} onChange={setModuleId} />
         <StudyChoicePicker label="Type" value={blockType} options={TIMETABLE_TYPE_OPTIONS} allowEmpty={false} onChange={setBlockType} />
+        {blockType === "other" && <label className="wide">Custom type<input required maxLength={80} value={customTypeLabel} onChange={(event) => setCustomTypeLabel(event.target.value)} placeholder="Workshop, meeting, hackathon…" /></label>}
         <StudyChoicePicker label="Day" value={String(day)} options={TIMETABLE_DAY_OPTIONS} allowEmpty={false} onChange={(value) => setDay(Number(value))} />
         <StudyTimePicker label="Starts" value={start} onChange={setStart} />
         <StudyTimePicker label="Ends" value={end} onChange={setEnd} />
-        <div className="study-timetable-weeks"><label>From week<input type="text" inputMode="numeric" pattern="[0-9]*" value={startWeek} onChange={(event) => setStartWeek(normalizeIntegerDraft(event.target.value))} onBlur={() => startWeek && setStartWeek(String(clampInteger(Number(startWeek), 1, 80)))} placeholder="1" /></label><span>to</span><label>Until week<input type="text" inputMode="numeric" pattern="[0-9]*" value={endWeek} onChange={(event) => setEndWeek(normalizeIntegerDraft(event.target.value))} onBlur={() => endWeek && setEndWeek(String(clampInteger(Number(endWeek), 1, 80)))} placeholder="13" /></label></div>
+        <StudyChoicePicker label="Repeats" value={recurrenceMode} options={[{ value: "once", label: "Once" }, { value: "weekly", label: "Every week" }]} allowEmpty={false} onChange={(value) => setRecurrenceMode(value as "once" | "weekly")} />
+        <div className="study-timetable-weeks"><label>{recurrenceMode === "once" ? "Date" : "Starts on"}<input required type="date" value={recurrenceStartDate} onChange={(event) => setRecurrenceStartDate(event.target.value)} /></label>{recurrenceMode === "weekly" && <><span>to</span><label>Ends on <small>(optional)</small><input type="date" min={recurrenceStartDate} value={recurrenceEndDate} onChange={(event) => setRecurrenceEndDate(event.target.value)} /></label></>}</div>
         <div className="study-timetable-travel wide"><span><MapPin size={16} /> Leave-time reminder</span><StudyPlaceCombobox value={destination} placeId={destinationPlaceId} onChange={(value, placeId) => { setDestination(value); setDestinationPlaceId(placeId); }} /><StudyChoicePicker label="Usual origin" value={originId} placeholder="Current/default origin" options={study.origins.map((origin) => ({ value: origin.id, label: origin.name }))} onChange={setOriginId} /><label>Travel buffer<IntegerInput min={0} max={90} value={buffer} onValueChange={setBuffer} aria-label="Travel buffer" /></label></div>
         <footer><span /><div><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy}><Check size={16} /> {busy ? "Saving…" : block ? "Save changes" : "Save block"}</button></div></footer>
       </form>
