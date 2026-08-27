@@ -164,6 +164,10 @@ export const DashboardSnapshotSchema = z.object({
       text: text(280),
       author: optionalText(120),
     }).strict()).max(40).default([]),
+    morningBriefEnabled: z.boolean().default(false),
+    morningBriefTime: clock.default("08:00"),
+    eveningDebriefEnabled: z.boolean().default(false),
+    eveningDebriefTime: clock.default("21:00"),
   }).optional(),
   collaboration: z.object({
     viewerTelegramId: z.string().regex(/^[1-9]\d{0,19}$/),

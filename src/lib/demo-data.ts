@@ -227,6 +227,10 @@ export function getDemoSnapshot(): DashboardSnapshot {
       calendarAutoSync: true,
       excelAutoSync: true,
       overviewQuotes: [],
+      morningBriefEnabled: false,
+      morningBriefTime: "08:00",
+      eveningDebriefEnabled: false,
+      eveningDebriefTime: "21:00",
     },
   };
 }

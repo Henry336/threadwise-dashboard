@@ -112,6 +112,11 @@
       "date": "2026-08-28",
       "decision": "Use one shared Today planner across Personal, Group, and Study overviews, with three bounded agenda columns and one progressively disclosed batch-review editor.",
       "reason": "A shared planning surface keeps planned days distinct from deadlines across modes. Add more stays secondary, detailed corrections remain inside the draft, and one atomic Save action avoids button fatigue and partial task lists."
+    },
+    {
+      "date": "2026-08-28",
+      "decision": "Keep private morning and evening briefing consent inside Personal Reminder settings, using two plain opt-in rows with branded time pickers.",
+      "reason": "A briefing summarizes Personal, assigned Group, and Study work for one person, so it is a personal delivery preference rather than a workspace control. Keeping it beside quiet hours makes timing and interruption boundaries understandable without adding another settings tab."
     }
   ],
   "evidence": [

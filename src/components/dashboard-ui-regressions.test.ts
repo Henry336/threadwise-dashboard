@@ -58,4 +58,13 @@ describe("dashboard UI regressions", () => {
     expect(css).toContain(".today-agenda-grid");
     expect(css).toContain("@media (max-width: 600px)");
   });
+
+  it("keeps private daily briefing consent in personal Reminder settings", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    expect(dashboard).toContain("Daily briefings");
+    expect(dashboard).toContain("Morning plan");
+    expect(dashboard).toContain("Evening wrap-up");
+    expect(dashboard).toContain("assigned Group work, and Study work");
+    expect(dashboard).toContain("delete payload.morningBriefEnabled");
+  });
 });

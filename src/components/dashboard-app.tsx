@@ -48,6 +48,7 @@ import { clampInteger } from "@/lib/numeric-input";
 import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
 import { ConfirmationProvider, useConfirmation } from "./confirmation-dialog";
 import { TodayPlanner } from "./today-planner";
+import { StudyTimePicker } from "./study-choice-picker";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -1202,7 +1203,15 @@ function GroupSettingsView({ data, workspace, onSave, announce }: { data: Dashbo
     if (!canManage) return;
     setSaving(true);
     try {
-      const payload = { ...settings, quietHoursStart: settings.quietHoursStart || null, quietHoursEnd: settings.quietHoursEnd || null };
+      const payload: Record<string, unknown> = {
+        ...settings,
+        quietHoursStart: settings.quietHoursStart || null,
+        quietHoursEnd: settings.quietHoursEnd || null,
+      };
+      delete payload.morningBriefEnabled;
+      delete payload.morningBriefTime;
+      delete payload.eveningDebriefEnabled;
+      delete payload.eveningDebriefTime;
       const saved = asPayload<DashboardSettings>(await api("settings", "PATCH", payload), "settings");
       onSave(saved);
       announce("Shared settings updated for the group.");
@@ -1368,6 +1377,19 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
             <label>Daily limit for regular reminders<IntegerInput min={1} max={2_000} required value={settings.maxRemindersPerDay} onValueChange={(value) => setSettings({ ...settings, maxRemindersPerDay: value })} aria-label="Daily limit for regular reminders" /><small>Stops ordinary follow-ups after this many messages in one day. Deadline warnings are still delivered.</small></label>
           </div>
           <div className="tw-form-row"><label>Quiet hours begin<input type="time" value={settings.quietHoursStart ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursStart: event.target.value || undefined })} /></label><label>Quiet hours end<input type="time" value={settings.quietHoursEnd ?? ""} onChange={(event) => setSettings({ ...settings, quietHoursEnd: event.target.value || undefined })} /></label></div>
+          <fieldset className="tw-briefing-settings">
+            <legend>Daily briefings</legend>
+            <p>One private digest can gather your Personal tasks, assigned Group work, and Study work. These are summaries—not repeating task reminders.</p>
+            <div className="tw-briefing-row">
+              <label className="tw-switch"><span><b>Morning plan</b><small>Today, carryover, and deadlines approaching within three days.</small></span><input type="checkbox" checked={settings.morningBriefEnabled} onChange={(event) => setSettings({ ...settings, morningBriefEnabled: event.target.checked })} /></label>
+              <StudyTimePicker label="Morning delivery time" value={settings.morningBriefTime} onChange={(morningBriefTime) => setSettings({ ...settings, morningBriefTime })} />
+            </div>
+            <div className="tw-briefing-row">
+              <label className="tw-switch"><span><b>Evening wrap-up</b><small>What was completed, what remains, and deadlines getting close.</small></span><input type="checkbox" checked={settings.eveningDebriefEnabled} onChange={(event) => setSettings({ ...settings, eveningDebriefEnabled: event.target.checked })} /></label>
+              <StudyTimePicker label="Evening delivery time" value={settings.eveningDebriefTime} onChange={(eveningDebriefTime) => setSettings({ ...settings, eveningDebriefTime })} />
+            </div>
+            <small>Both stay off until you enable them and respect your timezone and quiet hours.</small>
+          </fieldset>
           {saveButton}
         </form>
       </>}

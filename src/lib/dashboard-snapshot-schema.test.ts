@@ -31,6 +31,12 @@ describe("dashboard snapshot contract", () => {
   it("normalizes the legacy quiet hours that previously blanked Henry's dashboard", () => {
     const parsed = parseDashboardSnapshot(snapshot("3:00", "6:00"));
     expect(parsed.settings).toMatchObject({ quietHoursStart: "03:00", quietHoursEnd: "06:00" });
+    expect(parsed.settings).toMatchObject({
+      morningBriefEnabled: false,
+      morningBriefTime: "08:00",
+      eveningDebriefEnabled: false,
+      eveningDebriefTime: "21:00",
+    });
   });
 
   it("omits malformed optional quiet hours without rejecting valid user data", () => {

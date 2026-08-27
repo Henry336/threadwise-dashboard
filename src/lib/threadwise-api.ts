@@ -12,6 +12,8 @@ function defaultSettings(timeZone: string): DashboardSettings {
     maxRemindersPerDay: 24, dueNudgeMinutes: 5, reminderMode: "INDIVIDUAL",
     expenseCurrency: "SGD", ocrLanguages: "eng", directNudgesEnabled: false,
     calendarAutoSync: false, excelAutoSync: false, overviewQuotes: [],
+    morningBriefEnabled: false, morningBriefTime: "08:00",
+    eveningDebriefEnabled: false, eveningDebriefTime: "21:00",
   };
 }
 

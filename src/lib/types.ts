@@ -247,6 +247,10 @@ export type DashboardSettings = {
   calendarAutoSync: boolean;
   excelAutoSync: boolean;
   overviewQuotes: DashboardOverviewQuote[];
+  morningBriefEnabled: boolean;
+  morningBriefTime: string;
+  eveningDebriefEnabled: boolean;
+  eveningDebriefTime: string;
 };
 
 export type DashboardOverviewQuote = {

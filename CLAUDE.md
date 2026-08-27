@@ -136,6 +136,13 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-28 (Codex):** Implemented Phase 3 private briefing consent on guarded branch
+  `codex/phase3-today-delivery-notes`. Personal Reminder settings now provide two off-by-default
+  morning/evening digest switches with branded time pickers and clear cross-mode/quiet-hours copy;
+  Group settings cannot submit these private fields. Typecheck, lint, 139 tests, isolated production
+  build, secret scan, and browser smoke (5 passed, 1 intentional mobile skip) pass. The paired backend
+  scheduler remains owner-gated; no merge or deployment occurred.
+
 - **2026-08-28 (Codex):** Implemented the Phase 2 cross-mode Today planner on guarded branch
   `codex/phase2-today-interactions`. Personal, Group, and Study overviews now share a responsive
   Today/Carryover/Deadline-watch surface, progressive batch editor, exact Telegram draft hydration,

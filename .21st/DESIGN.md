@@ -54,3 +54,7 @@ Primary Study overflow controls are part of the visual system. On desktop, the s
 ## Decision: one cross-mode Today planner
 
 Personal, Group, and Study overviews reuse one Today planner. It presents Today, Carryover, and Deadline watch as three bounded columns on wide screens and one readable stack on mobile. Batch capture exposes one review surface, a secondary Add more action, focused row corrections, and one atomic Save action. Planned days and deadlines remain separate labelled fields; creating planned work never implies a reminder.
+
+## Decision: private daily briefing consent
+
+Morning and evening briefings live in Personal Reminder settings because they privately combine the user's Personal, assigned Group, and Study work. Use two restrained opt-in rows, branded time pickers, explicit descriptions, and one existing Save action. Keep both off by default and explain that quiet hours still apply; do not present these digests as repeating task reminders or shared group settings.
