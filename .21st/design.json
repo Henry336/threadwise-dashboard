@@ -107,6 +107,11 @@
       "date": "2026-08-21",
       "decision": "Let personal users manage a bounded quote-and-optional-author list in General settings and rotate those entries with the stable daily Overview line.",
       "reason": "Settings provides the clearest persistent place to add, attribute, inspect, and remove personal lines. Explicit add/remove/save actions preserve the existing form model, while bounded storage and same-day selection prevent visual churn."
+    },
+    {
+      "date": "2026-08-28",
+      "decision": "Use one shared Today planner across Personal, Group, and Study overviews, with three bounded agenda columns and one progressively disclosed batch-review editor.",
+      "reason": "A shared planning surface keeps planned days distinct from deadlines across modes. Add more stays secondary, detailed corrections remain inside the draft, and one atomic Save action avoids button fatigue and partial task lists."
     }
   ],
   "evidence": [

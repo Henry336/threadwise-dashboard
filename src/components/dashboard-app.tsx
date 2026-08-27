@@ -47,6 +47,7 @@ import { dailyOverviewLine } from "@/lib/dashboard-copy";
 import { clampInteger } from "@/lib/numeric-input";
 import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
 import { ConfirmationProvider, useConfirmation } from "./confirmation-dialog";
+import { TodayPlanner } from "./today-planner";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -734,7 +735,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   };
 
   const openTasks = data.tasks.filter((task) => task.status === "OPEN");
-  const todayTasks = openTasks.filter((task) => isToday(task.dueAt, data.user.timezone));
+  const todayKey = calendarKey(new Date(), data.user.timezone);
+  const todayTasks = openTasks.filter((task) => task.plannedFor ? task.plannedFor === todayKey : isToday(task.dueAt, data.user.timezone));
   const overdueTasks = openTasks.filter((task) => isOverdue(task, data.user.timezone));
   const focusTask = overdueTasks[0] ?? todayTasks[0] ?? openTasks[0];
   const groupManager = data.workspace.role === "OWNER" || data.workspace.role === "ADMIN";
@@ -784,7 +786,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         <div className="tw-content" key={activeView}>
           {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} overviewQuotes={data.settings.overviewQuotes} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
           {activeView === "today" && (data.workspace.kind === "GROUP"
-            ? <GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} />
+            ? <><TodayPlanner disabled={isDemo} onChanged={() => void refreshSnapshot()} /><GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} /></>
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
           {activeView === "tasks" && (data.workspace.kind === "GROUP" && data.collaboration
             ? <GroupTasksView tasks={data.tasks} meetings={(data.scheduling?.polls ?? []).filter((poll) => poll.status === "FINALIZED")} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onOpenSchedule={() => navigate("schedule")} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} manager={groupManager} />
@@ -989,6 +991,7 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
     || normalizeCopy(focusTask.title).startsWith(normalizeCopy(focusTask.description))
   ) ? focusTask.description : undefined;
   return <div className="tw-today-grid">
+    <TodayPlanner disabled={isDemo} onChanged={() => undefined} />
     <section className="tw-card tw-focus-card">
       <div className="tw-card-head"><span>Now</span><button onClick={() => onNavigate("tasks")}>All tasks <ArrowRight size={15} /></button></div>
       {focusTask ? <div className="tw-focus-body"><div><div className="tw-focus-kicker"><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><small>{focusTask.publicId}</small></div><h2>{focusTask.title}</h2>{focusDescription && <p>{focusDescription}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={15} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={15} />Reminder active</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={18} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={16} /> Details</button></div></div> : <Empty icon={CheckCircle2} mascot title="You are all clear." copy="Nothing needs your attention right now." />}
@@ -1047,7 +1050,7 @@ function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onCalen
     if (!`${task.title} ${task.description ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
     if (filter === "done") return task.status === "DONE";
     if (task.status !== "OPEN") return false;
-    if (filter === "today") return isToday(task.dueAt, timezone);
+    if (filter === "today") return task.plannedFor ? task.plannedFor === calendarKey(new Date(), timezone) : isToday(task.dueAt, timezone);
     if (filter === "upcoming") return Boolean(task.dueAt && !isToday(task.dueAt, timezone) && !isOverdue(task, timezone));
     return true;
   }).sort((a, b) => {

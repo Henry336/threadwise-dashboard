@@ -36,6 +36,8 @@ export type DashboardTask = {
   title: string;
   description?: string;
   dueAt?: string;
+  plannedFor?: string;
+  firstPlannedFor?: string;
   nextReminderAt?: string;
   snoozedUntil?: string;
   reminderIntervalMinutes?: number;
@@ -54,6 +56,55 @@ export type DashboardTask = {
   assignees?: DashboardTaskAssignee[];
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type TodayAgendaEntry = {
+  id: string;
+  publicId: string;
+  title: string;
+  mode: "INDIVIDUAL" | "GROUP" | "STUDY";
+  workspaceId?: string;
+  workspaceName?: string;
+  moduleId?: string;
+  moduleCode?: string;
+  plannedFor?: string;
+  firstPlannedFor?: string;
+  dueAt?: string;
+  status: string;
+};
+
+export type TodayAgenda = {
+  localDate: string;
+  timezone: string;
+  scope: "PERSONAL" | "GROUP" | "STUDY";
+  today: TodayAgendaEntry[];
+  carryover: TodayAgendaEntry[];
+  dueSoon: TodayAgendaEntry[];
+  overdue: TodayAgendaEntry[];
+  unscheduledCount: number;
+};
+
+export type TaskCaptureDraftItem = {
+  id: string;
+  position: number;
+  title: string;
+  sourceText: string;
+  plannedFor?: string | null;
+  dueAt?: string | null;
+  moduleId?: string | null;
+  studyItemType?: string | null;
+  warnings: string[];
+  status: "READY" | "NEEDS_REVIEW" | "COMMITTED";
+  included: boolean;
+};
+
+export type TaskCaptureDraft = {
+  id: string;
+  scope: "PERSONAL" | "GROUP" | "STUDY";
+  timezone: string;
+  status: "COLLECTING" | "REVIEWING" | "COMMITTING" | "COMMITTED" | "CANCELED" | "EXPIRED";
+  expiresAt: string;
+  items: TaskCaptureDraftItem[];
 };
 
 export type TaskImportAssignee = {

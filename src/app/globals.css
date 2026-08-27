@@ -1516,3 +1516,113 @@ kbd { font-family: var(--sans); }
 .threadwise-confirm-submit.danger { color: #fff; background: var(--danger); border-color: var(--danger); }
 .threadwise-confirm-dialog button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
 @media (max-width: 560px) { .threadwise-confirm-overlay { padding: 12px; place-items: end center; } .threadwise-confirm-dialog { padding: 20px 17px max(18px, env(safe-area-inset-bottom)); border-radius: 18px; } .threadwise-confirm-dialog footer button { flex: 1; } }
+/* Phase 2 Today planning uses the existing canvas, border, type, and action tokens. */
+.today-planner {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.today-planner.study { margin: 0 0 24px; box-shadow: none; }
+.today-planner-head,
+.today-draft-summary,
+.today-draft footer { display: flex; align-items: center; gap: 14px; justify-content: space-between; }
+.today-planner-head span { color: var(--accent); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.today-planner-head h2 { margin: 4px 0 0; font-family: var(--font-display); font-size: clamp(1.45rem, 2vw, 2rem); font-weight: 500; }
+.today-planner button { font: inherit; }
+.today-planner-add,
+.today-planner-primary,
+.today-draft footer > button,
+.today-draft-more button,
+.today-agenda-grid article > button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.today-planner-primary { border-color: var(--ink) !important; background: var(--ink) !important; color: var(--canvas) !important; }
+.today-planner button:disabled { cursor: not-allowed; opacity: .48; }
+.today-planner-message { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted-strong); font-size: .86rem; }
+.today-planner-capture,
+.today-draft { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
+.today-planner-capture label,
+.today-draft-fields label { display: grid; gap: 7px; color: var(--muted-strong); font-size: .77rem; font-weight: 750; }
+.today-planner textarea,
+.today-planner input,
+.today-planner select {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  color: var(--ink);
+  padding: 11px 12px;
+  font: inherit;
+}
+.today-planner textarea { resize: vertical; line-height: 1.5; }
+.today-planner textarea:focus,
+.today-planner input:focus,
+.today-planner select:focus { outline: 3px solid color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--accent); }
+.today-planner-capture > div { display: flex; justify-content: flex-end; gap: 10px; }
+.today-planner-capture > div > button:first-child { border: 0; background: transparent; color: var(--muted-strong); }
+.today-draft-summary > div { display: grid; gap: 3px; }
+.today-draft-summary span { color: var(--muted-strong); font-size: .82rem; }
+.today-draft-summary > button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--muted-strong); }
+.today-draft-items { display: grid; gap: 10px; }
+.today-draft-items > article { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px; background: var(--canvas); }
+.today-draft-items > article.needs-review { border-color: color-mix(in srgb, #c37a18 58%, var(--line)); }
+.today-draft-items > article.excluded { opacity: .5; }
+.today-draft-include { align-self: start; display: grid; place-items: center; gap: 5px; color: var(--muted-strong); font-size: .72rem; font-weight: 800; }
+.today-draft-include input { width: 17px; height: 17px; accent-color: var(--accent); }
+.today-draft-fields { display: grid; gap: 10px; }
+.today-draft-fields > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.today-draft-fields p { display: flex; align-items: center; gap: 7px; margin: 0; color: #a96110; font-size: .78rem; font-weight: 700; }
+.today-draft-fields p button { margin-left: auto; border: 0; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.today-draft-more { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.today-draft footer > span { flex: 1; }
+.today-draft footer small { color: #a96110; }
+.today-agenda-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.today-agenda-grid > section { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--canvas); overflow: hidden; }
+.today-agenda-grid > section > header { display: flex; align-items: center; justify-content: space-between; padding: 14px 15px; border-bottom: 1px solid var(--line); }
+.today-agenda-grid h3 { margin: 0; font-family: var(--font-display); font-size: 1.15rem; font-weight: 550; }
+.today-agenda-grid header > span { display: grid; min-width: 25px; height: 25px; place-items: center; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .75rem; font-weight: 800; }
+.today-agenda-grid > section > p { margin: 0; padding: 18px 15px; color: var(--muted-strong); font-size: .84rem; }
+.today-agenda-grid > section > div { display: grid; }
+.today-agenda-grid article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.today-agenda-grid article:last-child { border-bottom: 0; }
+.today-agenda-mark { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.today-agenda-grid article > div { display: grid; gap: 3px; min-width: 0; }
+.today-agenda-grid article b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .84rem; }
+.today-agenda-grid article small { overflow: hidden; color: var(--muted-strong); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.today-agenda-grid article > button { min-height: 34px; padding: 0 10px; font-size: .74rem; }
+.today-unscheduled { display: flex; align-items: center; gap: 7px; margin: -4px 0 0; color: var(--muted-strong); font-size: .78rem; }
+
+@media (max-width: 900px) {
+  .today-agenda-grid { grid-template-columns: 1fr; }
+  .today-draft-fields > div { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .today-planner { padding: 18px; border-radius: var(--radius-md); }
+  .today-planner-head { align-items: flex-start; }
+  .today-planner-add { min-width: 42px; padding: 0 10px; }
+  .today-planner-add svg + * { display: none; }
+  .today-draft-fields > div,
+  .today-draft-more { grid-template-columns: 1fr; }
+  .today-draft footer { flex-wrap: wrap; }
+  .today-draft footer > span { display: none; }
+  .today-draft footer small { width: 100%; order: -1; }
+}

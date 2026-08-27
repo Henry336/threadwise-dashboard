@@ -136,6 +136,13 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-08-28 (Codex):** Implemented the Phase 2 cross-mode Today planner on guarded branch
+  `codex/phase2-today-interactions`. Personal, Group, and Study overviews now share a responsive
+  Today/Carryover/Deadline-watch surface, progressive batch editor, exact Telegram draft hydration,
+  atomic save, branded Study module picker, and one-tap audited carryover planning. The feature hides
+  cleanly when the paired backend owner gate is unavailable. Typecheck, lint, 138 tests, optimized
+  build, and browser smoke (5 passed, 1 intentional mobile skip) pass. No merge or deployment occurred.
+
 - **2026-08-25 (Codex):** Implemented the paired Phase 1 trust UI on
   `codex/phase1-reliability-foundation`. Work remains the canonical complete assignment view and
   now labels suspicious Canvas deadlines for confirmation; quarantined deadlines stay out of the

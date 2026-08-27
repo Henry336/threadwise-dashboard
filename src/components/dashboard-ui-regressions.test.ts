@@ -41,4 +41,21 @@ describe("dashboard UI regressions", () => {
     expect(css).toContain(".tw-quote-manager {");
     expect(css).toContain(".tw-quote-composer {");
   });
+
+  it("uses one progressive Today planner across Personal, Group, and Study", () => {
+    const planner = readFileSync(join(process.cwd(), "src", "components", "today-planner.tsx"), "utf8");
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const study = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
+
+    expect(dashboard).toContain("<TodayPlanner");
+    expect(study).toContain('<TodayPlanner variant="study"');
+    expect(planner).toContain("Nothing is saved until you approve the whole list.");
+    expect(planner).toContain("Add more");
+    expect(planner).toContain("No reminders were created.");
+    expect(planner).toContain('title="Carryover"');
+    expect(planner).toContain('title="Deadline watch"');
+    expect(css).toContain(".today-agenda-grid");
+    expect(css).toContain("@media (max-width: 600px)");
+  });
 });

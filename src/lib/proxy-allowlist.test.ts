@@ -9,6 +9,13 @@ describe("dashboard BFF allowlist", () => {
     ["PATCH", "tasks/TASK-1"],
     ["DELETE", "notes/NOTE-1"],
     ["GET", "images/IMG-1/content"],
+    ["GET", "today"],
+    ["PATCH", "today/0c68a350-c061-4a86-a63f-842c132dc77d/plan"],
+    ["POST", "task-drafts"],
+    ["GET", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
+    ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items"],
+    ["PATCH", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items/0c68a350-c061-4a86-a63f-842c132dc77e"],
+    ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/commit"],
   ])("allows the reviewed %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);
@@ -21,6 +28,9 @@ describe("dashboard BFF allowlist", () => {
     ["GET", "privacy/account"],
     ["POST", "images/IMG-1/content"],
     ["GET", "tasks/TASK-1/collaboration"],
+    ["POST", "today"],
+    ["GET", "today/0c68a350-c061-4a86-a63f-842c132dc77d/plan"],
+    ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items/0c68a350-c061-4a86-a63f-842c132dc77e"],
   ])("rejects the forged %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);
   });

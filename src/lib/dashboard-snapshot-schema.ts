@@ -43,6 +43,8 @@ const TaskAssigneeSchema = z.object({
 const TaskSchema = z.object({
   id: text(100), publicId: text(50), title: text(500), description: optionalText(5_000),
   dueAt: isoDate.nullish().transform((value) => value ?? undefined),
+  plannedFor: dateOnly.nullish().transform((value) => value ?? undefined),
+  firstPlannedFor: dateOnly.nullish().transform((value) => value ?? undefined),
   nextReminderAt: isoDate.nullish().transform((value) => value ?? undefined),
   snoozedUntil: isoDate.nullish().transform((value) => value ?? undefined),
   reminderIntervalMinutes: z.number().int().min(1).max(525_600).nullish().transform((value) => value ?? undefined),
