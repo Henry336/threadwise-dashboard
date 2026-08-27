@@ -5,6 +5,11 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-28 (Codex, guarded):** Reconciled README, product, architecture, changelog, contributor
+  handoff, and tracked `.21st` decisions with the paired Phase 1–3 Today stack. Documentation now
+  distinguishes implemented/tested guarded behavior from production and treats the expanded
+  acceptance matrix as a pre-merge gate. No runtime, merge, or deployment changed in this pass.
+
 - **2026-08-21 (Codex, deployed):** Added an accessible Overview quote manager to personal
   Settings → General. Personal lines with optional attribution join the built-in deterministic
   daily rotation; the UI supports explicit add/remove/save, responsive desktop/mobile layouts, and

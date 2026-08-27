@@ -4,7 +4,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Product definition verified: **2026-08-10**
+Product definition verified: **2026-08-28**
 
 ## Platform
 
@@ -29,10 +29,15 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
 - Group access is derived from signed Telegram identity, an opaque selected workspace id, and live Telegram membership verification.
 - Study Mode uses read-only Canvas synchronization, deterministic attention ranking, module-scoped work and resources, weekly planning/review, and focused study sessions.
 - PostgreSQL is the shared source of truth for Telegram and dashboard interactions.
+- The guarded Today stack projects Personal, assigned Group, and Study work into one private daily
+  planning view; planned day, deadline, and reminder remain separate concepts.
 
 ## Capabilities and Constraints
 
 - Personal workspaces expose tasks, notes, ideas, searchable images, search, settings, and Google Calendar as a secondary integration.
+- On the guarded Phase 1–3 stack, Personal settings also own independently opt-in private morning and
+  evening digests. They summarize cross-mode work, respect quiet hours, and are not recurring task
+  reminders or shared group broadcasts.
 - Shared workspaces expose assigned work, people, progress, activity, resources, and availability coordination. Assignments take effect immediately: members may claim unassigned work, assignees may complete or snooze their work, and only the creator or a verified current Telegram administrator may assign or reassign it.
 - The Study dashboard appears only when the configured owner selects the exact configured Study group. Unauthorized Study routes and API requests return 404 without revealing the feature.
 - Study Mode includes Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. The timetable combines recurring module timings with planned study tasks and class-travel context; Canvas remains read-only and local completion never submits coursework.
@@ -40,6 +45,8 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
 - Beacon is a separate Telegram bot process with no web dashboard. Moderation policy and actions intentionally remain in permission-aware Telegram private chats.
 - Clear commands and most natural-language capture are deterministic; AI is an optional enhancement, not a dependency for core workflows or Study Mode.
 - Browser code never receives database credentials, Telegram bot tokens, Canvas tokens, OAuth refresh tokens, or dashboard service-signing keys.
+- The guarded Today stack is not yet merged or deployed and must pass the expanded executable
+  parser/service/Telegram/dashboard acceptance matrix before rollout.
 
 ## Brand Commitments
 

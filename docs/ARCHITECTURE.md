@@ -1,6 +1,6 @@
 # Dashboard architecture
 
-Updated: 2026-08-17
+Updated: 2026-08-28
 
 Current dashboard release: v0.9.0; paired backend release: v0.32.0
 
@@ -56,6 +56,20 @@ Optional content encryption is owned entirely by the Render backend's Prisma bou
 Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF → Render → Telegram. Render performs the authenticated lookup, enforces raster-only media and a bounded download, then streams bytes with defensive browser headers. When Telegram reports a generic MIME type, the proxy identifies supported raster formats from bounded byte signatures before responding; the browser repeats that defensive check before creating an object URL. Neither the bot token nor Telegram file ID crosses into Vercel or the browser.
 
 Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.
+
+## Guarded Today projection
+
+The Phase 1–3 guarded stack exposes one `TodayPlanner` across Personal, Group, and Study. The browser
+does not create a second to-do store: it projects existing personal tasks, assigned group tasks, and
+Study work into Today, derived Carryover, and Deadline watch. Planned day remains independent from
+deadline and reminder state. Batch edits stay inside one durable server draft and commit atomically;
+exact Telegram links select the authorized workspace and draft before opening the editor.
+
+Morning-plan and evening-wrap-up consent belongs only to Personal Reminder settings because the
+digest privately combines the signed-in user's work across modes. Both switches default off, use the
+branded accessible time picker, and retain quiet-hours copy. Group settings deliberately omit these
+fields. The corresponding backend routes remain fail-closed behind
+`TODAY_FOUNDATION_OWNER_TELEGRAM_ID`; this projection is not yet deployed.
 
 ## Private Study projection
 

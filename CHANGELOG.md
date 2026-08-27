@@ -4,6 +4,19 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Guarded cross-mode Today planner and private briefing controls (Phases 1–3)
+- Added one responsive Today, Carryover, and Deadline-watch planner across Personal, Group, and Study,
+  preserving the distinction between planned days, deadlines, and reminders.
+- Added a progressively disclosed atomic batch editor, branded Study module selection, audited
+  Carryover actions, and exact Telegram draft-review links.
+- Added independently opt-in morning and evening private digest controls to Personal Reminder
+  settings with branded time pickers and explicit quiet-hours/cross-mode copy. Group settings strip
+  these personal delivery fields.
+- Passed 139 tests, typecheck, lint, isolated optimized build, secret scan, and browser smoke with five
+  passes and one intentional mobile skip.
+- Kept the paired stack guarded and fail-closed. The expanded parser/service/surface acceptance matrix
+  must pass before merge or rollout; no production deployment is included here.
+
 ### Phase 5 browser hardening and maintainability
 - Added a nonce-bearing Content Security Policy staged in report-only mode, with no broad inline/eval allowances and a preview-first enforcement runbook.
 - Scoped crash-safe drafts to their owner, workspace, and resource; added seven-day expiry plus workspace/logout cleanup.
