@@ -73,7 +73,7 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
 
   return <div className="study-choice-field" ref={rootRef}>
     <span>{label}</span>
-    <button ref={triggerRef} type="button" className="study-choice-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined} onClick={() => open ? close() : openAt(selectedIndex)} onKeyDown={onTriggerKeyDown}>
+    <button ref={triggerRef} type="button" className="study-choice-trigger" disabled={disabled} aria-label={`${label}: ${selected?.label ?? placeholder}`} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined} onClick={() => open ? close() : openAt(selectedIndex)} onKeyDown={onTriggerKeyDown}>
       <span><b>{selected?.label ?? placeholder}</b>{selected?.detail && <small>{selected.detail}</small>}</span><ChevronDown size={16} />
     </button>
     {open && <div id={listboxId} className="study-choice-popover" role="listbox" aria-label={label} onKeyDown={onListboxKeyDown}>

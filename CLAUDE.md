@@ -5,6 +5,12 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-28 (Codex, release authorized):** The expanded Phase 1–3 dashboard acceptance gate now
+  passes: 139 unit/regression tests, typecheck, lint, optimized production build, secret scan, and
+  release-artifact Playwright coverage with 7 passes and 1 intentional mobile command-palette skip.
+  Personal briefing consent is covered at laptop/mobile widths with branded keyboard-accessible time
+  pickers and exact draft routing. Paired merge and production deployment are authorized and active.
+
 - **2026-08-28 (Codex, guarded):** Reconciled README, product, architecture, changelog, contributor
   handoff, and tracked `.21st` decisions with the paired Phase 1–3 Today stack. Documentation now
   distinguishes implemented/tested guarded behavior from production and treats the expanded

@@ -26,7 +26,7 @@ test("command palette owns focus, dismisses by keyboard, and restores its trigge
 });
 
 test("demo remains scrollable without viewport-wide horizontal overflow", async ({ page }) => {
-  await page.goto("/dashboard?demo=1", { waitUntil: "domcontentloaded" });
+  await page.goto("/dashboard?demo=1&view=tasks", { waitUntil: "load" });
   const dimensions = await page.evaluate(() => ({
     viewportWidth: window.innerWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -37,4 +37,19 @@ test("demo remains scrollable without viewport-wide horizontal overflow", async 
   expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.viewportHeight);
   await page.mouse.wheel(0, 700);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+});
+
+test("private briefing controls are accessible and responsive in Personal settings", async ({ page }) => {
+  await page.goto("/dashboard?demo=1&view=settings&tab=reminders", { waitUntil: "load" });
+  await expect(page.getByText("Daily briefings", { exact: true })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /morning plan/i })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /evening wrap-up/i })).not.toBeChecked();
+  const morningTime = page.getByRole("button", { name: /morning delivery time/i });
+  await morningTime.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("listbox", { name: "Morning delivery time" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(morningTime).toBeFocused();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
 });

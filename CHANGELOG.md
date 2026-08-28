@@ -12,10 +12,11 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Added independently opt-in morning and evening private digest controls to Personal Reminder
   settings with branded time pickers and explicit quiet-hours/cross-mode copy. Group settings strip
   these personal delivery fields.
-- Passed 139 tests, typecheck, lint, isolated optimized build, secret scan, and browser smoke with five
-  passes and one intentional mobile skip.
-- Kept the paired stack guarded and fail-closed. The expanded parser/service/surface acceptance matrix
-  must pass before merge or rollout; no production deployment is included here.
+- Passed 139 tests, typecheck, lint, isolated optimized build, secret scan, and release-artifact
+  browser smoke with seven passes and one intentional mobile command-palette skip.
+- Added accessible branded time-picker trigger names and deterministic browser navigation for Personal
+  briefing consent at laptop and mobile breakpoints. The paired expanded acceptance gate is green and
+  the owner has authorized merge and production release.
 
 ### Phase 5 browser hardening and maintainability
 - Added a nonce-bearing Content Security Policy staged in report-only mode, with no broad inline/eval allowances and a preview-first enforcement runbook.

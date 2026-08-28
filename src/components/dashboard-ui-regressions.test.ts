@@ -61,10 +61,19 @@ describe("dashboard UI regressions", () => {
 
   it("keeps private daily briefing consent in personal Reminder settings", () => {
     const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const picker = readFileSync(join(process.cwd(), "src", "components", "study-choice-picker.tsx"), "utf8");
+    const planner = readFileSync(join(process.cwd(), "src", "components", "today-planner.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
     expect(dashboard).toContain("Daily briefings");
     expect(dashboard).toContain("Morning plan");
     expect(dashboard).toContain("Evening wrap-up");
     expect(dashboard).toContain("assigned Group work, and Study work");
     expect(dashboard).toContain("delete payload.morningBriefEnabled");
+    expect(dashboard).toContain('<StudyTimePicker label="Morning delivery time"');
+    expect(dashboard).toContain('<StudyTimePicker label="Evening delivery time"');
+    expect(picker).toContain('aria-label={`${label}: ${selected?.label ?? placeholder}`}');
+    expect(css).toContain("@media (max-width: 640px) { .tw-briefing-row { grid-template-columns: 1fr; }");
+    expect(planner).toContain('new URLSearchParams(window.location.search).get("draft")');
+    expect(planner).toContain('`task-drafts/${encodeURIComponent(draftId)}`');
   });
 });
