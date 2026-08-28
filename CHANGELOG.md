@@ -4,6 +4,17 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Compact cross-mode Today completion
+- Added a clearly explained, accessible check control to every Today, Carryover, and Deadline-watch row
+  in Personal, Group, and Study while preserving the existing server-side completion rules.
+- Limited each agenda column to five items per page with compact range navigation, smaller mobile spacing,
+  and 40px mobile completion targets so opening Today no longer produces a long cramped task wall.
+- Updated task-capture guidance to prefer one task per line and documented the matching low-button Telegram
+  batch syntax using stable IDs.
+- Passed 141 dashboard tests, TypeScript, lint, optimized production build, secret scan, and seven desktop/
+  mobile Playwright checks with one intentional mobile command-palette skip. The paired backend passed 966
+  tests with six intentional skips, TypeScript/build, and its tracked-secret scan.
+
 ### Cross-mode Today planner and private briefing controls (Phases 1–3; released 2026-08-28)
 - Added one responsive Today, Carryover, and Deadline-watch planner across Personal, Group, and Study,
   preserving the distinction between planned days, deadlines, and reminders.

@@ -55,7 +55,13 @@ describe("dashboard UI regressions", () => {
     expect(planner).toContain("No reminders were created.");
     expect(planner).toContain('title="Carryover"');
     expect(planner).toContain('title="Deadline watch"');
+    expect(planner).toContain("Select the check beside a task to complete it here.");
+    expect(planner).toContain("const AGENDA_PAGE_SIZE = 5");
+    expect(planner).toContain('aria-label={`Complete ${entry.title}`}');
+    expect(planner).toContain('`today/${entry.id}/complete`');
     expect(css).toContain(".today-agenda-grid");
+    expect(css).toContain(".today-agenda-pagination");
+    expect(css).toContain(".today-agenda-complete");
     expect(css).toContain(".today-planner.study { --accent: var(--study-blue);");
     expect(css).toContain(".today-planner-head h2 { margin: 4px 0 0; font-family: var(--serif);");
     expect(css).toContain(".today-agenda-grid h3 { margin: 0; font-family: var(--serif);");

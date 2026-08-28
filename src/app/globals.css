@@ -1559,6 +1559,10 @@ kbd { font-family: var(--sans); }
 .today-planner-primary { border-color: var(--ink) !important; background: var(--ink) !important; color: var(--canvas) !important; }
 .today-planner button:disabled { cursor: not-allowed; opacity: .48; }
 .today-planner-message { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted-strong); font-size: .86rem; }
+.today-planner-guide { display: flex; align-items: flex-start; gap: 8px; margin: -6px 0 0; color: var(--muted-strong); font-size: .8rem; line-height: 1.45; }
+.today-planner-guide svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent); }
+.today-planner-guide code,
+.today-agenda-grid article small code { border-radius: 5px; background: var(--accent-soft); color: var(--accent); padding: 1px 4px; font-family: var(--mono); font-size: .68rem; font-weight: 800; }
 .today-planner-capture,
 .today-draft { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
 .today-planner-capture label,
@@ -1605,11 +1609,19 @@ kbd { font-family: var(--sans); }
 .today-agenda-grid > section > div { display: grid; }
 .today-agenda-grid article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .today-agenda-grid article:last-child { border-bottom: 0; }
-.today-agenda-mark { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
 .today-agenda-grid article > div { display: grid; gap: 3px; min-width: 0; }
 .today-agenda-grid article b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .84rem; }
 .today-agenda-grid article small { overflow: hidden; color: var(--muted-strong); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
 .today-agenda-grid article > button { min-height: 34px; padding: 0 10px; font-size: .74rem; }
+.today-agenda-grid article > .today-agenda-complete { width: 36px; min-width: 36px; height: 36px; padding: 0; border-radius: 999px; border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); color: var(--accent); background: var(--surface); }
+.today-agenda-grid article > .today-agenda-complete:hover { border-color: var(--accent); background: var(--accent); color: var(--surface); transform: translateY(-1px); }
+.today-agenda-grid article > .today-agenda-complete:focus-visible,
+.today-agenda-pagination button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px; }
+.today-agenda-deadline { color: var(--muted-strong); }
+.today-agenda-pagination { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px; padding: 9px 12px; border-top: 1px solid var(--line); background: var(--surface); }
+.today-agenda-pagination span { text-align: center; color: var(--muted-strong); font-size: .74rem; font-weight: 750; }
+.today-agenda-pagination button { display: grid; width: 36px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: var(--canvas); color: var(--ink); cursor: pointer; }
+.today-agenda-pagination button:disabled { opacity: .35; }
 .today-unscheduled { display: flex; align-items: center; gap: 7px; margin: -4px 0 0; color: var(--muted-strong); font-size: .78rem; }
 
 @media (max-width: 900px) {
@@ -1618,7 +1630,7 @@ kbd { font-family: var(--sans); }
 }
 
 @media (max-width: 600px) {
-  .today-planner { padding: 18px; border-radius: var(--radius-md); }
+  .today-planner { gap: 14px; padding: 15px; border-radius: var(--radius-md); }
   .today-planner-head { align-items: flex-start; }
   .today-planner-add { min-width: 42px; padding: 0 10px; }
   .today-planner-add svg + * { display: none; }
@@ -1627,4 +1639,9 @@ kbd { font-family: var(--sans); }
   .today-draft footer { flex-wrap: wrap; }
   .today-draft footer > span { display: none; }
   .today-draft footer small { width: 100%; order: -1; }
+  .today-agenda-grid { gap: 10px; }
+  .today-agenda-grid > section > header { padding: 12px 13px; }
+  .today-agenda-grid article { padding: 10px 12px; }
+  .today-agenda-grid article > .today-agenda-complete { width: 40px; min-width: 40px; height: 40px; }
+  .today-planner-guide { font-size: .76rem; }
 }

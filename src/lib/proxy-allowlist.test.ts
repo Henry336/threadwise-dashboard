@@ -11,6 +11,7 @@ describe("dashboard BFF allowlist", () => {
     ["GET", "images/IMG-1/content"],
     ["GET", "today"],
     ["PATCH", "today/0c68a350-c061-4a86-a63f-842c132dc77d/plan"],
+    ["POST", "today/0c68a350-c061-4a86-a63f-842c132dc77d/complete"],
     ["POST", "task-drafts"],
     ["GET", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
     ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items"],
@@ -30,6 +31,7 @@ describe("dashboard BFF allowlist", () => {
     ["GET", "tasks/TASK-1/collaboration"],
     ["POST", "today"],
     ["GET", "today/0c68a350-c061-4a86-a63f-842c132dc77d/plan"],
+    ["GET", "today/0c68a350-c061-4a86-a63f-842c132dc77d/complete"],
     ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items/0c68a350-c061-4a86-a63f-842c132dc77e"],
   ])("rejects the forged %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);

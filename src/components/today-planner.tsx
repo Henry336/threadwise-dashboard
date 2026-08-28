@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Check, ChevronRight, Clock3, ListTodo, LoaderCircle, Plus, RotateCcw, X } from "lucide-react";
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Clock3, LoaderCircle, Plus, RotateCcw, X } from "lucide-react";
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { StudyModule } from "@/lib/study-types";
 import type { TaskCaptureDraft, TaskCaptureDraftItem, TodayAgenda, TodayAgendaEntry } from "@/lib/types";
@@ -123,6 +123,22 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     }
   };
 
+  const completeEntry = async (entry: TodayAgendaEntry) => {
+    if (!agenda) return;
+    const previous = agenda;
+    const remove = (items: TodayAgendaEntry[]) => items.filter((candidate) => candidate.id !== entry.id);
+    setAgenda({ ...agenda, today: remove(agenda.today), carryover: remove(agenda.carryover), dueSoon: remove(agenda.dueSoon), overdue: remove(agenda.overdue) });
+    setMessage(`Completed “${entry.title}”.`);
+    try {
+      await todayApi(`today/${entry.id}/complete`, "POST", {});
+      await loadAgenda();
+      onChanged?.();
+    } catch (error) {
+      setAgenda(previous);
+      setMessage(error instanceof Error ? error.message : "That task could not be completed.");
+    }
+  };
+
   if (disabled || supported === false) return null;
   if (loading && supported === null) return <section className={`today-planner ${variant}`} aria-label="Loading Today"><LoaderCircle className="spin" size={20} /> Loading Today…</section>;
 
@@ -132,10 +148,12 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
       {!draft && <button type="button" className="today-planner-add" onClick={() => setAdding((value) => !value)}><Plus size={16} /> Add tasks</button>}
     </header>
 
+    {!draft && agenda && (agenda.today.length > 0 || agenda.carryover.length > 0 || agenda.dueSoon.length > 0) && <p className="today-planner-guide"><Check size={15} /> Select the check beside a task to complete it here. In Telegram, reply with <code>done TASK-1 TASK-4</code> using the IDs shown in Today.</p>}
+
     {message && <p className="today-planner-message" role="status"><AlertCircle size={15} /> {message}</p>}
 
     {!draft && adding && <div className="today-planner-capture">
-      <label><span>One task or a comma-separated list</span><textarea autoFocus rows={3} value={text} onChange={(event) => setText(event.target.value)} placeholder="Start the IP increments, prepare Tutorial 2, buy groceries" /></label>
+      <label><span>One task, or one task per line</span><textarea autoFocus rows={3} value={text} onChange={(event) => setText(event.target.value)} placeholder={"Start the IP increments\nPrepare Tutorial 2\nBuy groceries"} /></label>
       <div><button type="button" onClick={() => { setAdding(false); setText(""); }}>Cancel</button><button type="button" className="today-planner-primary" onClick={() => void beginOrAppend()} disabled={saving || !text.trim()}>{saving ? <LoaderCircle className="spin" size={16} /> : <ChevronRight size={16} />} Review list</button></div>
     </div>}
 
@@ -145,9 +163,9 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
       {adding && <div className="today-draft-more"><textarea autoFocus rows={2} value={text} onChange={(event) => setText(event.target.value)} placeholder="Add one or more tasks…" /><button type="button" onClick={() => void beginOrAppend()} disabled={saving || !text.trim()}>Add to list</button></div>}
       <footer><button type="button" onClick={() => setAdding((value) => !value)}><Plus size={15} /> {adding ? "Close" : "Add more"}</button><span />{unresolved && <small>Resolve the highlighted details first.</small>}<button type="button" className="today-planner-primary" onClick={() => void commit()} disabled={saving || unresolved || !included.length}>{saving ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />} Save {included.length}</button></footer>
     </div> : agenda && <div className="today-agenda-grid">
-      <AgendaColumn title="Today" empty="No tasks planned for today." entries={agenda.today} timezone={agenda.timezone} />
-      <AgendaColumn title="Carryover" empty="Nothing carried over." entries={agenda.carryover} timezone={agenda.timezone} carryover onPlan={(entry) => planEntry(entry, agenda.localDate)} />
-      <AgendaColumn title="Deadline watch" empty="Nothing due in the next 3 days." entries={agenda.dueSoon} timezone={agenda.timezone} deadlines />
+      <AgendaColumn title="Today" empty="No tasks planned for today." entries={agenda.today} timezone={agenda.timezone} onComplete={completeEntry} />
+      <AgendaColumn title="Carryover" empty="Nothing carried over." entries={agenda.carryover} timezone={agenda.timezone} carryover onPlan={(entry) => planEntry(entry, agenda.localDate)} onComplete={completeEntry} />
+      <AgendaColumn title="Deadline watch" empty="Nothing due in the next 3 days." entries={agenda.dueSoon} timezone={agenda.timezone} deadlines onComplete={completeEntry} />
     </div>}
     {!draft && agenda?.unscheduledCount ? <p className="today-unscheduled"><RotateCcw size={14} /> {agenda.unscheduledCount} unscheduled task{agenda.unscheduledCount === 1 ? "" : "s"} remain in All Tasks.</p> : null}
   </section>;
@@ -169,8 +187,16 @@ function DraftRow({ item, timezone, modules, study, onChange }: { item: TaskCapt
   </article>;
 }
 
-function AgendaColumn({ title, empty, entries, timezone, carryover, deadlines, onPlan }: { title: string; empty: string; entries: TodayAgendaEntry[]; timezone: string; carryover?: boolean; deadlines?: boolean; onPlan?: (entry: TodayAgendaEntry) => void }) {
-  return <section><header><h3>{title}</h3><span>{entries.length}</span></header>{entries.length ? <div>{entries.slice(0, 8).map((entry) => <article key={entry.id}><span className="today-agenda-mark">{deadlines ? <Clock3 size={15} /> : <ListTodo size={15} />}</span><div><b>{entry.title}</b><small>{entry.moduleCode ?? entry.workspaceName ?? modeLabel(entry.mode)}{entry.dueAt ? ` · ${formatDeadline(entry.dueAt, timezone)}` : ""}</small></div>{carryover && onPlan && <button type="button" onClick={() => onPlan(entry)}>Do today</button>}</article>)}</div> : <p>{empty}</p>}</section>;
+const AGENDA_PAGE_SIZE = 5;
+
+function AgendaColumn({ title, empty, entries, timezone, carryover, deadlines, onPlan, onComplete }: { title: string; empty: string; entries: TodayAgendaEntry[]; timezone: string; carryover?: boolean; deadlines?: boolean; onPlan?: (entry: TodayAgendaEntry) => void; onComplete: (entry: TodayAgendaEntry) => void }) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(entries.length / AGENDA_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const start = safePage * AGENDA_PAGE_SIZE;
+  const visible = entries.slice(start, start + AGENDA_PAGE_SIZE);
+
+  return <section><header><h3>{title}</h3><span>{entries.length}</span></header>{entries.length ? <><div>{visible.map((entry) => <article key={entry.id}><button type="button" className="today-agenda-complete" onClick={() => onComplete(entry)} aria-label={`Complete ${entry.title}`} title="Complete task"><Check size={17} /></button><div><b>{entry.title}</b><small><code>{entry.publicId}</code> · {entry.moduleCode ?? entry.workspaceName ?? modeLabel(entry.mode)}{entry.dueAt ? ` · ${formatDeadline(entry.dueAt, timezone)}` : ""}</small></div>{carryover && onPlan && <button type="button" onClick={() => onPlan(entry)}>Do today</button>}{deadlines && <Clock3 className="today-agenda-deadline" size={15} aria-hidden="true" />}</article>)}</div>{pageCount > 1 && <footer className="today-agenda-pagination"><button type="button" onClick={() => setPage(Math.max(0, safePage - 1))} disabled={safePage === 0} aria-label={`Previous ${title} tasks`}><ChevronLeft size={16} /></button><span>{start + 1}–{start + visible.length} of {entries.length}</span><button type="button" onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))} disabled={safePage + 1 >= pageCount} aria-label={`Next ${title} tasks`}><ChevronRight size={16} /></button></footer>}</> : <p>{empty}</p>}</section>;
 }
 
 function warningText(warnings: string[]): string | null {
