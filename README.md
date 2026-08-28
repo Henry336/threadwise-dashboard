@@ -2,12 +2,12 @@
 
 Current dashboard release: **v0.9.0**
 
-Documentation verified against both guarded Threadwise repositories: **2026-08-28**
+Documentation verified against the deployed Threadwise stack: **2026-08-28**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
-The cross-mode Today-planning Phase 1–3 stack is implemented and pushed on guarded branches but is
-not yet merged, migrated, enabled, or deployed. Production remains on the current release shown above.
+The owner-gated cross-mode Today-planning Phase 1–3 stack is merged and live at dashboard commit
+`eac5844` with backend commit `0ab4c9cffced`.
 
 The application is intentionally a separate Next.js frontend and backend-for-frontend. Browsers never receive a Supabase connection string, service-role key, Telegram bot token, or provider refresh token.
 
@@ -17,7 +17,7 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - An installable PWA shell for desktop taskbars and mobile home screens, with versioned Ari launcher icons and a generic offline recovery page
 - A command-first capture/search surface with `Ctrl/Cmd + K`
 - Personal Today, Tasks, Notes, Ideas, Images, Search, and Settings views
-- On the guarded Today stack, one responsive Today/Carryover/Deadline-watch planner is shared across
+- On the owner-gated Today stack, one responsive Today/Carryover/Deadline-watch planner is shared across
   Personal, Group, and Study, with an atomic batch editor and exact authorized Telegram draft links
 - Private morning-plan and evening-wrap-up consent in Personal Reminder settings, using branded time
   pickers; both controls default off and remain absent from shared Group settings

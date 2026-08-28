@@ -29,13 +29,13 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
 - Group access is derived from signed Telegram identity, an opaque selected workspace id, and live Telegram membership verification.
 - Study Mode uses read-only Canvas synchronization, deterministic attention ranking, module-scoped work and resources, weekly planning/review, and focused study sessions.
 - PostgreSQL is the shared source of truth for Telegram and dashboard interactions.
-- The guarded Today stack projects Personal, assigned Group, and Study work into one private daily
+- The owner-gated Today stack projects Personal, assigned Group, and Study work into one private daily
   planning view; planned day, deadline, and reminder remain separate concepts.
 
 ## Capabilities and Constraints
 
 - Personal workspaces expose tasks, notes, ideas, searchable images, search, settings, and Google Calendar as a secondary integration.
-- On the guarded Phase 1–3 stack, Personal settings also own independently opt-in private morning and
+- On the deployed owner-gated Phase 1–3 stack, Personal settings also own independently opt-in private morning and
   evening digests. They summarize cross-mode work, respect quiet hours, and are not recurring task
   reminders or shared group broadcasts.
 - Shared workspaces expose assigned work, people, progress, activity, resources, and availability coordination. Assignments take effect immediately: members may claim unassigned work, assignees may complete or snooze their work, and only the creator or a verified current Telegram administrator may assign or reassign it.
@@ -45,8 +45,8 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
 - Beacon is a separate Telegram bot process with no web dashboard. Moderation policy and actions intentionally remain in permission-aware Telegram private chats.
 - Clear commands and most natural-language capture are deterministic; AI is an optional enhancement, not a dependency for core workflows or Study Mode.
 - Browser code never receives database credentials, Telegram bot tokens, Canvas tokens, OAuth refresh tokens, or dashboard service-signing keys.
-- The guarded Today stack is not yet merged or deployed and must pass the expanded executable
-  parser/service/Telegram/dashboard acceptance matrix before rollout.
+- The Today stack passed the expanded executable parser/service/Telegram/dashboard matrix and is live
+  only for the configured owner; wider multi-user rollout remains separate.
 
 ## Brand Commitments
 

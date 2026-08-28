@@ -57,9 +57,9 @@ Saved-image bytes follow an owner-scoped server path: Browser → Vercel BFF →
 
 Mutations are accepted only through the same-origin Vercel BFF. Each Render route validates a short-lived Ed25519 service token and resolves the user from its verified Telegram subject before performing any database operation.
 
-## Guarded Today projection
+## Owner-gated Today projection
 
-The Phase 1–3 guarded stack exposes one `TodayPlanner` across Personal, Group, and Study. The browser
+The deployed Phase 1–3 stack exposes one `TodayPlanner` across Personal, Group, and Study. The browser
 does not create a second to-do store: it projects existing personal tasks, assigned group tasks, and
 Study work into Today, derived Carryover, and Deadline watch. Planned day remains independent from
 deadline and reminder state. Batch edits stay inside one durable server draft and commit atomically;
@@ -69,7 +69,7 @@ Morning-plan and evening-wrap-up consent belongs only to Personal Reminder setti
 digest privately combines the signed-in user's work across modes. Both switches default off, use the
 branded accessible time picker, and retain quiet-hours copy. Group settings deliberately omit these
 fields. The corresponding backend routes remain fail-closed behind
-`TODAY_FOUNDATION_OWNER_TELEGRAM_ID`; this projection is not yet deployed.
+`TODAY_FOUNDATION_OWNER_TELEGRAM_ID`; this live projection remains fail-closed and owner-only.
 
 ## Private Study projection
 

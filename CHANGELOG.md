@@ -4,7 +4,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
-### Guarded cross-mode Today planner and private briefing controls (Phases 1–3)
+### Cross-mode Today planner and private briefing controls (Phases 1–3; released 2026-08-28)
 - Added one responsive Today, Carryover, and Deadline-watch planner across Personal, Group, and Study,
   preserving the distinction between planned days, deadlines, and reminders.
 - Added a progressively disclosed atomic batch editor, branded Study module selection, audited
@@ -16,7 +16,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
   browser smoke with seven passes and one intentional mobile command-palette skip.
 - Added accessible branded time-picker trigger names and deterministic browser navigation for Personal
   briefing consent at laptop and mobile breakpoints. The paired expanded acceptance gate is green and
-  the owner has authorized merge and production release.
+  the paired stack is live: dashboard `eac5844` on Vercel with backend `0ab4c9cffced` on Render.
 
 ### Phase 5 browser hardening and maintainability
 - Added a nonce-bearing Content Security Policy staged in report-only mode, with no broad inline/eval allowances and a preview-first enforcement runbook.
