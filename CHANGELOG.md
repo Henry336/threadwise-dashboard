@@ -14,6 +14,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Passed 141 dashboard tests, TypeScript, lint, optimized production build, secret scan, and seven desktop/
   mobile Playwright checks with one intentional mobile command-palette skip. The paired backend passed 966
   tests with six intentional skips, TypeScript/build, and its tracked-secret scan.
+- Released as dashboard `5df6491facf7` in Vercel Production with backend `01a3f632ee3b` healthy on Render.
 
 ### Cross-mode Today planner and private briefing controls (Phases 1–3; released 2026-08-28)
 - Added one responsive Today, Carryover, and Deadline-watch planner across Personal, Group, and Study,
