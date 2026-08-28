@@ -17,6 +17,9 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Added accessible branded time-picker trigger names and deterministic browser navigation for Personal
   briefing consent at laptop and mobile breakpoints. The paired expanded acceptance gate is green and
   the paired stack is live: dashboard `eac5844` on Vercel with backend `0ab4c9cffced` on Render.
+- Corrected the shared Today planner's undefined display-font token so headings use Threadwise's
+  established serif hierarchy in Personal, Group, and Study. Study now also uses its existing blue
+  accent instead of inheriting Personal purple.
 
 ### Phase 5 browser hardening and maintainability
 - Added a nonce-bearing Content Security Policy staged in report-only mode, with no broad inline/eval allowances and a preview-first enforcement runbook.

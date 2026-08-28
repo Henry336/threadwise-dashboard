@@ -56,6 +56,10 @@ describe("dashboard UI regressions", () => {
     expect(planner).toContain('title="Carryover"');
     expect(planner).toContain('title="Deadline watch"');
     expect(css).toContain(".today-agenda-grid");
+    expect(css).toContain(".today-planner.study { --accent: var(--study-blue);");
+    expect(css).toContain(".today-planner-head h2 { margin: 4px 0 0; font-family: var(--serif);");
+    expect(css).toContain(".today-agenda-grid h3 { margin: 0; font-family: var(--serif);");
+    expect(css).not.toContain("var(--font-display)");
     expect(css).toContain("@media (max-width: 600px)");
   });
 

@@ -5,6 +5,11 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-28 (Codex):** Corrected cross-mode Today typography after the shared planner referenced
+  an undefined display-font token and fell back to body sans. Planner and agenda headings now use the
+  established serif token in Personal, Group, and Study; the Study variant also inherits Study blue
+  rather than Personal purple. Focused validation and release status are recorded in the Working log.
+
 - **2026-08-28 (Codex, deployed):** The expanded Phase 1–3 dashboard acceptance gate now
   passes: 139 unit/regression tests, typecheck, lint, optimized production build, secret scan, and
   release-artifact Playwright coverage with 7 passes and 1 intentional mobile command-palette skip.
@@ -147,6 +152,12 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-28 (Codex):** Fixed the shared Today planner's cross-mode design-system drift: its main
+  and agenda headings now use `--serif` instead of the nonexistent `--font-display`, and Study scopes
+  the shared accent to `--study-blue`. Added a regression guard that rejects the undefined token.
+  All 139 tests, typecheck, lint, optimized production build, tracked-secret scan, and diff checks
+  pass. Deployment identifiers will be appended after publication.
 
 - **2026-08-28 (Codex):** Implemented Phase 3 private briefing consent on guarded branch
   `codex/phase3-today-delivery-notes`. Personal Reminder settings now provide two off-by-default
