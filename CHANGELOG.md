@@ -4,6 +4,21 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Private Personal Today prioritization
+- Replaced the misleading checked appearance on open rows with an empty completion circle. Completion
+  shows a short confirmed state before removal and restores the row if the request fails.
+- Added Personal-only priority ordering with dedicated pointer/touch/keyboard drag handles and compact
+  Move to top/up/down actions. The five-item pages remain bounded; Group, Study, Carryover, and
+  Deadline Watch intentionally remain non-draggable.
+- Persists one private cross-mode Personal order through the protected Today proxy without changing
+  shared Group or Study records, and announces completion and movement to assistive technology.
+- Removed the long dashboard instruction block; concise Telegram Today cards retain completion and
+  move command examples where text guidance is actually needed.
+- Passed 143 dashboard tests, TypeScript, lint, the optimized production build, tracked-secret scan,
+  a zero-finding production dependency audit, and seven responsive browser checks with one intentional
+  mobile command-palette skip. The paired backend passed 970 tests with six intentional skips,
+  Prisma validation, typecheck/build, its tracked-secret scan, and a zero-finding production audit.
+
 ### Compact cross-mode Today completion
 - Added a clearly explained, accessible check control to every Today, Carryover, and Deadline-watch row
   in Personal, Group, and Study while preserving the existing server-side completion rules.

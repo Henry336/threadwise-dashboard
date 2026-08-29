@@ -71,6 +71,13 @@ branded accessible time picker, and retain quiet-hours copy. Group settings deli
 fields. The corresponding backend routes remain fail-closed behind
 `TODAY_FOUNDATION_OWNER_TELEGRAM_ID`; this live projection remains fail-closed and owner-only.
 
+Personal Today ordering is a private projection layered over that cross-mode agenda. The browser sends
+the complete current Today ID order, the one moved entry, and its observed revision through the narrow
+`PATCH today/order` proxy path. Optimistic movement rolls back on conflict. Dedicated handles support
+pointer, delayed touch, and keyboard sorting, while compact Move to top/up/down controls provide an
+explicit alternative across five-item page boundaries. Group and Study views receive
+`reorderable=false`, so this pilot cannot imply or mutate shared priority.
+
 ## Private Study projection
 
 Active Deep Work is shell-level state rather than a separate browser-owned timer. The dashboard derives the current session from the canonical Study snapshot and renders one compact companion across Study routes, so navigation never stops timing or hides module material. Start, finish, correction, resource-linking, and archive actions pass through the protected same-origin proxy to the backend. Structured focus styles and techniques are presentation choices stored on the session record; the browser neither infers mastery nor performs AI analysis. Reconciliation replaces optimistic state with the next canonical snapshot after each mutation.

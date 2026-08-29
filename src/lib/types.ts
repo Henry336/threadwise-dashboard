@@ -82,6 +82,8 @@ export type TodayAgenda = {
   dueSoon: TodayAgendaEntry[];
   overdue: TodayAgendaEntry[];
   unscheduledCount: number;
+  orderRevision: number;
+  reorderable: boolean;
 };
 
 export type TaskCaptureDraftItem = {

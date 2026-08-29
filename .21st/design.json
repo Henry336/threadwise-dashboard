@@ -42,7 +42,8 @@
       "persisted collapsible Study sidebar on desktop with an independent mobile drawer",
       "fit-to-window Study image viewer with an explicit natural-resolution inspection mode",
       "theme-aware restrained scrollbars on primary Study navigation and timetable overflow",
-      "bounded personal Overview quote manager with explicit add, remove, and save actions"
+      "bounded personal Overview quote manager with explicit add, remove, and save actions",
+      "private Personal Today ordering with empty completion controls and dedicated drag handles"
     ]
   },
   "constraints": {
@@ -117,6 +118,11 @@
       "date": "2026-08-28",
       "decision": "Keep private morning and evening briefing consent inside Personal Reminder settings, using two plain opt-in rows with branded time pickers.",
       "reason": "A briefing summarizes Personal, assigned Group, and Study work for one person, so it is a personal delivery preference rather than a workspace control. Keeping it beside quiet hours makes timing and interruption boundaries understandable without adding another settings tab."
+    },
+    {
+      "date": "2026-08-29",
+      "decision": "Pilot manual priority ordering only in private Personal Today, using empty completion circles, dedicated drag handles, and compact keyboard-accessible move actions.",
+      "reason": "An empty circle communicates incomplete work more honestly than a prefilled check. Private ordering lets one person prioritize their cross-mode day without mutating shared Group or Study records, while explicit handles and move actions preserve scrolling, touch use, pagination, and keyboard access."
     }
   ],
   "evidence": [
@@ -124,5 +130,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-21T19:45:00.000+08:00"
+  "generatedAt": "2026-08-29T12:00:00.000+08:00"
 }

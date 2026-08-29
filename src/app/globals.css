@@ -1559,9 +1559,6 @@ kbd { font-family: var(--sans); }
 .today-planner-primary { border-color: var(--ink) !important; background: var(--ink) !important; color: var(--canvas) !important; }
 .today-planner button:disabled { cursor: not-allowed; opacity: .48; }
 .today-planner-message { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted-strong); font-size: .86rem; }
-.today-planner-guide { display: flex; align-items: flex-start; gap: 8px; margin: -6px 0 0; color: var(--muted-strong); font-size: .8rem; line-height: 1.45; }
-.today-planner-guide svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent); }
-.today-planner-guide code,
 .today-agenda-grid article small code { border-radius: 5px; background: var(--accent-soft); color: var(--accent); padding: 1px 4px; font-family: var(--mono); font-size: .68rem; font-weight: 800; }
 .today-planner-capture,
 .today-draft { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
@@ -1614,9 +1611,21 @@ kbd { font-family: var(--sans); }
 .today-agenda-grid article small { overflow: hidden; color: var(--muted-strong); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
 .today-agenda-grid article > button { min-height: 34px; padding: 0 10px; font-size: .74rem; }
 .today-agenda-grid article > .today-agenda-complete { width: 36px; min-width: 36px; height: 36px; padding: 0; border-radius: 999px; border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); color: var(--accent); background: var(--surface); }
-.today-agenda-grid article > .today-agenda-complete:hover { border-color: var(--accent); background: var(--accent); color: var(--surface); transform: translateY(-1px); }
+.today-agenda-grid article > .today-agenda-complete:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+.today-agenda-grid article > .today-agenda-complete.is-completing,
+.today-agenda-grid article > .today-agenda-complete.is-completing:disabled { border-color: var(--accent); background: var(--accent); color: var(--surface); opacity: 1; }
 .today-agenda-grid article > .today-agenda-complete:focus-visible,
-.today-agenda-pagination button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px; }
+.today-agenda-pagination button:focus-visible,
+.today-agenda-grip:focus-visible,
+.today-reorder-actions button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px; }
+.today-agenda-grid article > .today-agenda-grip { display: grid; width: 36px; min-width: 36px; height: 36px; place-items: center; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--muted-strong); cursor: grab; touch-action: none; }
+.today-agenda-grid article > .today-agenda-grip:hover { background: var(--accent-soft); color: var(--accent); }
+.today-agenda-grid article > .today-agenda-grip:active { cursor: grabbing; }
+.today-agenda-sortable { position: relative; z-index: 0; }
+.today-agenda-sortable.is-dragging { z-index: 3; border: 1px solid var(--accent); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); opacity: .92; }
+.today-agenda-grid article > .today-reorder-actions { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding: 5px 0 2px; }
+.today-reorder-actions button { min-height: 32px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); padding: 0 9px; font-size: .7rem; font-weight: 750; cursor: pointer; }
+.today-reorder-actions button:disabled { opacity: .35; }
 .today-agenda-deadline { color: var(--muted-strong); }
 .today-agenda-pagination { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px; padding: 9px 12px; border-top: 1px solid var(--line); background: var(--surface); }
 .today-agenda-pagination span { text-align: center; color: var(--muted-strong); font-size: .74rem; font-weight: 750; }
@@ -1643,5 +1652,10 @@ kbd { font-family: var(--sans); }
   .today-agenda-grid > section > header { padding: 12px 13px; }
   .today-agenda-grid article { padding: 10px 12px; }
   .today-agenda-grid article > .today-agenda-complete { width: 40px; min-width: 40px; height: 40px; }
-  .today-planner-guide { font-size: .76rem; }
+  .today-agenda-grid article > .today-agenda-grip { width: 40px; min-width: 40px; height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-agenda-sortable { transition: none !important; }
+  .today-agenda-grid article > .today-agenda-complete:hover { transform: none; }
 }

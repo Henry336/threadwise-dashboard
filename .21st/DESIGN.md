@@ -3,7 +3,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Context verified: **2026-08-21**
+Context verified: **2026-08-29**
 
 ## Product
 
@@ -58,3 +58,9 @@ Personal, Group, and Study overviews reuse one Today planner. It presents Today,
 ## Decision: private daily briefing consent
 
 Morning and evening briefings live in Personal Reminder settings because they privately combine the user's Personal, assigned Group, and Study work. Use two restrained opt-in rows, branded time pickers, explicit descriptions, and one existing Save action. Keep both off by default and explain that quiet hours still apply; do not present these digests as repeating task reminders or shared group settings.
+
+## Decision: private Personal Today ordering
+
+In Personal Today, an unfinished task uses an empty circular completion control. Selecting it shows a check briefly, then removes the completed task; failed requests restore the empty state. Do not place instructional prose above a control whose appearance already explains its purpose.
+
+Manual priority ordering is a private daily overlay across Personal tasks, assigned Group work, and Study items. It must never rewrite ordering in the source Group or Study workspace. Use a dedicated drag handle so task completion and page scrolling remain unambiguous, retain five-item paging, and expose compact Move to top/up/down actions for keyboard and cross-page movement. Group and Study Today keep deterministic source ordering until this Personal pilot is validated.
