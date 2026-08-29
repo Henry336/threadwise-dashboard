@@ -18,6 +18,8 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
   a zero-finding production dependency audit, and seven responsive browser checks with one intentional
   mobile command-palette skip. The paired backend passed 970 tests with six intentional skips,
   Prisma validation, typecheck/build, its tracked-secret scan, and a zero-finding production audit.
+- Released as dashboard `e6dea9e2b67c` in Vercel Production after both required GitHub jobs passed,
+  paired with healthy backend `b7d2a87ca384` and its completed additive Render migration.
 
 ### Compact cross-mode Today completion
 - Added a clearly explained, accessible check control to every Today, Carryover, and Deadline-watch row
