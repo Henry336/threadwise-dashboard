@@ -78,11 +78,14 @@ Study image capture is intentional: the bot saves no image or OCR result until t
 The Library opens images in a same-origin lightbox rather than navigating to an API response. Loading,
 retryable failure, permanent expiry, and expired-session states must each have a direct next action.
 
-Study notes are quiet working documents, not a miniature IDE or an Obsidian clone. The reader gives
-the note most of the sheet and keeps connections, backlinks, and bounded history in a secondary rail.
-Editing offers Write, Preview, and Split modes, compact formatting aids, and an honest local-draft
-signal; the source always remains portable Markdown. Mermaid earns space only when the learner writes
-a diagram. Raw HTML, plugins, graph theatrics, and vault chrome do not enter the interface.
+Study notes are quiet working documents, not a miniature IDE or an Obsidian clone. The Overview exposes
+one direct Write note action, and the editor gives nearly the whole viewport to the document. Formatting
+renders inline while portable Markdown remains canonical; do not reintroduce Write/Preview/Split modes.
+The compact toolbar may scroll horizontally on phones rather than wrapping over the page. Save reveals
+one focused filing sheet for title and module, while an unobtrusive status line communicates encrypted
+cross-device autosave. Mermaid earns space only when the learner writes a diagram: selecting the canvas
+reveals its source, and Continue writing below provides an explicit exit. Raw HTML, plugins, tags, graph
+theatrics, and vault chrome do not enter the interface.
 
 ## Identity system
 

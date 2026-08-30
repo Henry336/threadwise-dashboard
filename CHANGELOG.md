@@ -4,6 +4,16 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Study-first full-screen rich notes
+- Added one Overview `Write note` entry point and a near/full-viewport editor whose Markdown
+  formatting renders inline. Headings, bold, italic, underline, lists, checklists, links, tables,
+  code, and Mermaid no longer require a separate Preview page.
+- Added encrypted cross-device autosave through the protected Study BFF, with visible save/conflict
+  state and a final filing sheet that asks only for title and module.
+- Made Mermaid canvases directly editable and provided an explicit `Continue writing below` action.
+- Removed visible tag inputs, chips, search guidance, and Markdown frontmatter across Personal,
+  Group, and Study while preserving compatibility with historical backend records.
+
 ### Private Personal Today prioritization
 - Replaced the misleading checked appearance on open rows with an empty completion circle. Completion
   shows a short confirmed state before removal and restores the row if the request fails.

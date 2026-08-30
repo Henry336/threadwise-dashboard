@@ -1,7 +1,6 @@
 export type MarkdownFileDraft = {
   title: string;
   body: string;
-  tags: string[];
 };
 
 const WIKI_LINK = /(?<!\\)\[\[([^\]\n]{1,240})\]\]/gu;
@@ -81,17 +80,15 @@ export function parseMarkdownFile(fileName: string, source: string): MarkdownFil
   return {
     title: values.get("title") || heading || fallbackTitle,
     body,
-    tags: parseTags(values.get("tags") ?? ""),
   };
 }
 
-export function buildMarkdownExport(input: { title: string; body: string; tags: string[]; moduleCode: string; publicId?: string }): string {
+export function buildMarkdownExport(input: { title: string; body: string; moduleCode: string; publicId?: string }): string {
   const metadata = [
     "---",
     `title: ${quoteYaml(input.title)}`,
     `module: ${quoteYaml(input.moduleCode)}`,
     ...(input.publicId ? [`threadwise_id: ${quoteYaml(input.publicId)}`] : []),
-    `tags: [${input.tags.map(quoteYaml).join(", ")}]`,
     "---",
     "",
   ];
@@ -101,11 +98,6 @@ export function buildMarkdownExport(input: { title: string; body: string; tags: 
 export function safeMarkdownFileName(title: string): string {
   const clean = title.normalize("NFKC").replace(/[<>:"/\\|?*\u0000-\u001F]/gu, " ").replace(/\s+/gu, " ").trim();
   return `${(clean || "Threadwise note").slice(0, 120)}.md`;
-}
-
-function parseTags(value: string): string[] {
-  const list = value.replace(/^\[/u, "").replace(/\]$/u, "").split(",");
-  return [...new Set(list.map((tag) => unquoteYaml(tag.trim()).replace(/^#/u, "").toLocaleLowerCase("en")).filter(Boolean))].slice(0, 20);
 }
 
 function quoteYaml(value: string): string {

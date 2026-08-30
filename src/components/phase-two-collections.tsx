@@ -74,7 +74,7 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardMenu = useActionMenu<DashboardNote>();
-  const visible = useMemo(() => newestPinned(notes).filter((note) => `${note.title} ${note.summary} ${note.body ?? ""} ${note.tags.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase())), [notes, query]);
+  const visible = useMemo(() => newestPinned(notes).filter((note) => `${note.title} ${note.summary} ${note.body ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())), [notes, query]);
   const toggleSelect = (id: string) => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const leaveSelection = () => { setSelecting(false); setSelected(new Set()); };
   const beginLongPress = (event: PointerEvent<HTMLElement>, note: DashboardNote) => {
@@ -96,7 +96,7 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
   ];
   return <section className="tw-phase-collection tw-phase-notes">
     <div className="tw-phase-note-toolbar">
-      <div className="tw-phase-search"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes, text, or tags" /><kbd>{visible.length}</kbd></div>
+      <div className="tw-phase-search"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search note titles and text" /><kbd>{visible.length}</kbd></div>
       <button className={selecting ? "active" : ""} onClick={() => selecting ? leaveSelection() : setSelecting(true)}>{selecting ? <X size={17} /> : <CheckSquare2 size={17} />}{selecting ? "Cancel" : "Select"}</button>
     </div>
     <div className="tw-phase-note-grid">
@@ -112,7 +112,6 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
         <header><span><FileText size={15} /> Note</span><div>{note.pinned && <em><Pin size={13} /> Pinned</em>}<button onClick={(event) => cardMenu.open(event, note)} aria-label={`Actions for ${note.title}`}><MoreHorizontal size={19} /></button></div></header>
         {selecting && <button className="tw-phase-note-select" onClick={() => toggleSelect(note.id)} aria-label={`${selected.has(note.id) ? "Deselect" : "Select"} ${note.title}`}>{selected.has(note.id) ? <Check size={16} /> : null}</button>}
         <button className="tw-phase-card-copy" onClick={() => selecting ? toggleSelect(note.id) : onEdit(note)}><h3>{note.title}</h3><p>{note.body || note.summary}</p></button>
-        {note.tags.length > 0 && <div className="tw-phase-tags">{note.tags.slice(0, 5).map((tag) => <span key={tag}>#{tag}</span>)}</div>}
         <footer><time>{formatDate(note.updatedAt ?? note.createdAt, timezone, { year: "numeric" })}</time><div><button onClick={() => onPin(note)} aria-label={note.pinned ? "Unpin note" : "Pin note"}><Pin size={16} /></button><button onClick={() => onEdit(note)}>Edit <ArrowRight size={15} /></button></div></footer>
       </article>)}
     </div>
@@ -154,7 +153,6 @@ export function PhaseTwoIdeasView({ ideas, timezone, onEdit, onPin, onArchive, o
       {visible.map((idea, index) => <article className="tw-phase-idea-card" key={idea.id} style={{ "--idea-index": index } as CSSProperties} onContextMenu={(event) => cardMenu.open(event, idea)}>
         <header><span><Lightbulb size={15} /> {idea.publicId}</span><div>{idea.pinned && <em><Pin size={13} /> Pinned</em>}<i data-status={idea.status}>{idea.status.toLowerCase()}</i><button onClick={(event) => cardMenu.open(event, idea)} aria-label={`Actions for ${idea.title}`}><MoreHorizontal size={19} /></button></div></header>
         <button className="tw-phase-card-copy" onClick={() => onEdit(idea)}><h3>{idea.title}</h3><p>{idea.concept}</p></button>
-        {idea.tags.length > 0 && <div className="tw-phase-tags">{idea.tags.slice(0, 5).map((tag) => <span key={tag}>#{tag}</span>)}</div>}
         <div className="tw-phase-idea-actions"><button className="tw-phase-brief-button" onClick={() => onAnalyze(idea)}><BrainCircuit size={17} />{idea.brief ? "Open idea brief" : "Analyze feasibility"}<Sparkles size={14} /></button><button onClick={() => onConvert(idea)}><Zap size={16} /> Task</button></div>
         <footer><time>{formatDate(idea.updatedAt ?? idea.createdAt, timezone, { year: "numeric" })}</time><button onClick={() => onEdit(idea)}>Edit <ArrowRight size={15} /></button></footer>
       </article>)}

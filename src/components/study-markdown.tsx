@@ -8,10 +8,38 @@ import { markdownWithThreadwiseLinks } from "@/lib/study-markdown";
 import { safeMarkdownLink } from "@/lib/study-markdown-security";
 import { MarkdownImage, MermaidDiagram } from "./study-markdown-media";
 
+type MarkdownNode = { type?: string; value?: string; children?: MarkdownNode[]; data?: { hName?: string } };
+
+function remarkUnderline() {
+  return (tree: MarkdownNode) => {
+    const visit = (node: MarkdownNode) => {
+      if (!node.children) return;
+      node.children = node.children.flatMap((child) => {
+        if (child.type !== "text" || !child.value?.includes("++")) {
+          visit(child);
+          return [child];
+        }
+        const parts: MarkdownNode[] = [];
+        let cursor = 0;
+        for (const match of child.value.matchAll(/\+\+([^+\n](?:.*?[^+])?)\+\+/gu)) {
+          const index = match.index ?? 0;
+          if (index > cursor) parts.push({ type: "text", value: child.value.slice(cursor, index) });
+          parts.push({ type: "underline", data: { hName: "u" }, children: [{ type: "text", value: match[1] }] });
+          cursor = index + match[0].length;
+        }
+        if (cursor < child.value.length) parts.push({ type: "text", value: child.value.slice(cursor) });
+        return parts.length ? parts : [child];
+      });
+      node.children.forEach(visit);
+    };
+    visit(tree);
+  };
+}
+
 export function StudyMarkdown({ source, onOpenNote }: { source: string; onOpenNote?: (target: string) => void }) {
   return <div className="study-markdown">
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkUnderline]}
       skipHtml
       urlTransform={(url) => url.startsWith("threadwise-note:") ? url : safeMarkdownLink(url)}
       components={{

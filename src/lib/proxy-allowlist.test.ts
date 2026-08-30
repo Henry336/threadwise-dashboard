@@ -18,6 +18,9 @@ describe("dashboard BFF allowlist", () => {
     ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items"],
     ["PATCH", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items/0c68a350-c061-4a86-a63f-842c132dc77e"],
     ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/commit"],
+    ["GET", "study/note-drafts"],
+    ["PATCH", "study/note-drafts"],
+    ["DELETE", "study/note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
   ])("allows the reviewed %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);
@@ -35,6 +38,9 @@ describe("dashboard BFF allowlist", () => {
     ["GET", "today/0c68a350-c061-4a86-a63f-842c132dc77d/plan"],
     ["GET", "today/0c68a350-c061-4a86-a63f-842c132dc77d/complete"],
     ["POST", "task-drafts/0c68a350-c061-4a86-a63f-842c132dc77d/items/0c68a350-c061-4a86-a63f-842c132dc77e"],
+    ["POST", "study/note-drafts"],
+    ["GET", "study/note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
+    ["DELETE", "study/note-drafts/not-a-uuid"],
   ])("rejects the forged %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);
   });

@@ -388,3 +388,7 @@ updates the Working log below** (newest first: date, who, what, current state).
 - **2026-08-06 (Claude):** Created this canonical `CLAUDE.md` + `AGENTS.md` pointer as part of a
   continuity pass across both Threadwise repos. Documented the trust boundary and the secrets to
   back up (`AUTH_SECRET`, Telegram OIDC creds, `DASHBOARD_API_PRIVATE_KEY`). No code changes.
+- **2026-08-31 (Codex):** Implemented the approved Study-first note-writing trial without 21st.dev:
+  one Overview entry point, a near/full-screen inline rich Markdown/Mermaid editor, encrypted
+  cross-device autosave with conflict status, a title/module filing sheet, and compatibility-safe
+  retirement of visible note/idea tags across modes. Backend release must precede this dashboard.

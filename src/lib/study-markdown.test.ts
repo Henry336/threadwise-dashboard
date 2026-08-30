@@ -17,11 +17,12 @@ describe("Study Markdown utilities", () => {
       .toBe("Pipeline Diagram. Cache notes");
   });
 
-  it("imports conservative YAML frontmatter and exports portable Markdown", () => {
+  it("imports portable Markdown without restoring retired tags", () => {
     const imported = parseMarkdownFile("fallback.md", "---\ntitle: \"Cache notes\"\ntags: [cs2100, revision]\n---\n# Body\nText");
-    expect(imported).toEqual({ title: "Cache notes", tags: ["cs2100", "revision"], body: "# Body\nText" });
-    const exported = buildMarkdownExport({ title: imported.title, body: imported.body, tags: imported.tags, moduleCode: "CS2100", publicId: "SNOTE-1" });
+    expect(imported).toEqual({ title: "Cache notes", body: "# Body\nText" });
+    const exported = buildMarkdownExport({ title: imported.title, body: imported.body, moduleCode: "CS2100", publicId: "SNOTE-1" });
     expect(exported).toContain('threadwise_id: "SNOTE-1"');
+    expect(exported).not.toContain("tags:");
     expect(exported).toContain("# Body\nText\n");
     expect(safeMarkdownFileName('Cache: "notes"')).toBe("Cache notes.md");
   });

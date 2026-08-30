@@ -3,7 +3,7 @@
 
 Current dashboard release: **v0.9.0**
 
-Context verified: **2026-08-29**
+Context verified: **2026-08-31**
 
 ## Product
 
@@ -64,3 +64,13 @@ Morning and evening briefings live in Personal Reminder settings because they pr
 In Personal Today, an unfinished task uses an empty circular completion control. Selecting it shows a check briefly, then removes the completed task; failed requests restore the empty state. Do not place instructional prose above a control whose appearance already explains its purpose.
 
 Manual priority ordering is a private daily overlay across Personal tasks, assigned Group work, and Study items. It must never rewrite ordering in the source Group or Study workspace. Use a dedicated drag handle so task completion and page scrolling remain unambiguous, retain five-item paging, and expose compact Move to top/up/down actions for keyboard and cross-page movement. Group and Study Today keep deterministic source ordering until this Personal pilot is validated.
+
+## Decision: Study-first full-screen note writing
+
+Expose one **Write note** action on Study Overview and give the document almost the whole viewport on
+desktop and the complete viewport on phones. Render formatting inline over a portable Markdown source;
+do not make the learner switch between source and preview. Keep the toolbar compact and horizontally
+scrollable, communicate encrypted cross-device autosave in one quiet status line, and ask for only title
+and module in the final filing sheet. A Mermaid canvas opens its source when selected and provides an
+explicit **Continue writing below** exit. Do not expose tags, raw HTML, plugin chrome, or a second note
+store. Personal and Group editors remain unchanged until the Study rollout is checked live.

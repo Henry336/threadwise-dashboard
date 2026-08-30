@@ -93,4 +93,15 @@ describe("dashboard UI regressions", () => {
     expect(planner).toContain('new URLSearchParams(window.location.search).get("draft")');
     expect(planner).toContain('`task-drafts/${encodeURIComponent(draftId)}`');
   });
+
+  it("retires tag controls and chips from Personal and Group note surfaces", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const collections = readFileSync(join(process.cwd(), "src", "components", "phase-two-collections.tsx"), "utf8");
+
+    expect(dashboard).not.toContain('name="tags"');
+    expect(dashboard).not.toContain("note.tags.map");
+    expect(dashboard).not.toContain("idea.tags.map");
+    expect(collections).not.toContain("note.tags.map");
+    expect(collections).not.toContain("idea.tags.map");
+  });
 });

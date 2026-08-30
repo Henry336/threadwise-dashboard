@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, AlertTriangle, Archive, ArrowRight, BookOpen, Brain, CalendarDays, Check,
-  Bold, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, Code2, Columns2, Download, Eye, ExternalLink,
-  File, FileText, FileUp, Heading2, History, Image as ImageIcon, Italic, Library, Link as LinkIcon, List, ListChecks, ListTodo,
+  CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, Download, ExternalLink,
+  File, FileText, History, Image as ImageIcon, Library, Link as LinkIcon, ListChecks,
   LoaderCircle, MapPin, Maximize2, Menu, Minimize2, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pin, Play, Plus,
   RefreshCw, Search, Settings, Square, Sun, Target, TimerReset, Trash2, Undo2, X,
 } from "lucide-react";
@@ -17,6 +17,7 @@ import { StudyTimetable } from "./study-timetable";
 import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox";
 import { StudyChoicePicker } from "./study-choice-picker";
 import { StudyMarkdown } from "./study-markdown";
+import { StudyNoteEditor } from "./study-note-editor";
 import { useConfirmation } from "./confirmation-dialog";
 import { TodayPlanner } from "./today-planner";
 import type { DashboardSnapshot, DashboardWorkspace } from "@/lib/types";
@@ -29,7 +30,7 @@ import { studyWeekLabel } from "@/lib/study-week";
 import { loadStudyImage, StudyImageLoadError } from "@/lib/study-image";
 import { clampInteger } from "@/lib/numeric-input";
 import { browserDraftKey, clearBrowserDraft, clearThreadwiseDrafts, readBrowserDraft, writeBrowserDraft } from "@/lib/browser-drafts";
-import { buildMarkdownExport, markdownExcerpt, normalizeMarkdownWikiTarget, parseMarkdownFile, safeMarkdownFileName } from "@/lib/study-markdown";
+import { buildMarkdownExport, markdownExcerpt, normalizeMarkdownWikiTarget, safeMarkdownFileName } from "@/lib/study-markdown";
 import {
   FOCUS_STRUCTURES, STUDY_TECHNIQUES, type FocusStructureId,
   sessionCustomMethod, sessionElapsedSeconds, sessionMethodSummary, sessionResourceIds,
@@ -361,7 +362,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
       </header>
       <div className="study-content" key={view}>
         {sync === "offline" && <section className="study-status-banner" role="alert"><AlertCircle size={18} /><div><b>Live sync is paused.</b><p>Your current view is preserved. Retry when the connection is ready.</p></div><button onClick={() => void refresh(false)}>Retry</button></section>}
-        {view === "study-overview" && <Overview study={study} ownerName={ownerName} onOpenModule={openModule} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onComplete={(item) => void completeItem(item)} onFocus={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} onTodayChanged={() => void refresh()} />}
+        {view === "study-overview" && <Overview study={study} ownerName={ownerName} onWriteNote={() => setEditor({ kind: "resource", resourceKind: "NOTE" })} onOpenModule={openModule} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onComplete={(item) => void completeItem(item)} onFocus={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} onTodayChanged={() => void refresh()} />}
         {view === "study-timetable" && <StudyTimetable study={study} busy={busy} onImportNusmods={(url) => mutate("study/nusmods/import", "POST", { url }, "NUSMods timetable imported.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Timetable updated.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Timetable updated.")} onDeleteBlock={(id, body) => mutate(`study/schedule/${id}`, "DELETE", body, "Schedule block removed.")} onEditItem={(item) => setEditor({ kind: "item", value: item })} onFocusItem={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
         {view === "study-modules" && <Modules study={study} onOpen={openModule} onEdit={(module) => setEditor({ kind: "module", value: module })} onAdd={() => setEditor({ kind: "module" })} onArchive={(module) => confirmAction(`Archive ${module.code}? Canvas sync will keep it archived until you restore it.`, () => { void (async () => { const saved = await mutate(`study/modules/${module.id}`, "PATCH", { active: false }); if (saved !== undefined) announce(`${module.code} archived.`, "success", { label: "Undo", run: () => void mutate(`study/modules/${module.id}`, "PATCH", { active: true }, `${module.code} restored.`) }); })(); })} onRestore={(module) => void mutate(`study/modules/${module.id}`, "PATCH", { active: true }, `${module.code} restored.`)} />}
         {view === "study-work" && <Work study={study} moduleFilter={moduleFilter} onModuleFilter={setModuleFilter} onEdit={(item) => setEditor({ kind: "item", value: item })} onAdd={() => setEditor({ kind: "item" })} onComplete={(item) => void completeItem(item)} onArchive={(item) => confirmAction(`Archive ${item.publicId}?`, () => mutate(`study/items/${item.id}`, "DELETE", undefined, "Work item archived."))} />}
@@ -375,19 +376,19 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     <nav className="study-mobile-dock" aria-label="Primary Study navigation">{MOBILE_NAV.map(({ id, label, icon: Icon }) => <button key={id} aria-current={view === id ? "page" : undefined} className={view === id ? "active" : ""} onClick={() => navigate(id)}><Icon size={19} /><span>{label === "Deep Work" ? "Focus" : label}</span></button>)}<button aria-expanded={mobileNav} onClick={() => setMobileNav(true)}><MoreHorizontal size={20} /><span>More</span></button></nav>
     {activeSession && view !== "study-focus" && <StudySessionCompanion session={activeSession} timezone={study.workspace.timezone} busy={busy} onOpen={() => navigate("study-focus")} onStop={stopSession} />}
     {openNote && <StudyNoteReader resource={openNote} timezone={study.workspace.timezone} onClose={() => setOpenNote(null)} onEdit={(resource) => { setOpenNote(null); setEditor({ kind: "resource", value: resource }); }} onOpenLinked={(target) => { const normalized = normalizeMarkdownWikiTarget(target); const match = study.resources.find((resource) => resource.kind === "NOTE" && (resource.id === target || [resource.title, resource.publicId].some((value) => normalizeMarkdownWikiTarget(value) === normalized))); if (match) void openStudyNote(match.id); else announce(`No saved note matches “${target}” yet.`, "info"); }} />}
-    {editor && <StudyEditor ownerId={initialData.user.telegramId} state={editor} study={study} busy={busy} onClose={() => setEditor(null)} onSave={async (path, method, body, message) => { const saved = await mutate(path, method, body, message); if (saved) setEditor(null); return Boolean(saved); }} />}
+    {editor && <StudyEditor state={editor} study={study} busy={busy} onClose={() => setEditor(null)} onSave={async (path, method, body, message) => { const saved = await mutate(path, method, body, message); if (saved) setEditor(null); return Boolean(saved); }} />}
     {helpOpen && <StudyGuideSheet onClose={() => setHelpOpen(false)} />}
     {confirmation && <StudyConfirmationDialog message={confirmation.message} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.action; setConfirmation(null); void action(); }} />}
     {toast && <div className="study-toast" data-tone={toast.tone} role={toast.tone === "error" ? "alert" : "status"}>{toast.tone === "error" ? <AlertCircle size={18} /> : toast.tone === "info" ? <Cloud size={18} /> : <CheckCircle2 size={18} />}<span>{toast.message}</span>{toast.action && <button onClick={() => { setToast(null); toast.action?.run(); }}><Undo2 size={15} /> {toast.action.label}</button>}<button className="study-toast-close" onClick={() => setToast(null)} aria-label="Dismiss message"><X size={15} /></button></div>}
   </div>;
 }
 
-function Overview({ study, ownerName, onOpenModule, onNavigate, onEditItem, onComplete, onFocus, onTodayChanged }: { study: StudySnapshot; ownerName: string; onOpenModule: (id: string, view?: StudyView) => void; onNavigate: (view: StudyView) => void; onEditItem: (item: StudyItem) => void; onComplete: (item: StudyItem) => void; onFocus: (item: StudyItem) => void; onTodayChanged: () => void }) {
+function Overview({ study, ownerName, onWriteNote, onOpenModule, onNavigate, onEditItem, onComplete, onFocus, onTodayChanged }: { study: StudySnapshot; ownerName: string; onWriteNote: () => void; onOpenModule: (id: string, view?: StudyView) => void; onNavigate: (view: StudyView) => void; onEditItem: (item: StudyItem) => void; onComplete: (item: StudyItem) => void; onFocus: (item: StudyItem) => void; onTodayChanged: () => void }) {
   const attention = study.overview.attention;
   const first = attention.items[0];
   const firstItem = first ? study.items.find((item) => item.id === first.id) : undefined;
   return <>
-    <section className="study-overview-hero"><div><span>{studyWeekLabel(study)}</span><h1>{greeting()}, {ownerName}.</h1><p>{attention.overdue ? `${attention.overdue} overdue item${attention.overdue === 1 ? "" : "s"} need a decision.` : attention.dueToday ? `${attention.dueToday} item${attention.dueToday === 1 ? "" : "s"} due today.` : "Your semester is in view."}</p></div></section>
+    <section className="study-overview-hero"><div><span>{studyWeekLabel(study)}</span><h1>{greeting()}, {ownerName}.</h1><p>{attention.overdue ? `${attention.overdue} overdue item${attention.overdue === 1 ? "" : "s"} need a decision.` : attention.dueToday ? `${attention.dueToday} item${attention.dueToday === 1 ? "" : "s"} due today.` : "Your semester is in view."}</p></div><button type="button" className="study-overview-note-action" onClick={onWriteNote}><FileText size={17} /> Write note</button></section>
     <TodayPlanner variant="study" modules={study.modules} onChanged={onTodayChanged} />
     <div className="study-overview-grid">
       <section className="study-next-card"><header><span>Next move</span><button onClick={() => onNavigate("study-work")}>All work <ArrowRight size={15} /></button></header>{first && firstItem ? <><div className="study-next-meta"><Mastery value={firstItem.module.id ? study.modules.find((module) => module.id === firstItem.module.id)?.currentMastery ?? "UNASSESSED" : "UNASSESSED"} /><b>{first.moduleCode}</b><span>{first.reasons[0]}</span></div><h2>{first.title}</h2><p>{first.recommendedAction}</p><footer>{first.dueAt && <span><CalendarDays size={16} />{formatDateTime(first.dueAt, study.workspace.timezone)}</span>}<div><button className="study-secondary" onClick={() => onEditItem(firstItem)}>Edit</button><button className="study-secondary" onClick={() => onFocus(firstItem)}><Play size={15} /> Focus</button><button className="study-primary" onClick={() => onComplete(firstItem)}><Check size={16} /> Complete</button></div></footer></> : <Empty title="Nothing needs attention." copy="The next Canvas sync or Telegram capture will appear here." />}</section>
@@ -433,7 +434,7 @@ function LibraryView({ study, moduleFilter, activeSession, onModuleFilter, onAdd
   return <section className="study-page">
     <PageHead kicker="Library" title="Library" action={<div className="study-add-cluster"><button onClick={() => onAdd("NOTE")}><FileText size={16} /> Note</button><button onClick={() => onAdd("LINK")}><LinkIcon size={16} /> Link</button><button onClick={() => onAdd("QUESTION")}><CircleHelp size={16} /> Question</button></div>} />
     <div className="study-toolbar study-library-toolbar"><ModuleSelect modules={study.modules} value={moduleFilter} onChange={onModuleFilter} /><select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}><option value="ALL">All resources</option>{(["NOTE", "IMAGE", "LINK", "FILE", "QUESTION"] as StudyResourceKind[]).map((value) => <option key={value}>{humanize(value)}</option>)}</select><label><Search size={16} /><span className="sr-only">Search library</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search library" /></label></div>
-    <div className="study-resource-grid">{visible.map((resource) => { const caption = imageCaption(resource); const linked = linkedResourceIds.includes(resource.id); const canLink = activeSession?.moduleId === resource.moduleId; const open = () => resource.kind === "NOTE" ? onOpenNote(resource) : onEdit(resource); return <article key={resource.id} className={`kind-${resource.kind.toLowerCase()}`}><header><span>{resourceIcon(resource.kind)}{resource.module.code}</span><div>{resource.pinnedAt && <Pin size={14} />}{canLink && <button className={`study-resource-session-link${linked ? " active" : ""}`} aria-pressed={linked} onClick={() => onToggleSessionResource(resource)} title={linked ? "Remove from active session" : "Use in active session"} aria-label={linked ? "Remove from active session" : "Use in active session"}><LinkIcon size={16} /></button>}<button onClick={() => onPin(resource)} aria-label={resource.pinnedAt ? "Unpin resource" : "Pin resource"}><Pin size={16} /></button><button className="study-archive-action" onClick={() => onArchive(resource)} aria-label="Archive resource"><Archive size={16} /></button></div></header>{resource.kind === "IMAGE" ? <><button className="study-resource-image" onClick={() => setOpenImage(resource)} aria-label={`View ${caption || "saved image"}`}><img src={`/api/threadwise/study/resources/${resource.id}/content`} alt={caption || `Saved image for ${resource.module.code}`} /></button>{caption && <button className="study-resource-copy study-image-caption" onClick={() => setOpenImage(resource)}><p>{caption}</p></button>}</> : <button className="study-resource-copy" onClick={open}><h3>{resource.title}</h3><p>{resource.kind === "NOTE" ? markdownExcerpt(resource.body ?? "") : resource.body || resource.caption || resource.url || resource.fileName || "Open resource"}</p></button>}<footer><span>{resource.publicId}</span>{resource.kind === "NOTE" && <i>Markdown</i>}{resource.tags.slice(0, 2).map((tag) => <i key={tag}>#{tag}</i>)}{linked && <i>In session</i>}{resource.kind === "IMAGE" && <button className="study-resource-open" onClick={() => setOpenImage(resource)}>View <ExternalLink size={13} /></button>}{resource.kind === "FILE" && <a href={`/api/threadwise/study/resources/${resource.id}/content`} target="_blank" rel="noreferrer">Open <ExternalLink size={13} /></a>}</footer></article>; })}{!visible.length && <Empty title="No resources here yet." copy="Capture one in Telegram or add a note, link, or question here." />}</div>
+    <div className="study-resource-grid">{visible.map((resource) => { const caption = imageCaption(resource); const linked = linkedResourceIds.includes(resource.id); const canLink = activeSession?.moduleId === resource.moduleId; const open = () => resource.kind === "NOTE" ? onOpenNote(resource) : onEdit(resource); return <article key={resource.id} className={`kind-${resource.kind.toLowerCase()}`}><header><span>{resourceIcon(resource.kind)}{resource.module.code}</span><div>{resource.pinnedAt && <Pin size={14} />}{canLink && <button className={`study-resource-session-link${linked ? " active" : ""}`} aria-pressed={linked} onClick={() => onToggleSessionResource(resource)} title={linked ? "Remove from active session" : "Use in active session"} aria-label={linked ? "Remove from active session" : "Use in active session"}><LinkIcon size={16} /></button>}<button onClick={() => onPin(resource)} aria-label={resource.pinnedAt ? "Unpin resource" : "Pin resource"}><Pin size={16} /></button><button className="study-archive-action" onClick={() => onArchive(resource)} aria-label="Archive resource"><Archive size={16} /></button></div></header>{resource.kind === "IMAGE" ? <><button className="study-resource-image" onClick={() => setOpenImage(resource)} aria-label={`View ${caption || "saved image"}`}><img src={`/api/threadwise/study/resources/${resource.id}/content`} alt={caption || `Saved image for ${resource.module.code}`} /></button>{caption && <button className="study-resource-copy study-image-caption" onClick={() => setOpenImage(resource)}><p>{caption}</p></button>}</> : <button className="study-resource-copy" onClick={open}><h3>{resource.title}</h3><p>{resource.kind === "NOTE" ? markdownExcerpt(resource.body ?? "") : resource.body || resource.caption || resource.url || resource.fileName || "Open resource"}</p></button>}<footer><span>{resource.publicId}</span>{resource.kind === "NOTE" && <i>Markdown</i>}{linked && <i>In session</i>}{resource.kind === "IMAGE" && <button className="study-resource-open" onClick={() => setOpenImage(resource)}>View <ExternalLink size={13} /></button>}{resource.kind === "FILE" && <a href={`/api/threadwise/study/resources/${resource.id}/content`} target="_blank" rel="noreferrer">Open <ExternalLink size={13} /></a>}</footer></article>; })}{!visible.length && <Empty title="No resources here yet." copy="Capture one in Telegram or add a note, link, or question here." />}</div>
     {openImage && <StudyImageViewer key={openImage.id} resource={openImage} timezone={study.workspace.timezone} onEdit={() => { onEdit(openImage); setOpenImage(null); }} onArchive={() => { onArchive(openImage); setOpenImage(null); }} onClose={() => setOpenImage(null)} />}
   </section>;
 }
@@ -441,7 +442,7 @@ function LibraryView({ study, moduleFilter, activeSession, onModuleFilter, onAdd
 function StudyNoteReader({ resource, timezone, onClose, onEdit, onOpenLinked }: { resource: StudyResource; timezone: string; onClose: () => void; onEdit: (resource: StudyResource) => void; onOpenLinked: (target: string) => void }) {
   const metadata = resource.noteMeta;
   const download = () => {
-    const markdown = buildMarkdownExport({ title: resource.title, body: resource.body ?? "", tags: resource.tags, moduleCode: resource.module.code, publicId: resource.publicId });
+    const markdown = buildMarkdownExport({ title: resource.title, body: resource.body ?? "", moduleCode: resource.module.code, publicId: resource.publicId });
     downloadTextFile(safeMarkdownFileName(resource.title), markdown, "text/markdown;charset=utf-8");
   };
   return <StudyDialog kicker={`${resource.module.code} · ${resource.publicId}`} title={resource.title} wide onClose={onClose}>{(requestClose) =>
@@ -452,7 +453,7 @@ function StudyNoteReader({ resource, timezone, onClose, onEdit, onOpenLinked }: 
         <aside className="study-note-context">
           <section><span>Connections</span><h3>Linked notes</h3>{metadata?.outgoingLinks.length ? <div>{metadata.outgoingLinks.map((link) => <button type="button" key={`${link.target}-${link.label}`} disabled={!link.resolved} onClick={() => onOpenLinked(link.resource?.id ?? link.target)}><LinkIcon size={14} /><span><b>{link.label}</b><small>{link.resolved ? link.resource?.moduleCode : "Not created yet"}</small></span></button>)}</div> : <p>Write <code>[[Note title]]</code> to connect another note.</p>}</section>
           <section><span>Backlinks</span><h3>Notes pointing here</h3>{metadata?.backlinks.length ? <div>{metadata.backlinks.map((link) => <button type="button" key={link.id} onClick={() => onOpenLinked(link.publicId)}><ArrowRight size={14} /><span><b>{link.title}</b><small>{link.moduleCode} · {link.publicId}</small></span></button>)}</div> : <p>No other notes point here yet.</p>}</section>
-          <details className="study-note-history"><summary><History size={15} /> Version history <span>{metadata?.revisions.length ?? 0}</span></summary><div>{metadata?.revisions.map((revision, index) => <article key={revision.id}><div><b>{index === 0 ? "Latest saved version" : formatDate(revision.createdAt, timezone)}</b><small>{humanize(revision.source)}</small></div><p>{markdownExcerpt(revision.body, 120)}</p><button type="button" onClick={() => onEdit({ ...resource, title: revision.title, body: revision.body, tags: revision.tags })}>Use in editor</button></article>)}{!metadata?.revisions.length && <p>History begins with the next saved version.</p>}</div></details>
+          <details className="study-note-history"><summary><History size={15} /> Version history <span>{metadata?.revisions.length ?? 0}</span></summary><div>{metadata?.revisions.map((revision, index) => <article key={revision.id}><div><b>{index === 0 ? "Latest saved version" : formatDate(revision.createdAt, timezone)}</b><small>{humanize(revision.source)}</small></div><p>{markdownExcerpt(revision.body, 120)}</p><button type="button" onClick={() => onEdit({ ...resource, title: revision.title, body: revision.body })}>Use in editor</button></article>)}{!metadata?.revisions.length && <p>History begins with the next saved version.</p>}</div></details>
         </aside>
       </div>
       <footer><button type="button" className="study-secondary" onClick={requestClose}>Close</button></footer>
@@ -511,7 +512,7 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
       </div>
       <div className="study-image-context">
         {caption && <p>{caption}</p>}
-        <div className="study-image-meta"><span>{resource.module.code}</span><span>{formatDate(resource.createdAt, timezone)}</span>{resource.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
+        <div className="study-image-meta"><span>{resource.module.code}</span><span>{formatDate(resource.createdAt, timezone)}</span></div>
         {resource.ocrText && <details><summary>Searchable text</summary><p>{resource.ocrText}</p></details>}
       </div>
     </article>
@@ -1094,10 +1095,10 @@ function StudyDialog({ kicker, title, dirty = false, wide = false, onClose, chil
   </div>;
 }
 
-function StudyEditor({ ownerId, state, study, busy, onClose, onSave }: { ownerId: string; state: Exclude<Editor, null>; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (path: string, method: "POST" | "PATCH", body: unknown, message: string) => Promise<boolean> }) {
+function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<Editor, null>; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (path: string, method: "POST" | "PATCH", body: unknown, message: string) => Promise<boolean> }) {
   const [dirty, setDirty] = useState(false);
   if (state.kind === "resource" && (state.value?.kind ?? state.resourceKind ?? "NOTE") === "NOTE") {
-    return <StudyNoteEditor ownerId={ownerId} state={state} study={study} busy={busy} onClose={onClose} onSave={onSave} />;
+    return <StudyNoteEditor value={state.value} study={study} busy={busy} onClose={onClose} onSave={onSave} />;
   }
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1119,7 +1120,7 @@ function StudyEditor({ ownerId, state, study, busy, onClose, onSave }: { ownerId
     if (state.kind === "resource") {
       const value = state.value;
       const kind = value?.kind ?? state.resourceKind ?? "NOTE";
-      void onSave(value ? `study/resources/${value.id}` : "study/resources", value ? "PATCH" : "POST", { moduleId: formText(form, "moduleId"), ...(value ? {} : { kind }), title: formText(form, "title"), body: formText(form, "body") || undefined, url: formText(form, "url") || undefined, caption: formText(form, "caption") || undefined, tags: formText(form, "tags").split(",").map((tag) => tag.trim()).filter(Boolean) }, value ? "Resource updated." : "Resource saved.");
+      void onSave(value ? `study/resources/${value.id}` : "study/resources", value ? "PATCH" : "POST", { moduleId: formText(form, "moduleId"), ...(value ? {} : { kind }), title: formText(form, "title"), body: formText(form, "body") || undefined, url: formText(form, "url") || undefined, caption: formText(form, "caption") || undefined }, value ? "Resource updated." : "Resource saved.");
     }
     if (state.kind === "mistake") {
       void onSave("study/mistakes", "POST", { moduleId: formText(form, "moduleId"), ...(formText(form, "itemId") ? { itemId: formText(form, "itemId") } : {}), source: formText(form, "source"), category: formText(form, "category"), cause: formText(form, "cause"), prevention: formText(form, "prevention"), revisitAt: formText(form, "revisitAt") ? new Date(formText(form, "revisitAt")).toISOString() : undefined }, "Mistake recorded.");
@@ -1132,93 +1133,9 @@ function StudyEditor({ ownerId, state, study, busy, onClose, onSave }: { ownerId
     <form onSubmit={submit} onChange={() => setDirty(true)}>
       {state.kind === "module" && <><label>Module code<input name="code" required defaultValue={state.value?.code ?? ""} /></label><label>Module name<input name="name" required defaultValue={state.value?.name ?? ""} /></label><label>Module color<input name="color" type="color" defaultValue={state.value?.color ?? "#168b83"} /></label></>}
       {state.kind === "item" && <><div className="study-form-row"><label>Module<ModuleField modules={study.modules} name="moduleId" value={state.value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id} /></label><label>Type<select name="type" defaultValue={state.value?.type ?? "ASSIGNMENT"}>{ITEM_TYPES.map((type) => <option key={type} value={type}>{humanize(type)}</option>)}</select></label></div><label>Title<input name="title" required maxLength={500} defaultValue={state.value?.title ?? ""} /></label><label>Details<textarea name="notes" rows={5} defaultValue={state.value?.notes ?? ""} /></label><div className="study-form-row"><label>Due date<input name="dueAt" type="datetime-local" defaultValue={localInput(state.value?.dueAt)} /></label><label>Planned minutes<input name="plannedMinutes" type="number" min="1" max="1440" defaultValue={state.value?.plannedMinutes ?? ""} /></label></div><div className="study-form-row"><label>Priority<select name="priority" defaultValue={state.value?.priority ?? "NORMAL"}>{["LOW", "NORMAL", "HIGH", "CRITICAL"].map((value) => <option key={value} value={value}>{humanize(value)}</option>)}</select></label>{state.value && <label>Status<select name="status" defaultValue={state.value.status}>{["OPEN", "IN_PROGRESS", "PROCESSED", "DONE"].map((value) => <option key={value} value={value}>{humanize(value)}</option>)}</select></label>}</div></>}
-      {state.kind === "resource" && <><label>Module<ModuleField modules={study.modules} name="moduleId" value={state.value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id} /></label><label>Title<input name="title" required defaultValue={state.value?.title ?? ""} /></label>{(state.value?.kind ?? state.resourceKind) === "LINK" ? <label>Link<input name="url" type="url" required defaultValue={state.value?.url ?? ""} /></label> : (state.value?.kind ?? state.resourceKind) === "IMAGE" || (state.value?.kind ?? state.resourceKind) === "FILE" ? <><label>Caption<textarea name="caption" rows={4} defaultValue={state.value?.caption ?? ""} /></label>{state.value?.ocrText && <div className="study-ocr"><span>Searchable text</span><p>{state.value.ocrText}</p></div>}</> : <label>{(state.value?.kind ?? state.resourceKind) === "QUESTION" ? "Question" : "Note"}<textarea name="body" required rows={10} defaultValue={state.value?.body ?? ""} /></label>}<label>Tags <small>comma-separated</small><input name="tags" defaultValue={state.value?.tags.join(", ") ?? ""} /></label></>}
+      {state.kind === "resource" && <><label>Module<ModuleField modules={study.modules} name="moduleId" value={state.value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id} /></label><label>Title<input name="title" required defaultValue={state.value?.title ?? ""} /></label>{(state.value?.kind ?? state.resourceKind) === "LINK" ? <label>Link<input name="url" type="url" required defaultValue={state.value?.url ?? ""} /></label> : (state.value?.kind ?? state.resourceKind) === "IMAGE" || (state.value?.kind ?? state.resourceKind) === "FILE" ? <><label>Caption<textarea name="caption" rows={4} defaultValue={state.value?.caption ?? ""} /></label>{state.value?.ocrText && <div className="study-ocr"><span>Searchable text</span><p>{state.value.ocrText}</p></div>}</> : <label>{(state.value?.kind ?? state.resourceKind) === "QUESTION" ? "Question" : "Note"}<textarea name="body" required rows={10} defaultValue={state.value?.body ?? ""} /></label>}</>}
       {state.kind === "mistake" && <><input type="hidden" name="itemId" value={state.item?.id ?? ""} /><label>Module<ModuleField modules={study.modules} name="moduleId" value={mistakeModuleId} /></label>{state.item && <div className="study-linked-context"><Target size={17} /><div><small>Linked work</small><b>{state.item.title}</b></div></div>}<label>Question or source<textarea name="source" required rows={3} defaultValue={state.item?.title ?? ""} /></label><label>Category<select name="category" defaultValue="CONCEPTUAL_MISUNDERSTANDING"><option value="CONCEPTUAL_MISUNDERSTANDING">Conceptual misunderstanding</option><option value="WRONG_APPROACH">Wrong approach</option><option value="EXECUTION_CARELESS">Execution / careless</option><option value="TIME_MANAGEMENT">Time management</option></select></label><label>Cause<textarea name="cause" required rows={3} /></label><label>Preventive check<textarea name="prevention" required rows={3} /></label><label>Revisit<input name="revisitAt" type="datetime-local" /></label></>}
       <footer><button type="button" className="study-secondary" onClick={requestClose}>Cancel</button><button className="study-primary" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />} Save</button></footer>
-    </form>
-  }</StudyDialog>;
-}
-
-type StudyNoteDraft = { moduleId: string; title: string; body: string; tags: string };
-
-function StudyNoteEditor({ ownerId, state, study, busy, onClose, onSave }: { ownerId: string; state: Extract<Exclude<Editor, null>, { kind: "resource" }>; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (path: string, method: "POST" | "PATCH", body: unknown, message: string) => Promise<boolean> }) {
-  const value = state.value;
-  const storageKey = browserDraftKey("study-note", ownerId, study.workspace.id, value?.id ?? "new");
-  const baseDraft: StudyNoteDraft = {
-    moduleId: value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id ?? "",
-    title: value?.title ?? "",
-    body: value?.body ?? "",
-    tags: value?.tags.join(", ") ?? "",
-  };
-  const [initial] = useState(() => {
-    if (typeof window === "undefined") return { draft: baseDraft, restored: false };
-    try {
-      const stored = readBrowserDraft<StudyNoteDraft>(window.localStorage, storageKey, ownerId, study.workspace.id);
-      return stored ? { draft: { ...baseDraft, ...stored }, restored: true } : { draft: baseDraft, restored: false };
-    } catch { return { draft: baseDraft, restored: false }; }
-  });
-  const [draft, setDraft] = useState(initial.draft);
-  const [dirty, setDirty] = useState(initial.restored);
-  const [mode, setMode] = useState<"write" | "preview" | "split">("write");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const importRef = useRef<HTMLInputElement>(null);
-  const selectedModule = study.modules.find((entry) => entry.id === draft.moduleId) ?? study.modules[0];
-
-  useEffect(() => {
-    if (!dirty) return;
-    const timer = window.setTimeout(() => {
-      try { writeBrowserDraft(window.localStorage, storageKey, ownerId, study.workspace.id, draft); } catch { /* Keep the in-memory draft. */ }
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [dirty, draft, ownerId, storageKey, study.workspace.id]);
-
-  const update = (change: Partial<StudyNoteDraft>) => {
-    setDirty(true);
-    setDraft((current) => ({ ...current, ...change }));
-  };
-  const insert = (before: string, after = "", placeholder = "text") => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = draft.body.slice(start, end) || placeholder;
-    const body = `${draft.body.slice(0, start)}${before}${selected}${after}${draft.body.slice(end)}`;
-    update({ body });
-    window.requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
-    });
-  };
-  const importMarkdown = async (file: File | undefined) => {
-    if (!file) return;
-    if (!/\.md$/iu.test(file.name) || file.size > 1_000_000) return;
-    const imported = parseMarkdownFile(file.name, await file.text());
-    update({ title: imported.title, body: imported.body, tags: imported.tags.join(", ") });
-  };
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const tags = draft.tags.split(",").map((tag) => tag.trim()).filter(Boolean);
-    void onSave(value ? `study/resources/${value.id}` : "study/resources", value ? "PATCH" : "POST", {
-      moduleId: draft.moduleId,
-      ...(value ? { expectedUpdatedAt: value.updatedAt } : { kind: "NOTE" }),
-      title: draft.title.trim(),
-      body: draft.body,
-      tags,
-    }, value ? "Note updated." : "Note saved.").then((saved) => {
-      if (!saved) return;
-      try { clearBrowserDraft(window.localStorage, storageKey); } catch { /* The server save still succeeded. */ }
-      setDirty(false);
-    });
-  };
-
-  return <StudyDialog kicker={value ? `${value.module.code} · ${value.publicId}` : "Markdown note"} title={value ? "Edit note" : "New note"} dirty={dirty} wide onClose={onClose}>{(requestClose) =>
-    <form className={`study-note-editor mode-${mode}`} onSubmit={submit}>
-      {initial.restored && <div className="study-note-draft-restored"><Undo2 size={16} /><span><b>Recovered unsaved work</b><small>This private draft expires after seven days.</small></span><button type="button" onClick={() => { try { clearBrowserDraft(window.localStorage, storageKey); } catch { /* Reset in memory regardless. */ } setDraft(baseDraft); setDirty(false); }}>Discard draft</button></div>}
-      <div className="study-note-fields"><StudyChoicePicker label="Module" value={draft.moduleId} options={study.modules.map((entry) => ({ value: entry.id, label: entry.code, detail: entry.name }))} searchable allowEmpty={false} onChange={(moduleId) => update({ moduleId })} /><label>Title<input required maxLength={500} value={draft.title} onChange={(event) => update({ title: event.target.value })} /></label><label>Tags <small>comma-separated</small><input value={draft.tags} onChange={(event) => update({ tags: event.target.value })} placeholder="revision, exam" /></label></div>
-      <div className="study-note-toolbar" role="toolbar" aria-label="Markdown formatting"><div><button type="button" onClick={() => insert("## ", "", "Heading")} title="Heading"><Heading2 size={16} /></button><button type="button" onClick={() => insert("**", "**")} title="Bold"><Bold size={16} /></button><button type="button" onClick={() => insert("*", "*")} title="Italic"><Italic size={16} /></button><button type="button" onClick={() => insert("\n- ", "", "List item")} title="List"><List size={16} /></button><button type="button" onClick={() => insert("\n- [ ] ", "", "Task")} title="Checklist"><ListTodo size={16} /></button><button type="button" onClick={() => insert("[[", "]]", "Note title")} title="Wiki link"><LinkIcon size={16} /></button><button type="button" onClick={() => insert("\n```\n", "\n```", "code")} title="Code block"><Code2 size={16} /></button></div><div className="study-note-view-modes">{(["write", "preview", "split"] as const).map((view) => <button type="button" key={view} aria-pressed={mode === view} onClick={() => setMode(view)}>{view === "write" ? <FileText size={15} /> : view === "preview" ? <Eye size={15} /> : <Columns2 size={15} />}{humanize(view)}</button>)}<input ref={importRef} type="file" accept=".md,text/markdown,text/plain" hidden onChange={(event) => { void importMarkdown(event.target.files?.[0]); event.currentTarget.value = ""; }} /><button type="button" onClick={() => importRef.current?.click()}><FileUp size={15} /> Import .md</button></div></div>
-      <div className="study-note-workspace"><section className="study-note-write"><label htmlFor="study-note-body">Markdown</label><textarea id="study-note-body" ref={textareaRef} required maxLength={100_000} value={draft.body} onChange={(event) => update({ body: event.target.value })} onKeyDown={(event) => { if (!(event.metaKey || event.ctrlKey)) return; if (event.key.toLowerCase() === "b") { event.preventDefault(); insert("**", "**"); } if (event.key.toLowerCase() === "i") { event.preventDefault(); insert("*", "*"); } }} spellCheck /></section><section className="study-note-preview" aria-label="Markdown preview"><span>Preview</span>{draft.body.trim() ? <StudyMarkdown source={draft.body} /> : <div className="study-note-preview-empty"><BookOpen size={25} /><b>Your formatted note appears here.</b><p>Markdown, tables, checklists, wiki links, code, and Mermaid diagrams are supported.</p></div>}</section></div>
-      <div className="study-note-editor-status"><span>{draft.body.length.toLocaleString()} / 100,000 characters</span><span>{selectedModule?.code ?? "Choose a module"}</span><span>Private draft · expires in 7 days</span></div>
-      <footer><button type="button" className="study-secondary" onClick={requestClose}>Cancel</button><button className="study-primary" disabled={busy || !draft.moduleId || !draft.title.trim() || !draft.body.trim()}>{busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />} Save note</button></footer>
     </form>
   }</StudyDialog>;
 }

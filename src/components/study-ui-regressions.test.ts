@@ -140,4 +140,37 @@ describe("Study UI regressions", () => {
     expect(step).toContain("overscroll-behavior: contain");
     expect(css).toContain(".study-review-wizard > footer");
   });
+
+  it("opens a full-screen Study writing space with inline formatting and cross-device drafts", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const editor = readFileSync(join(process.cwd(), "src", "components", "study-note-editor.tsx"), "utf8");
+    const body = readFileSync(join(process.cwd(), "src", "components", "study-rich-note-body.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(dashboard).toContain('onWriteNote={() => setEditor({ kind: "resource", resourceKind: "NOTE" })}');
+    expect(dashboard).toContain("Write note");
+    expect(editor).toContain('noteApi<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`)');
+    expect(editor).toContain('"study/note-drafts", "PATCH"');
+    expect(editor).toContain("Saved across devices");
+    expect(editor).toContain("Where should this live?");
+    expect(editor).not.toContain("Tags");
+    expect(body).toContain('contentType: "markdown"');
+    expect(body).toContain("current.getMarkdown()");
+    expect(body).toContain("Mermaid diagram");
+    expect(body).toContain("Continue writing below");
+    expect(body).not.toContain("Preview");
+    expect(css).toContain(".study-note-fullscreen");
+    expect(css).toContain("height: calc(100dvh - 32px)");
+    expect(css).toContain("@media (max-width: 700px)");
+  });
+
+  it("retires visible note tags while preserving Study note content and modules", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const markdown = readFileSync(join(process.cwd(), "src", "lib", "study-markdown.ts"), "utf8");
+    const editor = dashboard.slice(dashboard.indexOf("function StudyEditor"));
+
+    expect(editor).not.toContain('name="tags"');
+    expect(editor).not.toContain("splitTags");
+    expect(markdown).not.toContain("tags:");
+  });
 });

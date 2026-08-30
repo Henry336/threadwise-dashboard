@@ -43,7 +43,8 @@
       "fit-to-window Study image viewer with an explicit natural-resolution inspection mode",
       "theme-aware restrained scrollbars on primary Study navigation and timetable overflow",
       "bounded personal Overview quote manager with explicit add, remove, and save actions",
-      "private Personal Today ordering with empty completion controls and dedicated drag handles"
+      "private Personal Today ordering with empty completion controls and dedicated drag handles",
+      "full-screen Study writing with inline rich Markdown, Mermaid editing, and encrypted cross-device autosave"
     ]
   },
   "constraints": {
@@ -123,6 +124,11 @@
       "date": "2026-08-29",
       "decision": "Pilot manual priority ordering only in private Personal Today, using empty completion circles, dedicated drag handles, and compact keyboard-accessible move actions.",
       "reason": "An empty circle communicates incomplete work more honestly than a prefilled check. Private ordering lets one person prioritize their cross-mode day without mutating shared Group or Study records, while explicit handles and move actions preserve scrolling, touch use, pagination, and keyboard access."
+    },
+    {
+      "date": "2026-08-31",
+      "decision": "Pilot one full-screen inline-rich note editor in Study Mode, with encrypted cross-device scratch drafts and a focused title/module filing sheet.",
+      "reason": "Writing needs sustained space and direct formatting feedback. Keeping Markdown canonical preserves Telegram, Library, search, revisions, backlinks, and export, while one autosave status and one final filing decision avoid preview friction and button fatigue."
     }
   ],
   "evidence": [
@@ -130,5 +136,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-29T12:00:00.000+08:00"
+  "generatedAt": "2026-08-31T03:00:00.000+08:00"
 }
