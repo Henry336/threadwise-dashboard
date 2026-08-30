@@ -1,6 +1,6 @@
 # Dashboard architecture
 
-Updated: 2026-08-28
+Updated: 2026-08-31
 
 Current dashboard release: v0.9.0; paired backend release: v0.32.0
 

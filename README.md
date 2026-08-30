@@ -2,12 +2,16 @@
 
 Current dashboard release: **v0.9.0**
 
-Documentation verified against the deployed Threadwise stack: **2026-08-28**
+Documentation verified against the deployed Threadwise stack: **2026-08-31**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
-The owner-gated cross-mode Today-planning Phase 1–3 stack is merged and live at dashboard commit
-`eac5844` with backend commit `0ab4c9cffced`.
+The owner-gated Today-planning stack and Study-first rich-note release are merged and live at dashboard
+runtime commit `b81f57fc3594` with backend runtime commit `0adbf0be688f`.
+
+New developers should start with [docs/DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md).
+The current cross-repository audit is in the backend at
+[`docs/POST_RELEASE_CODE_UI_SECURITY_AUDIT_2026-08-31.md`](https://github.com/Henry336/threadwise/blob/main/docs/POST_RELEASE_CODE_UI_SECURITY_AUDIT_2026-08-31.md).
 
 The application is intentionally a separate Next.js frontend and backend-for-frontend. Browsers never receive a Supabase connection string, service-role key, Telegram bot token, or provider refresh token.
 

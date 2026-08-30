@@ -11,6 +11,11 @@ React `style` attributes used for bounded visual values such as colors, widths, 
 enforced `style-src 'self' 'nonce-…'` policy would block those attributes. Do not hide that work with
 `unsafe-inline`, and do not set production to `enforce` yet.
 
+Latest evidence (2026-08-31): a fresh live demo load produced at least five report-only `style-src`
+violations for legitimate inline style attributes. The page remained functional because the policy is
+not enforced. No script error or exploit was observed; the result confirms that the enforcement gate
+below is still open.
+
 ## Enforcement gate
 
 1. Deploy report-only to staging with synthetic accounts.

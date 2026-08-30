@@ -5,6 +5,15 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-31 (Codex, deployed and audited):** Released dashboard runtime `b81f57fc3594` after
+  backend runtime `0adbf0be688f`: one Study Overview writing entry point, a near/full-screen inline
+  Markdown/Mermaid editor, encrypted cross-device autosave/conflicts, title/module filing, and
+  compatibility-safe visible tag retirement. Added `docs/DEVELOPER_ONBOARDING.md` and linked the
+  backend cross-repository post-release audit. No critical issue or confirmed regression was found;
+  current CSP, session-revocation, mobile accessible-name, filing-focus, abrupt-close, long-note
+  performance, behavioral-test, native-selector, and large-component findings remain documented and
+  intentionally unfixed in this audit pass.
+
 - **2026-08-28 (Codex, deployed):** Corrected cross-mode Today typography after the shared planner referenced
   an undefined display-font token and fell back to body sans. Planner and agenda headings now use the
   established serif token in Personal, Group, and Study; the Study variant also inherits Study blue
@@ -152,6 +161,17 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-31 (Codex):** Completed a post-release static, dependency, test, and live responsive
+  audit across both repos. Added the dashboard developer map; reconciled README, architecture, CSP
+  evidence, changelog, and handoff. Runtime behavior was deliberately unchanged. All 153 unit tests,
+  typecheck, lint, independent production build, 7 browser passes plus 1 intentional mobile skip,
+  secret scan, and both dependency audits pass.
+
+- **2026-08-31 (Codex):** Implemented and released the approved Study-first note-writing trial
+  without 21st.dev: one Overview entry point, a near/full-screen inline rich Markdown/Mermaid editor,
+  encrypted cross-device autosave with conflict status, a title/module filing sheet, and
+  compatibility-safe retirement of visible note/idea tags across modes. Backend released first.
 
 - **2026-08-28 (Codex):** Fixed the shared Today planner's cross-mode design-system drift: its main
   and agenda headings now use `--serif` instead of the nonexistent `--font-display`, and Study scopes
@@ -388,7 +408,3 @@ updates the Working log below** (newest first: date, who, what, current state).
 - **2026-08-06 (Claude):** Created this canonical `CLAUDE.md` + `AGENTS.md` pointer as part of a
   continuity pass across both Threadwise repos. Documented the trust boundary and the secrets to
   back up (`AUTH_SECRET`, Telegram OIDC creds, `DASHBOARD_API_PRIVATE_KEY`). No code changes.
-- **2026-08-31 (Codex):** Implemented the approved Study-first note-writing trial without 21st.dev:
-  one Overview entry point, a near/full-screen inline rich Markdown/Mermaid editor, encrypted
-  cross-device autosave with conflict status, a title/module filing sheet, and compatibility-safe
-  retirement of visible note/idea tags across modes. Backend release must precede this dashboard.

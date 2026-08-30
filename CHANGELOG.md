@@ -4,6 +4,13 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Post-release audit and contributor handoff
+- Added a dashboard-specific new-developer map covering component ownership, BFF/auth boundaries,
+  state ownership, accessible UI workflow, validation, hotspots, and deployment order.
+- Recorded current live CSP evidence and linked the cross-repository code/UI/security/privacy audit.
+- Reconciled README, architecture, and contributor checkpoints with the deployed Study-rich-note
+  runtime. No product behavior or production configuration changed in this documentation pass.
+
 ### Study-first full-screen rich notes
 - Added one Overview `Write note` entry point and a near/full-viewport editor whose Markdown
   formatting renders inline. Headings, bold, italic, underline, lists, checklists, links, tables,
