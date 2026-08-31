@@ -5,15 +5,17 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, guarded Phase 1):** Migrated every currently rendered Personal, Group,
+- **2026-08-31 (Codex, deployed Phase 1):** Migrated every currently rendered Personal, Group,
   and Study selector to the shared accessible Threadwise picker, named the remaining image-only actions,
   and added an isolated authenticated Study lifecycle gate. Its synthetic API cryptographically verifies
   the real EdDSA service-token contract and proves recovery, conflicts, invalid-import guidance, filing
   focus, canonical save, and Library visibility without production credentials. Real editor/draft writes
   measured 875/886/941 ms at roughly 10k/50k/100k characters with an 8-second CI ceiling. Dashboard
   typecheck, lint, isolated optimized build, 177 unit/regression tests, and Playwright (15 passed, 5
-  intentional mobile skips) pass. CSP, browser-session revocation, and large-module extraction remain
-  separate gates; this checkpoint is not yet claimed deployed.
+  intentional mobile skips) pass. Backend PR `#19` deployed first at `1d47597f30bd`; dashboard PR `#4`
+  followed at `14f285ebfcba`, with GitHub validation/browser jobs and Vercel production passing. The
+  canonical hosted suite passed 12 tests with 8 intentional hosted/mobile skips. CSP, browser-session
+  revocation, and large-module extraction remain separate gates.
 
 - **2026-08-31 (Codex, deployed):** Removed the remaining rich-note typing friction by
   coalescing Markdown conversion and making dashboard shortcuts contenteditable-aware; restored visible
