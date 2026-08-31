@@ -12,10 +12,11 @@ progress widths, module accents, and drag transforms. Those attributes are isola
 Level 3 directive `style-src-attr 'unsafe-inline'`; the allowance does not apply to scripts or style
 elements. Raw user HTML remains disabled and accepted Mermaid SVG remains sanitized.
 
-Latest local evidence (2026-08-31): the optimized production build completed and the full 20-case
+Latest evidence (2026-08-31): the optimized production build completed and the full 20-case
 desktop/mobile Playwright gate exercised the enforced header, public/demo routes, responsive scrolling,
 rich-note rendering, Mermaid/UML examples, and the cryptographically authenticated synthetic Study
-draft lifecycle without a CSP break. Record the canonical hosted evidence in the release checkpoint.
+draft lifecycle without a CSP break. Dashboard PR `#6` passed validate/browser/Vercel checks, and
+production deployment `dpl_Bhk9yjShbMNnYu4gxYkbCgojHoDp` completed Ready with the canonical alias.
 
 ## Maintenance gate
 
