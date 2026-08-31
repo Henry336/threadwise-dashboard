@@ -5,12 +5,13 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, release pending):** Fixed the fatal Study timetable scroll lock after deleting
+- **2026-08-31 (Codex, deployed):** Fixed the fatal Study timetable scroll lock after deleting
   any occurrence scope. The deletion confirmation now replaces, rather than stacks over, block details;
   timetable overlays share a reference-counted body lock that restores the original overflow after the
   last overlay closes in either cleanup order. Two lock-order tests and a single-modal structural guard
-  join the full 172-test, 78-security-check, type/lint/build/secret, and 10-pass browser gates. No backend,
-  schema, provider, or data change is required.
+  join the full 172-test, 78-security-check, type/lint/build/secret, and 10-pass browser gates. Runtime
+  `703d89b1612e` passed GitHub CI run `33369782858`, completed Vercel, and passed all 10 hosted browser
+  checks. No backend, schema, provider, or data change was required.
 
 - **2026-08-31 (Codex, deployed):** Corrected rich-editor checklist alignment against Tiptap's
   real label/content structure and extended the validated writing flow to Personal mode: Today-level
@@ -188,10 +189,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-31 (Codex, release pending):** Diagnosed Study block deletion as two sibling modal effects
+- **2026-08-31 (Codex, deployed):** Diagnosed Study block deletion as two sibling modal effects
   independently saving and restoring `body.style.overflow`. Replaced the underlying details layer during
   confirmation and introduced `src/lib/body-scroll-lock.ts` for order-independent reference-counted
-  restoration. Desktop/mobile regression and full dashboard gates pass; deployment remains pending.
+  restoration. Runtime `703d89b1612e` is live after local, hosted-CI, Vercel, and desktop/mobile gates.
 
 - **2026-08-31 (Codex, deployed):** Corrected rich-editor checklist alignment at Tiptap's structural
   label/content boundary and rolled the checked full-screen Markdown/Mermaid/UML writer into Personal
