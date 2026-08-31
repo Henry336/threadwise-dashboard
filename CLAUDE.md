@@ -13,7 +13,8 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
   dynamic React geometry uses only `style-src-attr`. Local gates pass at 184 tests, 85 focused security
   checks, type/lint/optimized build, and Playwright 15 passed/5 intentional skips with zero CSP console
   violations. Backend `5b2b962324ba` is live; dashboard PR `#6` merged at `c4eade6b85de` and Ready
-  production deployment `dpl_Bhk9yjShbMNnYu4gxYkbCgojHoDp` is aliased to the canonical site.
+  production code deployment `dpl_Bhk9yjShbMNnYu4gxYkbCgojHoDp` completed Ready; later
+  documentation-only `main` deployments retain the identical runtime code on the canonical site.
 
 - **2026-08-31 (Codex, deployed Phase 1):** Migrated every currently rendered Personal, Group,
   and Study selector to the shared accessible Threadwise picker, named the remaining image-only actions,
