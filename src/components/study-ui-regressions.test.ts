@@ -57,6 +57,8 @@ describe("Study UI regressions", () => {
     expect(editor).toContain('<StudyTimePicker label="Starts"');
     expect(editor).toContain('<StudyTimePicker label="Ends"');
     expect(editor).toContain('<StudyChoicePicker label="Usual origin"');
+    expect(editor).toContain('<div className="study-timetable-weeks wide">');
+    expect(editor).toContain('<StudyPlaceCombobox optional');
     expect(editor).not.toContain("<select");
     expect(editor).not.toContain('type="time"');
   });
@@ -157,13 +159,16 @@ describe("Study UI regressions", () => {
 
     expect(dashboard).toContain('onWriteNote={() => setEditor({ kind: "resource", resourceKind: "NOTE" })}');
     expect(dashboard).toContain("Write note");
-    expect(editor).toContain('noteApi<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`)');
-    expect(editor).toContain('"study/note-drafts", "PATCH"');
+    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`)');
+    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft }>("study/note-drafts", "PATCH"');
     expect(editor).toContain("Saved across devices");
     expect(editor).toContain("Where should this live?");
     expect(editor).not.toContain("Tags");
     expect(body).toContain('contentType: "markdown"');
     expect(body).toContain("current.getMarkdown()");
+    expect(body).toContain("scheduleMarkdownSync(current)");
+    expect(body).toContain("MARKDOWN_SYNC_MAX_WAIT_MS");
+    expect(body).toContain("onFlushReady?.(flushMarkdown)");
     expect(body).toContain("Mermaid diagram");
     expect(body).toContain("Mermaid and UML syntax help");
     expect(body).toContain("lastLocallyEmittedMarkdownRef");
@@ -174,6 +179,12 @@ describe("Study UI regressions", () => {
     expect(css).toContain(".study-mermaid-help");
     expect(css).toContain('.study-rich-document ul[data-type="taskList"] li > label { min-height: 1.72em; display: flex; align-items: center; }');
     expect(css).toContain('.study-rich-document ul[data-type="taskList"] li > div > p:first-child { margin-top: 0; }');
+    expect(css).toContain('.study-rich-document ol { list-style-type: decimal; }');
+    expect(css).toContain('.study-rich-document ul:not([data-type="taskList"]) { list-style-type: disc; }');
+    expect(editor).toContain('role="dialog" aria-modal="true"');
+    expect(editor).toContain('inert={filing ? true : undefined}');
+    expect(editor).toContain('window.addEventListener("pagehide", preserveLatestDraft)');
+    expect(editor).toContain("Choose a Markdown file ending in .md.");
     expect(css).toContain("height: calc(100dvh - 32px)");
     expect(css).toContain("@media (max-width: 700px)");
   });
@@ -186,13 +197,38 @@ describe("Study UI regressions", () => {
     expect(dashboard).toContain("<PersonalNoteEditor");
     expect(dashboard).toContain('(activeView === "today" && data.workspace.kind === "PERSONAL")');
     expect(dashboard).toContain('view === "today" ? "Write note"');
-    expect(editor).toContain('personalNoteApi<{ draft: RemoteDraft | null }>(`note-drafts${query}`)');
-    expect(editor).toContain('personalNoteApi<{ draft: RemoteDraft }>("note-drafts", "PATCH"');
+    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft | null }>(`note-drafts${query}`)');
+    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft }>("note-drafts", "PATCH"');
     expect(editor).toContain('ariaLabel="Personal note"');
     expect(editor).toContain("full-text search, Telegram, and your other signed-in devices");
     expect(editor).not.toContain("StudyChoicePicker");
     expect(editor).not.toContain("Tags");
     expect(css).toContain(".personal-note-fullscreen");
+  });
+
+  it("never treats rich-editor keystrokes as global navigation shortcuts", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+
+    expect(dashboard).toContain("target.isContentEditable");
+    expect(dashboard).toContain("target.closest(\"[contenteditable='true']\")");
+  });
+
+  it("keeps mobile search controls named when their visible labels collapse", () => {
+    const personal = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const study = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+
+    expect(personal).toContain('className="tw-search-button" aria-label="Find anything"');
+    expect(study).toContain('className="study-search-jump" aria-label="Search this semester"');
+  });
+
+  it("pins Study modules persistently with a labelled, stateful control", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const types = readFileSync(join(process.cwd(), "src", "lib", "study-types.ts"), "utf8");
+
+    expect(types).toContain("pinnedAt?: string | null");
+    expect(dashboard).toContain('{ pinned: !module.pinnedAt }');
+    expect(dashboard).toContain('aria-pressed={Boolean(module.pinnedAt)}');
+    expect(dashboard).toContain('module.pinnedAt ? `Unpin ${module.code}` : `Pin ${module.code}`');
   });
 
   it("retires visible note tags while preserving Study note content and modules", () => {

@@ -396,7 +396,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   }, []);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
-      const typing = ["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement).tagName);
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const typing = Boolean(target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable || target.closest("[contenteditable='true']")));
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setPaletteOpen(true); }
       else if (!typing && event.key === "/") { event.preventDefault(); setPaletteOpen(true); }
       else if (!typing && event.key.toLowerCase() === "n") { event.preventDefault(); setCaptureOpen(true); }
@@ -779,7 +780,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
           <div className="tw-crumb"><span>{data.workspace.kind === "GROUP" ? data.workspace.name : "Personal"}</span><ChevronRight size={12} /><b>{navItems.find((entry) => entry.id === activeView)?.label ?? "Library"}</b></div>
           <div className="tw-top-actions">
             {isDemo && <span className="tw-demo-pill">Demo · changes stay here</span>}
-            <button className="tw-search-button" onClick={() => setPaletteOpen(true)}><Search size={16} /><span>Find anything</span><kbd>⌘ K</kbd></button>
+            <button className="tw-search-button" aria-label="Find anything" onClick={() => setPaletteOpen(true)}><Search size={16} /><span>Find anything</span><kbd>⌘ K</kbd></button>
             <button className="tw-icon-button" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button>
             <button className="tw-icon-button tw-avatar" onClick={() => navigate(profileView)} aria-label={data.workspace.kind === "GROUP" ? "Open group profile" : "Open settings"}>{data.workspace.name[0]}</button>
           </div>

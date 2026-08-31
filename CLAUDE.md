@@ -5,6 +5,13 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-31 (Codex, release in progress):** Removed the remaining rich-note typing friction by
+  coalescing Markdown conversion and making dashboard shortcuts contenteditable-aware; restored visible
+  ordered/unordered markers and added a continuous browser typing regression. Study/Personal filing is
+  now one aligned active modal layer, import/conflict feedback is code-driven, mobile search names are
+  stable, and page-hide makes a best-effort draft handoff. Study modules can be pinned, while timetable
+  dates and the optional leave-reminder row align and empty optional values no longer trigger raw errors.
+
 - **2026-08-31 (Codex, deployed):** Fixed the fatal Study timetable scroll lock after deleting
   any occurrence scope. The deletion confirmation now replaces, rather than stacks over, block details;
   timetable overlays share a reference-counted body lock that restores the original overflow after the
@@ -188,6 +195,11 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-31 (Codex, release in progress):** Fixed the actual `n`-key Quick Capture focus theft,
+  bounded Markdown synchronization, restored list markers, aligned/isolated note filing, added persistent
+  Study module pins, and corrected optional timetable layout/payload/error handling. Updated design and
+  developer documentation; complete gates and paired backend-first release remain.
 
 - **2026-08-31 (Codex, deployed):** Diagnosed Study block deletion as two sibling modal effects
   independently saving and restoring `body.style.overflow`. Replaced the underlying details layer during

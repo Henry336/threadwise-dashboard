@@ -70,6 +70,13 @@ Browser → same-origin Next.js BFF → 60-second EdDSA JWT → Render dashboard
   stay within `study-mermaid.ts` budgets and pass the browser parser contract before release.
 - Personal Today ordering is a private projection. It must not mutate Group/Study source ordering,
   deadlines, reminders, or provider priority.
+- Study module pinning is canonical `StudyModule.pinnedAt` state. Pinned active modules sort before
+  unpinned modules, then retain the existing display-order/code ordering; pinning does not alter Canvas
+  activation or archival state.
+- Rich-note transactions schedule Markdown conversion after a 140 ms quiet window with a 900 ms upper
+  bound. Filing, explicit close, and page-hide handoff call the registered flush first; do not restore
+  per-transaction parent serialization. Global shortcuts must treat any `contenteditable` descendant as
+  a typing surface.
 
 ## Local setup
 
@@ -113,15 +120,17 @@ Run build and browser tests sequentially on Windows because both write shared `.
 artifacts. A release also requires the paired backend tests and schema/API compatibility checks.
 
 The browser suite intentionally skips the command-palette focus test on mobile where the control is
-not exposed. Add a synthetic authenticated Study fixture before treating rich-note behavior as fully
-covered; the current rich-note regression test is primarily structural.
+not exposed. Personal demo coverage now types continuously through numbered-list conversion, checks
+computed markers and focus retention, and verifies filing focus isolation. Add a synthetic authenticated
+Study fixture before treating the owner-gated Study lifecycle as fully covered.
 
 ## Current hotspots
 
 - `src/components/dashboard-app.tsx` combines shell orchestration and many Personal/Group views.
 - `src/components/study-dashboard.tsx` combines the Study shell and most feature views/forms.
 - Several older forms still use native `select` while newer surfaces use branded pickers.
-- The rich editor serializes full Markdown on every update and needs behavioral focus/recovery tests.
+- Rich-note serialization is bounded and the Personal flow has behavioral focus/list/filing coverage;
+  representative 10k/50k/100k profiling and authenticated Study recovery/conflict coverage remain.
 - CSP is report-only because current dynamic style attributes violate the intended enforced policy.
 
 Extract by feature responsibility behind characterization tests. Do not combine a broad visual

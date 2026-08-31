@@ -86,3 +86,27 @@ test("Personal notes open as a large rich editor and align checklist controls wi
     expect((await download).suggestedFilename()).toMatch(/\.md$/u);
   }
 });
+
+test("rich notes keep typing focus, show list markers, and isolate the filing dialog", async ({ page }) => {
+  await page.goto("/dashboard?demo=1", { waitUntil: "load" });
+  await page.getByRole("button", { name: "Write note" }).click();
+
+  const editorDialog = page.getByRole("dialog", { name: "Untitled note" });
+  const document = editorDialog.locator('[contenteditable="true"][aria-label="Personal note"]');
+  await document.click();
+  await document.pressSequentially("1. First visible item");
+  await expect(document.locator("ol > li")).toContainText("First visible item");
+  await expect.poll(() => document.locator("ol").evaluate((element) => getComputedStyle(element).listStyleType)).toBe("decimal");
+
+  await document.press("Enter");
+  await document.pressSequentially("Second item typed without refocusing");
+  await expect(document.locator("ol > li")).toHaveCount(2);
+  await expect(document).toBeFocused();
+  await expect(page.getByRole("dialog", { name: "Quick capture" })).toHaveCount(0);
+
+  await editorDialog.getByRole("button", { name: "Save", exact: true }).click();
+  const filingDialog = page.getByRole("dialog", { name: "Give this note a home." });
+  await expect(filingDialog).toBeVisible();
+  await expect(page.locator(".study-note-fullscreen > main")).toHaveAttribute("inert", "");
+  await expect(filingDialog.getByRole("textbox", { name: "Title" })).toBeFocused();
+});

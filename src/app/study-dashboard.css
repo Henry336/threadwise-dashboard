@@ -417,6 +417,9 @@
 .study-module-actions { display: flex; align-items: center; gap: 2px; }
 .study-module-actions button { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 9px; background: transparent; }
 .study-module-actions button:hover { background: var(--surface-soft); }
+.study-module-actions .study-module-pin { color: var(--faint); }
+.study-module-actions .study-module-pin[aria-pressed="true"] { background: color-mix(in srgb, var(--module-color) 11%, transparent); color: var(--module-color); }
+.study-module-grid > article.is-pinned { border-color: color-mix(in srgb, var(--module-color) 35%, var(--line-strong)); }
 .study-module-actions .study-module-archive,
 .study-archive-action,
 .study-danger-quiet { color: var(--danger); }
@@ -720,7 +723,12 @@
 .study-rich-document h2 { padding-bottom: .22em; border-bottom: 1px solid var(--line); font-size: 30px; }
 .study-rich-document h3 { font-size: 24px; }
 .study-rich-document ul,
-.study-rich-document ol { padding-left: 1.45em; }
+.study-rich-document ol { margin-block: .8em; padding-left: 1.7em; }
+.study-rich-document ul:not([data-type="taskList"]) { list-style-type: disc; }
+.study-rich-document ol { list-style-type: decimal; }
+.study-rich-document ul:not([data-type="taskList"]) ul { list-style-type: circle; }
+.study-rich-document ol ol { list-style-type: lower-alpha; }
+.study-rich-document li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
 .study-rich-document ul[data-type="taskList"] { padding-left: 0; list-style: none; }
 .study-rich-document ul[data-type="taskList"] li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; }
 .study-rich-document ul[data-type="taskList"] li > label { min-height: 1.72em; display: flex; align-items: center; }
@@ -832,12 +840,15 @@
 .study-mermaid-help-footnote { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .study-mermaid-help-footnote b { color: var(--ink); }
 .study-note-filing-scrim { position: absolute; z-index: 230; inset: 0; padding: 18px; display: grid; place-items: center; background: color-mix(in srgb, #081211 68%, transparent); }
-.study-note-filing { width: min(560px, 100%); padding: 22px; display: grid; gap: 15px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface-strong); box-shadow: 0 26px 80px rgb(0 0 0 / 32%); }
+.study-note-filing { width: min(560px, 100%); padding: 24px; display: grid; gap: 18px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface-strong); box-shadow: 0 26px 80px rgb(0 0 0 / 32%); }
 .study-note-filing > header { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
 .study-note-filing > header span { color: var(--study-blue); font-size: 9px; font-weight: 820; letter-spacing: .09em; text-transform: uppercase; }
 .study-note-filing > header h3 { margin: 4px 0 0; font-family: var(--serif); font-size: 29px; font-weight: 460; letter-spacing: -.03em; }
 .study-note-filing > header button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 9px; background: var(--surface-soft); }
-.study-note-filing > label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 720; }
+.study-note-filing > label { min-width: 0; margin: 2px 0 0; display: grid; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 720; }
+.study-note-filing > label > input { width: 100%; min-width: 0; min-height: 54px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 9px; outline: 0; background: var(--surface-strong); color: var(--ink); font: inherit; font-size: 13px; font-weight: 620; }
+.study-note-filing > label > input:focus { border-color: var(--study-blue); box-shadow: 0 0 0 3px var(--study-blue-soft); }
+.study-note-filing > .study-choice-field { gap: 8px; }
 .study-note-filing > p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .study-note-filing > footer { display: flex; justify-content: flex-end; gap: 8px; }
 
@@ -1883,8 +1894,11 @@
 .study-timetable-dialog footer { grid-column: 1 / -1; }
 .study-timetable-weeks { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 9px; }
 .study-timetable-weeks > span { padding-bottom: 14px; color: var(--faint); font-size: 11px; }
-.study-timetable-travel { padding: 15px; display: grid; grid-template-columns: 1.3fr 1fr .65fr; gap: 12px; border: 1px solid color-mix(in srgb, var(--study-blue) 25%, var(--line)); background: var(--study-blue-soft); }
+.study-timetable-travel { padding: 15px 0 0; display: grid; grid-template-columns: 1.3fr 1fr .65fr; gap: 12px; border: 0; border-top: 1px solid color-mix(in srgb, var(--study-blue) 25%, var(--line)); background: transparent; }
 .study-timetable-travel > span { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; color: var(--study-blue); font-size: 11px; font-weight: 800; }
+.study-timetable-travel > span small { margin-left: 2px; color: var(--faint); font-size: 9px; font-weight: 650; }
+.study-timetable-travel .study-place-combobox > input,
+.study-timetable-travel > label input { min-height: 52px; }
 .study-timetable-dialog footer { padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .study-timetable-dialog footer > div { display: flex; gap: 8px; }
 .study-timetable-detail-body { padding: 26px 24px; }

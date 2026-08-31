@@ -64,6 +64,7 @@ describe("Study timetable day bounds", () => {
     };
     expect(timetableBlockPayload(draft, false)).not.toHaveProperty("destinationPlaceId");
     expect(timetableBlockPayload(draft, false)).not.toHaveProperty("destination");
+    expect(timetableBlockPayload({ ...draft, blockType: "class" }, false)).not.toHaveProperty("customTypeLabel");
     expect(timetableBlockPayload(draft, false)).toMatchObject({
       customTypeLabel: "Competition",
       recurrenceStartDate: "2026-08-16",

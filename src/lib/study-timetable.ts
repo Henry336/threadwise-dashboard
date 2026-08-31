@@ -76,7 +76,6 @@ export function timetableBlockPayload(draft: TimetableBlockDraft, editing: boole
     endTime: draft.endTime,
     label: draft.label,
     blockType: draft.blockType,
-    customTypeLabel: draft.blockType === "other" ? draft.customTypeLabel.trim() : null,
     recurrenceStartDate: draft.recurrenceStartDate,
     recurrenceEndDate: draft.recurrenceMode === "once" ? draft.recurrenceStartDate : draft.recurrenceEndDate || null,
     startWeek: null,
@@ -84,6 +83,8 @@ export function timetableBlockPayload(draft: TimetableBlockDraft, editing: boole
     defaultOriginId: draft.defaultOriginId || null,
     travelBufferMinutes: draft.travelBufferMinutes,
   };
+  if (draft.blockType === "other") payload.customTypeLabel = draft.customTypeLabel.trim();
+  else if (editing) payload.customTypeLabel = null;
   if (destination) payload.destination = destination;
   else if (editing) payload.destination = null;
   if (draft.destinationPlaceId) payload.destinationPlaceId = draft.destinationPlaceId;

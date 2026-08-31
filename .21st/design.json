@@ -45,7 +45,8 @@
       "bounded personal Overview quote manager with explicit add, remove, and save actions",
       "private Personal Today ordering with empty completion controls and dedicated drag handles",
       "full-screen Study writing with inline rich Markdown, selection-safe autosave, and searchable Mermaid/UML guidance",
-      "single-active-modal destructive flows with reference-counted body scroll locking"
+      "single-active-modal destructive flows with reference-counted body scroll locking",
+      "pinned Study modules ordered ahead of the existing stable module order"
     ]
   },
   "constraints": {
@@ -145,6 +146,11 @@
       "date": "2026-08-31",
       "decision": "Replace timetable block details with the destructive confirmation instead of stacking two exposed modals, and share body scroll locking across overlapping timetable overlays.",
       "reason": "Independent modal cleanup can restore another overlay's hidden overflow value and permanently disable page scrolling. One active focus layer plus reference-counted restoration is accessible and remains correct regardless of React cleanup order."
+    },
+    {
+      "date": "2026-08-31",
+      "decision": "Keep rich-note typing local and selection-stable, use one aligned active filing layer, and let learners pin Study modules without changing their academic state.",
+      "reason": "Bounded Markdown synchronization and contenteditable-aware shortcuts remove writing friction; one focused filing rhythm prevents obscured controls; nullable pin state improves scan order without conflating preference with Canvas activation or archival."
     }
   ],
   "evidence": [
@@ -152,5 +158,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-31T15:43:00.000+08:00"
+  "generatedAt": "2026-08-31T17:10:00.000+08:00"
 }

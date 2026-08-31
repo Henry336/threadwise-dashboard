@@ -92,3 +92,12 @@ or move the learner's selection.
 Task-list controls align to the first content line through the actual Tiptap `label + content` structure.
 Do not imitate that alignment with a screenshot-specific top margin: nested and wrapped checklist items
 must retain the same relationship at laptop and phone widths.
+
+Rich-note typing remains local and selection-stable: global shortcuts ignore all `contenteditable`
+descendants, Markdown conversion is bounded rather than performed for every editor transaction, and
+filing/close boundaries explicitly flush pending content. The filing sheet is the only active modal
+layer while open and title/module fields share one aligned control rhythm.
+
+Pinned Study modules appear before unpinned modules while retaining the existing display-order/code
+order inside each group. Pinning is a view preference recorded on the module; it must not imply Canvas
+selection, activation, mastery, or archival state.

@@ -28,6 +28,7 @@ export type StudyModule = {
   name: string;
   active: boolean;
   displayOrder: number;
+  pinnedAt?: string | null;
   color?: string | null;
   workloadGroup?: string | null;
   currentMastery: StudyTrafficLight;

@@ -21,7 +21,7 @@ import {
   Bold, Braces, CheckSquare, CircleHelp, Code2, Heading2, Italic, Link as LinkIcon,
   List, ListOrdered, Network, Redo2, Table2, Underline as UnderlineIcon, Undo2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_INDENT, indentationRemovalWidth, selectedLineStarts } from "../lib/study-editor-indentation";
 import { shouldReplaceEditorDocument } from "../lib/study-editor-sync";
 import { safeMarkdownLink } from "../lib/study-markdown-security";
@@ -151,7 +151,18 @@ export const studyRichNoteExtensions = [
   StudyIndentation,
 ];
 
-export function StudyRichNoteBody({ value, onChange, onReady, ariaLabel = "Study note" }: { value: string; onChange: (markdown: string) => void; onReady?: () => void; ariaLabel?: string }) {
+type StudyRichNoteBodyProps = {
+  value: string;
+  onChange: (markdown: string) => void;
+  onReady?: () => void;
+  onFlushReady?: (flush: (() => string) | null) => void;
+  ariaLabel?: string;
+};
+
+const MARKDOWN_SYNC_DELAY_MS = 140;
+const MARKDOWN_SYNC_MAX_WAIT_MS = 900;
+
+export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, ariaLabel = "Study note" }: StudyRichNoteBodyProps) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState("");
   const [linkError, setLinkError] = useState("");
@@ -159,9 +170,41 @@ export function StudyRichNoteBody({ value, onChange, onReady, ariaLabel = "Study
   const onChangeRef = useRef(onChange);
   const onReadyRef = useRef(onReady);
   const lastLocallyEmittedMarkdownRef = useRef(value);
+  const pendingEditorRef = useRef<Editor | null>(null);
+  const quietSyncTimerRef = useRef<number | null>(null);
+  const maxSyncTimerRef = useRef<number | null>(null);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
+
+  const clearMarkdownSyncTimers = useCallback(() => {
+    if (quietSyncTimerRef.current !== null) window.clearTimeout(quietSyncTimerRef.current);
+    if (maxSyncTimerRef.current !== null) window.clearTimeout(maxSyncTimerRef.current);
+    quietSyncTimerRef.current = null;
+    maxSyncTimerRef.current = null;
+  }, []);
+
+  const flushMarkdown = useCallback(() => {
+    const current = pendingEditorRef.current;
+    clearMarkdownSyncTimers();
+    if (!current) return lastLocallyEmittedMarkdownRef.current;
+    pendingEditorRef.current = null;
+    const markdown = current.getMarkdown();
+    if (markdown !== lastLocallyEmittedMarkdownRef.current) {
+      lastLocallyEmittedMarkdownRef.current = markdown;
+      onChangeRef.current(markdown);
+    }
+    return markdown;
+  }, [clearMarkdownSyncTimers]);
+
+  const scheduleMarkdownSync = useCallback((current: Editor) => {
+    pendingEditorRef.current = current;
+    if (quietSyncTimerRef.current !== null) window.clearTimeout(quietSyncTimerRef.current);
+    quietSyncTimerRef.current = window.setTimeout(flushMarkdown, MARKDOWN_SYNC_DELAY_MS);
+    if (maxSyncTimerRef.current === null) {
+      maxSyncTimerRef.current = window.setTimeout(flushMarkdown, MARKDOWN_SYNC_MAX_WAIT_MS);
+    }
+  }, [flushMarkdown]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -176,12 +219,16 @@ export function StudyRichNoteBody({ value, onChange, onReady, ariaLabel = "Study
       },
     },
     onCreate: () => onReadyRef.current?.(),
-    onUpdate: ({ editor: current }) => {
-      const markdown = current.getMarkdown();
-      lastLocallyEmittedMarkdownRef.current = markdown;
-      onChangeRef.current(markdown);
-    },
+    onUpdate: ({ editor: current }) => scheduleMarkdownSync(current),
   }, [ariaLabel]);
+
+  useEffect(() => {
+    onFlushReady?.(flushMarkdown);
+    return () => {
+      onFlushReady?.(null);
+      clearMarkdownSyncTimers();
+    };
+  }, [clearMarkdownSyncTimers, flushMarkdown, onFlushReady]);
 
   useEffect(() => {
     if (!editor) return;
