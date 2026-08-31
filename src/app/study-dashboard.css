@@ -632,6 +632,10 @@
   color: var(--ink);
   box-shadow: 0 32px 110px rgb(0 0 0 / 34%);
 }
+.personal-note-fullscreen {
+  --study-blue: var(--accent);
+  --study-blue-soft: color-mix(in srgb, var(--accent) 11%, var(--surface));
+}
 .study-note-fullscreen-head {
   min-height: 72px;
   padding: 12px 14px 12px 22px;
@@ -719,7 +723,11 @@
 .study-rich-document ol { padding-left: 1.45em; }
 .study-rich-document ul[data-type="taskList"] { padding-left: 0; list-style: none; }
 .study-rich-document ul[data-type="taskList"] li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; }
-.study-rich-document ul[data-type="taskList"] input { width: 16px; min-height: 16px; margin-top: 6px; accent-color: var(--study-blue); }
+.study-rich-document ul[data-type="taskList"] li > label { min-height: 1.72em; display: flex; align-items: center; }
+.study-rich-document ul[data-type="taskList"] li > label input { width: 16px; min-height: 16px; margin: 0; accent-color: var(--study-blue); }
+.study-rich-document ul[data-type="taskList"] li > div { min-width: 0; }
+.study-rich-document ul[data-type="taskList"] li > div > p:first-child { margin-top: 0; }
+.study-rich-document ul[data-type="taskList"] li > div > p:last-child { margin-bottom: 0; }
 .study-rich-document blockquote { margin-left: 0; padding-left: 18px; border-left: 3px solid var(--study-blue); color: var(--muted); }
 .study-rich-document a { color: var(--study-blue); text-decoration: underline; text-underline-offset: 3px; }
 .study-rich-document code { padding: .15em .36em; border-radius: 4px; background: var(--surface-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; }

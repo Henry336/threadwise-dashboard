@@ -151,7 +151,7 @@ export const studyRichNoteExtensions = [
   StudyIndentation,
 ];
 
-export function StudyRichNoteBody({ value, onChange, onReady }: { value: string; onChange: (markdown: string) => void; onReady?: () => void }) {
+export function StudyRichNoteBody({ value, onChange, onReady, ariaLabel = "Study note" }: { value: string; onChange: (markdown: string) => void; onReady?: () => void; ariaLabel?: string }) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState("");
   const [linkError, setLinkError] = useState("");
@@ -171,7 +171,7 @@ export function StudyRichNoteBody({ value, onChange, onReady }: { value: string;
     editorProps: {
       attributes: {
         class: "study-rich-document",
-        "aria-label": "Study note",
+        "aria-label": ariaLabel,
         spellcheck: "true",
       },
     },
@@ -181,7 +181,7 @@ export function StudyRichNoteBody({ value, onChange, onReady }: { value: string;
       lastLocallyEmittedMarkdownRef.current = markdown;
       onChangeRef.current(markdown);
     },
-  });
+  }, [ariaLabel]);
 
   useEffect(() => {
     if (!editor) return;

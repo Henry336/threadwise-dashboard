@@ -83,11 +83,11 @@ export function parseMarkdownFile(fileName: string, source: string): MarkdownFil
   };
 }
 
-export function buildMarkdownExport(input: { title: string; body: string; moduleCode: string; publicId?: string }): string {
+export function buildMarkdownExport(input: { title: string; body: string; moduleCode?: string; publicId?: string }): string {
   const metadata = [
     "---",
     `title: ${quoteYaml(input.title)}`,
-    `module: ${quoteYaml(input.moduleCode)}`,
+    ...(input.moduleCode ? [`module: ${quoteYaml(input.moduleCode)}`] : []),
     ...(input.publicId ? [`threadwise_id: ${quoteYaml(input.publicId)}`] : []),
     "---",
     "",

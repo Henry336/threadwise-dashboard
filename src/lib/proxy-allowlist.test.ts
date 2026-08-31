@@ -21,6 +21,9 @@ describe("dashboard BFF allowlist", () => {
     ["GET", "study/note-drafts"],
     ["PATCH", "study/note-drafts"],
     ["DELETE", "study/note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
+    ["GET", "note-drafts"],
+    ["PATCH", "note-drafts"],
+    ["DELETE", "note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
   ])("allows the reviewed %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);
@@ -41,6 +44,9 @@ describe("dashboard BFF allowlist", () => {
     ["POST", "study/note-drafts"],
     ["GET", "study/note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
     ["DELETE", "study/note-drafts/not-a-uuid"],
+    ["POST", "note-drafts"],
+    ["GET", "note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
+    ["DELETE", "note-drafts/not-a-uuid"],
   ])("rejects the forged %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);
   });

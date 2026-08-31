@@ -16,6 +16,7 @@ import type {
   DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, IdeaBrief,
   IdeaStatus, IntegrationStatus,
 } from "@/lib/types";
+import { buildMarkdownExport, markdownExcerpt, safeMarkdownFileName } from "@/lib/study-markdown";
 
 type Pagination = { page: number; hasMore: boolean; loading: boolean };
 export type IdeaBriefDialogState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
@@ -35,6 +36,16 @@ function formatDate(value: string, timezone: string, options: Intl.DateTimeForma
 
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-SG", { style: "currency", currency }).format(value);
+}
+
+function downloadPersonalNote(note: DashboardNote): void {
+  const source = buildMarkdownExport({ title: note.title, body: note.body || note.summary, publicId: note.publicId });
+  const url = URL.createObjectURL(new Blob([source], { type: "text/markdown;charset=utf-8" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = safeMarkdownFileName(note.title);
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function imageSrc(image: DashboardImage, isDemo: boolean, index = 0) {
@@ -89,6 +100,7 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
   };
   const menuActions = (note: DashboardNote): ActionMenuAction[] => [
     { label: "Edit note", icon: <Pencil size={16} />, onSelect: () => onEdit(note) },
+    { label: "Export .md", icon: <Download size={16} />, onSelect: () => downloadPersonalNote(note) },
     { label: note.pinned ? "Unpin note" : "Pin to top", icon: <Pin size={16} />, onSelect: () => onPin(note) },
     { label: "Select note", icon: <CheckSquare2 size={16} />, onSelect: () => { setSelecting(true); setSelected((current) => new Set(current).add(note.id)); } },
     { label: "separator", icon: null, onSelect: () => undefined },
@@ -111,7 +123,7 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
       >
         <header><span><FileText size={15} /> Note</span><div>{note.pinned && <em><Pin size={13} /> Pinned</em>}<button onClick={(event) => cardMenu.open(event, note)} aria-label={`Actions for ${note.title}`}><MoreHorizontal size={19} /></button></div></header>
         {selecting && <button className="tw-phase-note-select" onClick={() => toggleSelect(note.id)} aria-label={`${selected.has(note.id) ? "Deselect" : "Select"} ${note.title}`}>{selected.has(note.id) ? <Check size={16} /> : null}</button>}
-        <button className="tw-phase-card-copy" onClick={() => selecting ? toggleSelect(note.id) : onEdit(note)}><h3>{note.title}</h3><p>{note.body || note.summary}</p></button>
+        <button className="tw-phase-card-copy" onClick={() => selecting ? toggleSelect(note.id) : onEdit(note)}><h3>{note.title}</h3><p>{markdownExcerpt(note.body || note.summary)}</p></button>
         <footer><time>{formatDate(note.updatedAt ?? note.createdAt, timezone, { year: "numeric" })}</time><div><button onClick={() => onPin(note)} aria-label={note.pinned ? "Unpin note" : "Pin note"}><Pin size={16} /></button><button onClick={() => onEdit(note)}>Edit <ArrowRight size={15} /></button></div></footer>
       </article>)}
     </div>

@@ -58,9 +58,12 @@ Browser → same-origin Next.js BFF → 60-second EdDSA JWT → Render dashboard
 - PostgreSQL is canonical. Optimistic browser state must reconcile from the backend.
 - `localStorage` is for bounded presentation preferences or explicitly documented expiring drafts,
   not canonical private records.
-- Study rich-note scratch text lives in encrypted backend `StudyNoteDraft` rows, not local storage.
+- Study rich-note scratch text lives in encrypted backend `StudyNoteDraft` rows; Personal scratch text
+  lives in separately owner-scoped `PersonalNoteDraft` rows. Neither uses local storage or search indexes.
 - A filed Study note is a canonical `StudyResource`; Telegram, Library, search, backlinks, revisions,
   sessions, and analysis share it.
+- A filed Personal note remains the existing canonical `Note`; the rich editor does not create a second
+  document collection. Group note editing has not adopted the rich-draft flow yet.
 - `study-rich-note-body.tsx` owns Tiptap integration; `study-editor-sync.ts` distinguishes local updates
   from external replacements; `study-editor-indentation.ts` keeps Tab behavior independently testable;
   `study-mermaid-templates.ts` is the reviewed local syntax/template catalog. New diagram kinds must

@@ -65,7 +65,7 @@ In Personal Today, an unfinished task uses an empty circular completion control.
 
 Manual priority ordering is a private daily overlay across Personal tasks, assigned Group work, and Study items. It must never rewrite ordering in the source Group or Study workspace. Use a dedicated drag handle so task completion and page scrolling remain unambiguous, retain five-item paging, and expose compact Move to top/up/down actions for keyboard and cross-page movement. Group and Study Today keep deterministic source ordering until this Personal pilot is validated.
 
-## Decision: Study-first full-screen note writing
+## Decision: full-screen note writing, Study then Personal
 
 Expose one **Write note** action on Study Overview and give the document almost the whole viewport on
 desktop and the complete viewport on phones. Render formatting inline over a portable Markdown source;
@@ -73,10 +73,18 @@ do not make the learner switch between source and preview. Keep the toolbar comp
 scrollable, communicate encrypted cross-device autosave in one quiet status line, and ask for only title
 and module in the final filing sheet. A Mermaid canvas opens its source when selected and provides an
 explicit **Continue writing below** exit. Do not expose tags, raw HTML, plugin chrome, or a second note
-store. Personal and Group editors remain unchanged until the Study rollout is checked live.
+store. The checked Study interaction is now reused in Personal mode with Personal accent tokens, one
+title-only filing decision, and the existing canonical Personal `Note` record. Personal Today exposes
+one **Write note** action. Personal scratch drafts receive the same encrypted cross-device autosave,
+expiry, and optimistic conflict behavior through a separately owner-scoped backend table. Group notes
+remain unchanged until they receive a separate collaboration/ownership design.
 
 Diagram help is one searchable side panel inside the writing space, not another modal. It combines a
 compact quick reference with insertable examples, including Mermaid-native UML class, sequence, and
 state diagrams. Tab/Shift+Tab nests list items and edits selected diagram/code indentation; normal prose
 retains native focus traversal. Parent autosave renders must not replace locally emitted editor content
 or move the learner's selection.
+
+Task-list controls align to the first content line through the actual Tiptap `label + content` structure.
+Do not imitate that alignment with a screenshot-specific top margin: nested and wrapped checklist items
+must retain the same relationship at laptop and phone widths.

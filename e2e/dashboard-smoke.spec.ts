@@ -53,3 +53,36 @@ test("private briefing controls are accessible and responsive in Personal settin
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+test("Personal notes open as a large rich editor and align checklist controls with their text", async ({ page }, testInfo) => {
+  await page.goto("/dashboard?demo=1", { waitUntil: "load" });
+  await page.getByRole("button", { name: "Write note" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Untitled note" });
+  await expect(dialog).toBeVisible();
+  const document = dialog.locator('[contenteditable="true"][aria-label="Personal note"]');
+  await expect(document).toBeVisible();
+  await dialog.getByRole("button", { name: "Checklist" }).click();
+  await document.pressSequentially("Write the reflection");
+
+  const checkbox = document.locator('input[type="checkbox"]');
+  const taskText = document.locator('li > div > p').first();
+  await expect(checkbox).toBeVisible();
+  const [checkboxBox, textBox] = await Promise.all([checkbox.boundingBox(), taskText.boundingBox()]);
+  expect(checkboxBox).not.toBeNull();
+  expect(textBox).not.toBeNull();
+  expect(Math.abs((checkboxBox!.y + checkboxBox!.height / 2) - (textBox!.y + textBox!.height / 2))).toBeLessThanOrEqual(3);
+
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Give this note a home." })).toBeVisible();
+  await page.getByRole("button", { name: "Save note", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+
+  if (!testInfo.project.name.startsWith("mobile")) {
+    await page.goto("/dashboard?demo=1&view=notes", { waitUntil: "load" });
+    await page.getByRole("button", { name: /Actions for/u }).first().click();
+    const download = page.waitForEvent("download");
+    await page.getByRole("menuitem", { name: "Export .md" }).click();
+    expect((await download).suggestedFilename()).toMatch(/\.md$/u);
+  }
+});

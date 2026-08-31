@@ -164,8 +164,27 @@ describe("Study UI regressions", () => {
     expect(body).not.toContain("Preview");
     expect(css).toContain(".study-note-fullscreen");
     expect(css).toContain(".study-mermaid-help");
+    expect(css).toContain('.study-rich-document ul[data-type="taskList"] li > label { min-height: 1.72em; display: flex; align-items: center; }');
+    expect(css).toContain('.study-rich-document ul[data-type="taskList"] li > div > p:first-child { margin-top: 0; }');
     expect(css).toContain("height: calc(100dvh - 32px)");
     expect(css).toContain("@media (max-width: 700px)");
+  });
+
+  it("rolls the same secure rich writing space into Personal notes without module filing", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const editor = readFileSync(join(process.cwd(), "src", "components", "personal-note-editor.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(dashboard).toContain("<PersonalNoteEditor");
+    expect(dashboard).toContain('(activeView === "today" && data.workspace.kind === "PERSONAL")');
+    expect(dashboard).toContain('view === "today" ? "Write note"');
+    expect(editor).toContain('personalNoteApi<{ draft: RemoteDraft | null }>(`note-drafts${query}`)');
+    expect(editor).toContain('personalNoteApi<{ draft: RemoteDraft }>("note-drafts", "PATCH"');
+    expect(editor).toContain('ariaLabel="Personal note"');
+    expect(editor).toContain("full-text search, Telegram, and your other signed-in devices");
+    expect(editor).not.toContain("StudyChoicePicker");
+    expect(editor).not.toContain("Tags");
+    expect(css).toContain(".personal-note-fullscreen");
   });
 
   it("retires visible note tags while preserving Study note content and modules", () => {

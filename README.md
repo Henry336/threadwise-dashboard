@@ -35,6 +35,9 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
   Mermaid/UML syntax help and templates, Tab-indented lists/diagram source, selection-safe encrypted
   cross-device draft recovery, `[[wiki links]]` and backlinks, bounded history, and portable `.md`
   import/export
+- Personal notes reuse the same full-screen WYSIWYG Markdown/Mermaid/UML writing surface, `.md`
+  import/export, and encrypted cross-device draft recovery, with one title-only filing decision and
+  no artificial module or tag choice; Group note editing remains unchanged pending a shared-ownership design
 - A sender/admin-controlled review sheet for group `TODO:` and `ACTION ITEMS:` batches, with editable tasks, dates, assignees, team owners, status, inclusion, and safe retry
 - A chronological "threadline" for today and overdue work
 - Real user-scoped creation, editing, completion, conversion, deletion, pagination, and settings updates

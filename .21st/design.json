@@ -134,6 +134,11 @@
       "date": "2026-08-31",
       "decision": "Keep Mermaid and UML help in one searchable editor-side guide, and reserve Tab indentation for portable list and code-block structures.",
       "reason": "Insertable examples make diagram syntax discoverable without another modal or remote rendering service. Mermaid-native UML preserves the existing security boundary, while ordinary-paragraph Tab traversal avoids a keyboard trap and Markdown-only indentation that cannot round-trip reliably."
+    },
+    {
+      "date": "2026-08-31",
+      "decision": "Reuse the validated full-screen rich editor in Personal mode with Personal styling, title-only filing, and owner-scoped encrypted drafts; keep Group unchanged.",
+      "reason": "Personal notes need the same uninterrupted writing, direct formatting, diagrams, portability, and cross-device recovery without inventing a module choice. A separate Personal draft scope preserves ownership and conflict guarantees, while deferring Group avoids guessing at shared-note permissions."
     }
   ],
   "evidence": [
@@ -141,5 +146,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-31T11:10:00.000+08:00"
+  "generatedAt": "2026-08-31T13:10:00.000+08:00"
 }

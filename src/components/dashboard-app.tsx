@@ -49,6 +49,7 @@ import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
 import { ConfirmationProvider, useConfirmation } from "./confirmation-dialog";
 import { TodayPlanner } from "./today-planner";
 import { StudyTimePicker } from "./study-choice-picker";
+import { PersonalNoteEditor } from "./personal-note-editor";
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
@@ -785,7 +786,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         </header>
 
         <div className="tw-content" key={activeView}>
-          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} overviewQuotes={data.settings.overviewQuotes} onAdd={() => setEditor({ kind: activeView === "notes" ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
+          {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} overviewQuotes={data.settings.overviewQuotes} onAdd={() => setEditor({ kind: activeView === "notes" || (activeView === "today" && data.workspace.kind === "PERSONAL") ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
           {activeView === "today" && (data.workspace.kind === "GROUP"
             ? <><TodayPlanner disabled={isDemo} onChanged={() => void refreshSnapshot()} /><GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} /></>
             : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
@@ -820,7 +821,9 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         <button className={moreOpen ? "active" : ""} onClick={() => setMoreOpen(true)}><Menu size={20} /><span>More</span></button>
       </nav>
 
-      {editor && <EntityEditor state={editor} busy={busy} currency={data.settings.expenseCurrency} timezone={data.user.timezone} onClose={() => setEditor(null)} onSave={saveEntity} onDelete={removeEntity} onConvert={convertIdea} />}
+      {editor && editor.kind === "note" && data.workspace.kind === "PERSONAL"
+        ? <PersonalNoteEditor value={editor.item as DashboardNote | undefined} seed={editor.seed} busy={busy} isDemo={isDemo} onClose={() => setEditor(null)} onSave={(values, item) => saveEntity("note", values, item)} />
+        : editor && <EntityEditor state={editor} busy={busy} currency={data.settings.expenseCurrency} timezone={data.user.timezone} onClose={() => setEditor(null)} onSave={saveEntity} onDelete={removeEntity} onConvert={convertIdea} />}
       {captureOpen && <CaptureComposer isDemo={isDemo} timezone={data.user.timezone} currency={data.settings.expenseCurrency} allowExpenses={false} groupName={data.workspace.kind === "GROUP" ? data.workspace.name : undefined} onClose={() => setCaptureOpen(false)} onSave={saveEntity} announce={announce} />}
       {paletteOpen && <CommandPalette data={data} items={navItems} onClose={() => setPaletteOpen(false)} onNavigate={(view) => { navigate(view); setPaletteOpen(false); }} />}
       {moreOpen && <MobileMore activeView={activeView} items={navItems} onClose={() => setMoreOpen(false)} onNavigate={navigate} />}
@@ -973,8 +976,8 @@ function PageHeading({ view, workspace, name, timezone, generatedAt, overviewQuo
     expenses: ["Expenses", ""], search: ["Search tasks, notes, ideas, and images", ""],
     settings: workspace.kind === "GROUP" ? ["Manage group", ""] : ["Settings", ""],
   };
-  const canAdd = ["tasks", "notes", "ideas"].includes(view);
-  const addLabel = `Add ${view.slice(0, -1)}`;
+  const canAdd = ["tasks", "notes", "ideas"].includes(view) || (view === "today" && workspace.kind === "PERSONAL");
+  const addLabel = view === "today" ? "Write note" : `Add ${view.slice(0, -1)}`;
   const keepMobileLabel = workspace.kind === "GROUP" && view === "tasks";
   return <div className={`tw-heading ${view === "search" ? "tw-heading-search" : ""}`}><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(now)}</p><h1>{copy[view][0]}</h1>{copy[view][1] && <span>{copy[view][1]}</span>}</div>{canAdd && <button className={`tw-primary tw-heading-add${keepMobileLabel ? " tw-heading-add-explicit" : ""}`} aria-label={addLabel} onClick={onAdd}><Plus size={17} /> {addLabel}</button>}</div>;
 }

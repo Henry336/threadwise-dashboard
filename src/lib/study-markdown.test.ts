@@ -24,6 +24,9 @@ describe("Study Markdown utilities", () => {
     expect(exported).toContain('threadwise_id: "SNOTE-1"');
     expect(exported).not.toContain("tags:");
     expect(exported).toContain("# Body\nText\n");
+    const personal = buildMarkdownExport({ title: "Personal note", body: "Body", publicId: "NOTE-1" });
+    expect(personal).not.toContain("module:");
+    expect(personal).toContain('threadwise_id: "NOTE-1"');
     expect(safeMarkdownFileName('Cache: "notes"')).toBe("Cache notes.md");
   });
 });

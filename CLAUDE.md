@@ -5,6 +5,13 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-08-31 (Codex, release pending):** Corrected rich-editor checklist alignment against Tiptap's
+  real label/content structure and extended the validated writing flow to Personal mode: Today-level
+  `Write note`, Personal-themed full-screen WYSIWYG Markdown/Mermaid/UML, title-only filing, `.md`
+  portability, and encrypted owner-scoped cross-device drafts with expiry and optimistic conflicts.
+  Group remains intentionally unchanged. Targeted unit/security checks, typecheck, lint, optimized build,
+  and desktop/mobile behavioral geometry tests pass; final full gates and coordinated release are pending.
+
 - **2026-08-31 (Codex, deployed):** Hardened the Study rich editor against selection loss by
   separating locally emitted Markdown from genuine external replacements. Added Tab/Shift+Tab nesting
   for lists and indentation for Mermaid/code lines, plus a searchable responsive Mermaid/UML guide with
