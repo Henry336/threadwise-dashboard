@@ -94,6 +94,11 @@ Study Mode is discoverable only when the signed Telegram principal is the config
 
 The Study shell exposes Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings. Timetable builds scrollable 00:00–24:00 week/day views from recurring class or study blocks plus planned work, renders assignment deadlines in a distinct lane, and supports module-week ranges and optional class-travel configuration. It positions the initial viewport near the current or earliest relevant block and clamps current-time markers inside a dedicated rail. Travel origins are managed in Settings and class blocks may store a destination, normal origin, and travel buffer. All surfaces mutate the same PostgreSQL records used by Telegram; server-sent events request reconciliation rather than maintaining a second browser-owned copy.
 
+The shell's composition boundary is explicit: `study-dashboard.tsx` owns navigation, synchronization,
+canonical snapshot orchestration, and feature selection; `study-deep-work.tsx` owns session building,
+history/editing, and evidence-backed module analysis; `study-dialog.tsx` owns the shared focus trap,
+dirty-close confirmation, scroll lock, and focus restoration used by Study editors.
+
 Timetable can also import a canonical NUSMods semester share link through the same-origin Study proxy. The browser submits only the URL; the protected backend parses the selected lesson types and class numbers, retrieves the public module data, and owns source-scoped reconciliation. The dashboard does not duplicate NUSMods parsing or receive provider credentials. Imported blocks then appear through the normal snapshot and realtime reconciliation path alongside untouched manual blocks.
 
 Destination search crosses the trust boundary through the same protected BFF, using `GET /api/threadwise/study/places`. The backend owns aliases, canonical ids, coordinates, type, ambiguity, and nearby-stop ranking; the dashboard owns only the debounced accessible combobox state. Stale browser requests are aborted. Selecting a suggestion stores its canonical id with the schedule block. Unresolved labels remain visible for editing but are not treated as routable and therefore cannot enable a proactive class-travel reminder.

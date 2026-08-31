@@ -25,7 +25,9 @@ headers, then update the handoff when truth changes.
 | --- | --- | --- |
 | Route entry | `src/app/dashboard/page.tsx` | Auth/demo selection, initial snapshot, startup failures |
 | Personal/group shell | `src/components/dashboard-app.tsx` | Navigation, Personal and Group composition, shared dialogs |
-| Study shell | `src/components/study-dashboard.tsx` | Study navigation and feature composition |
+| Study shell | `src/components/study-dashboard.tsx` | Study navigation, synchronization, and feature composition |
+| Study Deep Work | `src/components/study-deep-work.tsx` | Session builder/history/editor and module analysis |
+| Study dialogs | `src/components/study-dialog.tsx` | Shared focus trap, dirty-close confirmation, and focus restoration |
 | Timetable | `src/components/study-timetable.tsx` | Week/day layout, block/details/editor state |
 | Today | `src/components/today-planner.tsx` | Cross-mode agenda projection and Personal ordering |
 | Study writing | `study-note-editor.tsx`, `study-rich-note-body.tsx`, `study-markdown-media.tsx` | Draft lifecycle, Tiptap Markdown, Mermaid/media |
@@ -133,9 +135,11 @@ It is local-only and skips whenever `PLAYWRIGHT_BASE_URL` points at a hosted env
 ## Current hotspots
 
 - `src/components/dashboard-app.tsx` combines shell orchestration and many Personal/Group views.
-- `src/components/study-dashboard.tsx` combines the Study shell and most feature views/forms.
-- Rendered forms now share one branded choice primitive. A commented historical settings reference and
-  an unused pre-migration Deep Work reference remain source archaeology, not user-facing controls.
+- Phase 3 reduced `src/components/study-dashboard.tsx` from 1,303 to 911 lines by moving Deep Work,
+  module analysis, and the shared Study dialog into focused modules. The shell still owns several
+  feature views/forms and should be split incrementally when those areas are next changed.
+- `src/components/study-maintainability-boundaries.test.ts` protects the new shell/feature/dialog seam
+  and line-count budgets. Rendered forms continue to share one branded choice primitive.
 - Rich-note serialization is bounded and authenticated 10k/50k/99.5k browser measurements are held to
   an 8-second ceiling. Keep the gate before widening rich notes to Group.
 - CSP is enforced by default. Scripts/style elements stay nonce-bound; only bounded dynamic React style

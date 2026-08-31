@@ -4,6 +4,14 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Phase 3 Study composition extraction
+- Moved Deep Work session building, history/editing, and evidence-backed module analysis out of the
+  Study shell into `study-deep-work.tsx` without changing rendered behavior or API paths.
+- Moved the shared Study focus trap and dirty-close behavior into `study-dialog.tsx`, so feature views
+  reuse one independently reviewable modal boundary.
+- Reduced `study-dashboard.tsx` from 1,303 to 911 lines and added characterization/line-budget tests.
+  No schema, endpoint, user copy, provider, or product behavior changed.
+
 ### Study editor reliability and diagram guidance
 - Prevented parent autosave renders from reapplying locally emitted Markdown and resetting the active
   selection, while retaining explicit replacement for genuinely newer cross-device content.
