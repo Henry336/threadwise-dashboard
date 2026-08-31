@@ -5,14 +5,15 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, Phase 2 release candidate):** Replaced self-contained seven-day browser
+- **2026-08-31 (Codex, deployed Phase 2):** Replaced self-contained seven-day browser
   sessions with backend-registered opaque sessions for both Telegram OIDC and Mini App login. Every
   personalized render/BFF request fails closed if that owner-scoped record is missing, expired, revoked,
   or cross-owner; logout revokes it before deleting the cookie and legacy cookies require one fresh
   sign-in. CSP is enforced by default: scripts and style elements are nonce-bound, while existing bounded
   dynamic React geometry uses only `style-src-attr`. Local gates pass at 184 tests, 85 focused security
   checks, type/lint/optimized build, and Playwright 15 passed/5 intentional skips with zero CSP console
-  violations. Backend-first publication and exact hosted evidence remain.
+  violations. Backend `5b2b962324ba` is live; dashboard PR `#6` merged at `c4eade6b85de` and Ready
+  production deployment `dpl_Bhk9yjShbMNnYu4gxYkbCgojHoDp` is aliased to the canonical site.
 
 - **2026-08-31 (Codex, deployed Phase 1):** Migrated every currently rendered Personal, Group,
   and Study selector to the shared accessible Threadwise picker, named the remaining image-only actions,
