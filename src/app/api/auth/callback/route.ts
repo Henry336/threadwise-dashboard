@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
+import { registerBrowserSession } from "@/lib/browser-session-registry";
 
 const JWKS = createRemoteJWKSet(new URL("https://oauth.telegram.org/.well-known/jwks.json"));
 
@@ -42,15 +43,23 @@ export async function GET(request: NextRequest) {
     const telegramId = payload.id;
     if (typeof telegramId !== "number" && typeof telegramId !== "string") return fail(request, "missing-profile");
     const fullName = typeof payload.name === "string" ? payload.name : "Threadwise user";
+    const browserSession = await registerBrowserSession(String(telegramId));
     const token = createSessionToken({
+      sessionId: browserSession.id,
       telegramId: String(telegramId),
       firstName: typeof payload.given_name === "string" ? payload.given_name : fullName.split(" ")[0],
       fullName,
       username: typeof payload.preferred_username === "string" ? payload.preferred_username : undefined,
       avatarUrl: typeof payload.picture === "string" ? payload.picture : undefined,
-    });
+    }, browserSession.expiresAt);
     const response = NextResponse.redirect(new URL("/dashboard", appOrigin));
-    response.cookies.set(SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
+    response.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: Math.max(1, Math.floor((browserSession.expiresAt - Date.now()) / 1_000)),
+    });
     response.cookies.delete("threadwise_oauth_state");
     response.cookies.delete("threadwise_oauth_nonce");
     response.cookies.delete("threadwise_oauth_verifier");

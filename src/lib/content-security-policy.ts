@@ -1,7 +1,7 @@
 export type ContentSecurityPolicyMode = "enforce" | "report-only";
 
 export function contentSecurityPolicyMode(value = process.env.THREADWISE_CSP_MODE): ContentSecurityPolicyMode {
-  return value === "enforce" ? "enforce" : "report-only";
+  return value === "report-only" ? "report-only" : "enforce";
 }
 
 export function buildContentSecurityPolicy(nonce: string, mode: ContentSecurityPolicyMode = "enforce"): string {
@@ -9,6 +9,8 @@ export function buildContentSecurityPolicy(nonce: string, mode: ContentSecurityP
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://telegram.org`,
     `style-src 'self' 'nonce-${nonce}'`,
+    `style-src-elem 'self' 'nonce-${nonce}'`,
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' blob: data: https:",
     "font-src 'self'",
     "connect-src 'self' https://oauth.telegram.org",

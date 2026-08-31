@@ -3,9 +3,11 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const AUTH_SECRET = "threadwise-playwright-study-fixture-secret";
 const WORKSPACE_ID = "10000000-0000-4000-8000-000000000001";
+const SESSION_ID = "60000000-0000-4000-8000-000000000001";
 
 function sessionToken() {
   const payload = Buffer.from(JSON.stringify({
+    sessionId: SESSION_ID,
     telegramId: "900000001", firstName: "Study", fullName: "Study Owner",
     expiresAt: Date.now() + 3_600_000,
   })).toString("base64url");

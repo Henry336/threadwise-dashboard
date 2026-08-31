@@ -28,7 +28,13 @@ The callback validates:
 - audience (the BotFather client ID)
 - expiry and nonce
 
-Only the verified numeric `id` claim maps to `User.telegramId`; usernames are display-only. The session cookie is signed, HTTP-only, secure in production, and SameSite=Lax.
+Only the verified numeric `id` claim maps to `User.telegramId`; usernames are display-only. After either
+OIDC or Telegram Mini App verification, Vercel registers a random seven-day browser-session id with the
+Render backend. The signed, HTTP-only, production-secure, SameSite=Lax cookie carries that opaque id and
+display data, never a provider credential. Every server render and BFF request verifies the cookie and
+then requires the owner-scoped session record to be active and unexpired. Logout revokes that exact
+record before deleting the cookie; account deletion cascade-removes all of the owner's records. A legacy
+self-contained cookie has no session id and fails closed, so the Phase 2 release requires one fresh sign-in.
 
 ## Vercel-to-Render identity
 
@@ -105,7 +111,14 @@ with a seven-day expiry and optimistic revision. Existing-note drafts retain the
 and cannot silently overwrite Telegram or another browser. Group notes intentionally retain their prior
 editor until shared drafting permissions and conflict ownership are designed explicitly.
 
-Browser responses stage a request-nonce Content Security Policy in report-only mode by default. The policy carries no `unsafe-inline` or `unsafe-eval`, supplies the nonce to Next.js and the Telegram bootstrap script, and keeps object embedding and framing disabled. Operators must inspect report-only violations and complete browser validation before setting `THREADWISE_CSP_MODE=enforce`; that explicit switch is separate from deployment. Static-only service-worker caching remains unchanged and never caches authenticated API or navigation responses.
+Browser responses enforce a request-nonce Content Security Policy by default. Scripts remain restricted
+to self/nonce with `strict-dynamic`; inline scripts and eval are not allowed. Style elements are likewise
+self/nonce restricted. Existing bounded React layout attributes—timetable coordinates, progress widths,
+module accents, and drag transforms—use the narrower CSP Level 3 `style-src-attr 'unsafe-inline'`
+compatibility lane instead of weakening script or stylesheet-element policy. User HTML is still disabled,
+Mermaid SVG is sanitized, object embedding and framing remain blocked, and `THREADWISE_CSP_MODE=report-only`
+is the documented emergency rollback. Static-only service-worker caching remains unchanged and never
+caches authenticated API or navigation responses.
 
 The snapshot separates active `modules` from `inactiveModules`. Operational arrays contain only
 active-module data; the latter exists solely for owner Restore/Activate controls. Horizontal week

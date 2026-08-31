@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
+import { registerBrowserSession } from "@/lib/browser-session-registry";
 import {
   TelegramMiniAppAuthenticationError,
   verifyTelegramMiniAppInitData,
@@ -42,14 +43,15 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyTelegramMiniAppInitData(body.initData, botId);
-    const token = createSessionToken(user);
+    const browserSession = await registerBrowserSession(user.telegramId);
+    const token = createSessionToken({ ...user, sessionId: browserSession.id }, browserSession.expiresAt);
     const response = json({ ok: true, redirectTo: miniAppRedirect(user.startParam) }, 200);
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: Math.max(1, Math.floor((browserSession.expiresAt - Date.now()) / 1_000)),
     });
     return response;
   } catch (error) {
