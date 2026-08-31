@@ -6,15 +6,14 @@ describe("Study UI regressions", () => {
   it("keeps every rendered dashboard choice on the shared accessible picker", () => {
     const read = (name: string) => readFileSync(join(process.cwd(), "src", "components", name), "utf8");
     const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//gu, "");
-    const studySource = withoutComments(read("study-dashboard.tsx"));
-    const renderedStudy = studySource.replace(/function DeepWork\([\s\S]*?\r?\n\}\r?\n\r?\ntype DeepWorkPhaseOneProps/u, "type DeepWorkPhaseOneProps");
 
     for (const source of [
       withoutComments(read("dashboard-app.tsx")),
       withoutComments(read("group-scheduling.tsx")),
       withoutComments(read("group-workspace.tsx")),
       withoutComments(read("task-import-review.tsx")),
-      renderedStudy,
+      withoutComments(read("study-dashboard.tsx")),
+      withoutComments(read("study-deep-work.tsx")),
     ]) expect(source).not.toContain("<select");
 
     const picker = read("study-choice-picker.tsx");
@@ -55,7 +54,7 @@ describe("Study UI regressions", () => {
   });
 
   it("uses Threadwise choice popovers for module analysis instead of native selects", () => {
-    const component = readFileSync(join(process.cwd(), "src", "components", "study-dashboard.tsx"), "utf8");
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-deep-work.tsx"), "utf8");
     const analysis = component.slice(component.indexOf('className="study-module-analysis"'), component.indexOf("function StudyCitationLinks"));
 
     expect(analysis).toContain('<StudyChoicePicker label="Module"');
