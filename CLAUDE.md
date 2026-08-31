@@ -5,12 +5,15 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, release pending):** Corrected rich-editor checklist alignment against Tiptap's
+- **2026-08-31 (Codex, deployed):** Corrected rich-editor checklist alignment against Tiptap's
   real label/content structure and extended the validated writing flow to Personal mode: Today-level
   `Write note`, Personal-themed full-screen WYSIWYG Markdown/Mermaid/UML, title-only filing, `.md`
   portability, and encrypted owner-scoped cross-device drafts with expiry and optimistic conflicts.
-  Group remains intentionally unchanged. Targeted unit/security checks, typecheck, lint, optimized build,
-  and desktop/mobile behavioral geometry tests pass; final full gates and coordinated release are pending.
+  Group remains intentionally unchanged. All 169 unit/regression tests, 78 security checks, typecheck,
+  lint, optimized build, secret/dependency scans, and browser checks (10 passed, 2 intentional skips)
+  pass. Backend `25f80939b8e2` released first with the additive draft migration; dashboard
+  `7bf90df1a75a` then passed GitHub CI run `33360802480`, completed Vercel, and passed the hosted
+  desktop/mobile Personal flow.
 
 - **2026-08-31 (Codex, deployed):** Hardened the Study rich editor against selection loss by
   separating locally emitted Markdown from genuine external replacements. Added Tab/Shift+Tab nesting
@@ -177,6 +180,13 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-08-31 (Codex, deployed):** Corrected rich-editor checklist alignment at Tiptap's structural
+  label/content boundary and rolled the checked full-screen Markdown/Mermaid/UML writer into Personal
+  Today and Notes. Personal keeps canonical `Note` records, title-only filing, `.md` portability, and
+  encrypted cross-device recovery through backend `PersonalNoteDraft`; Group remains unchanged. Backend
+  `25f80939b8e2` released first with its additive migration; dashboard `7bf90df1a75a` passed GitHub CI
+  run `33360802480`, completed Vercel, and passed the hosted desktop/mobile Personal flow.
 
 - **2026-08-31 (Codex, deployed):** Fixed intermittent Study editor selection resets, stabilized the parent body
   callback, added accessible diagram-help disclosure/Escape behavior, portable list/code indentation,

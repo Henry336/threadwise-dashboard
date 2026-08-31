@@ -6,8 +6,8 @@ Documentation verified against the deployed Threadwise stack: **2026-08-31**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
-The owner-gated Today-planning stack and Study-first rich-note release are merged and live at dashboard
-runtime commit `b81f57fc3594` with backend runtime commit `0adbf0be688f`.
+The owner-gated Today-planning stack and Study/Personal rich-note releases are merged and live at dashboard
+runtime commit `7bf90df1a75a` with backend runtime commit `25f80939b8e2`.
 
 New developers should start with [docs/DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md).
 The current cross-repository audit is in the backend at
