@@ -4,7 +4,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
-### Phase 3 Study composition extraction
+### Phase 3 Study composition extraction (released 2026-08-31)
 - Moved Deep Work session building, history/editing, and evidence-backed module analysis out of the
   Study shell into `study-deep-work.tsx` without changing rendered behavior or API paths.
 - Moved the shared Study focus trap and dirty-close behavior into `study-dialog.tsx`, so feature views

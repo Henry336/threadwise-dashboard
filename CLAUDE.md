@@ -5,12 +5,13 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, Phase 3 validation in progress):** Reduced the Study shell from 1,303 to 911
+- **2026-08-31 (Codex, deployed Phase 3):** Reduced the Study shell from 1,303 to 911
   lines by extracting Deep Work/session analysis to `study-deep-work.tsx` and the shared modal/focus
   boundary to `study-dialog.tsx`. Characterization tests keep the shell, feature, and dialog seams
   separate and extend native-control/dialog scans to the moved code. This is a behavior-preserving
   refactor paired with backend Study-route and Beacon-registration extraction; no API, schema, copy,
-  provider, or product behavior changed.
+  provider, or product behavior changed. Dashboard PR `#9` is live at `f6f8326e559e` through Ready
+  production deployment `dpl_FppQmpqC8ZyPr6bMbJmyJjmVwhju`.
 
 - **2026-08-31 (Codex, deployed Phase 2):** Replaced self-contained seven-day browser
   sessions with backend-registered opaque sessions for both Telegram OIDC and Mini App login. Every
@@ -228,9 +229,9 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-31 (Codex, Phase 3 validation in progress):** Extracted Study Deep Work/module analysis and
-  the shared Study dialog from the shell; updated source-aware regressions and contributor docs. Full
-  validation and release evidence remain before this checkpoint is complete.
+- **2026-08-31 (Codex, deployed Phase 3):** Extracted Study Deep Work/module analysis and
+  the shared Study dialog from the shell; updated source-aware regressions and contributor docs.
+  Runtime merge `f6f8326` is Ready on Vercel production after backend `29d439c` became healthy.
 
 - **2026-08-31 (Codex, deployed):** Fixed the actual `n`-key Quick Capture focus theft,
   bounded Markdown synchronization, restored list markers, aligned/isolated note filing, added persistent
