@@ -33,7 +33,7 @@ headers, then update the handoff when truth changes.
 | Server API client | `src/lib/threadwise-api.ts` | 60-second EdDSA service tokens and backend response parsing |
 | Authentication | `src/lib/auth.ts`, `src/app/api/auth/*` | Telegram OIDC/Mini App verification and signed browser session |
 | CSP/PWA | `src/proxy.ts`, `src/lib/content-security-policy.ts`, `public/sw.js` | Nonce policy staging and static-only offline shell |
-| Contracts | `src/lib/types.ts`, `study-types.ts`, snapshot schemas | Browser-facing DTOs and validation |
+| Contracts | `src/lib/types.ts`, `study-types.ts`, snapshot schemas, backend `src/dashboard/study.ts` | Browser-facing DTOs and validation; Study drafts are explicitly minimized server-side |
 | Styling | `src/app/globals.css`, `src/app/study-dashboard.css` | Shared/Study tokens, responsive behavior, themes |
 
 ## Trust boundary
@@ -77,6 +77,9 @@ Browser → same-origin Next.js BFF → 60-second EdDSA JWT → Render dashboard
   bound. Filing, explicit close, and page-hide handoff call the registered flush first; do not restore
   per-transaction parent serialization. Global shortcuts must treat any `contenteditable` descendant as
   a typing surface.
+- Use `StudyChoicePicker` for controlled dashboard choices and `StudyFormChoicePicker` for traditional
+  `FormData` submissions. Both share keyboard listbox semantics, focus return, searchable lists, mobile
+  containment, and theme tokens. Do not reintroduce browser-native selectors in rendered forms.
 
 ## Local setup
 
@@ -120,17 +123,21 @@ Run build and browser tests sequentially on Windows because both write shared `.
 artifacts. A release also requires the paired backend tests and schema/API compatibility checks.
 
 The browser suite intentionally skips the command-palette focus test on mobile where the control is
-not exposed. Personal demo coverage now types continuously through numbered-list conversion, checks
-computed markers and focus retention, and verifies filing focus isolation. Add a synthetic authenticated
-Study fixture before treating the owner-gated Study lifecycle as fully covered.
+not exposed. Personal demo coverage types continuously through numbered-list conversion, checks computed
+markers and focus retention, and verifies filing focus isolation. The desktop Study lifecycle is now
+covered by `e2e/study-authenticated-lifecycle.spec.ts`: Playwright generates an ephemeral Ed25519 pair,
+starts `scripts/study-browser-fixture.mjs`, signs a synthetic browser session, and proves autosave,
+reload recovery, conflict refusal, import guidance, filing focus, canonical save, and Library visibility.
+It is local-only and skips whenever `PLAYWRIGHT_BASE_URL` points at a hosted environment.
 
 ## Current hotspots
 
 - `src/components/dashboard-app.tsx` combines shell orchestration and many Personal/Group views.
 - `src/components/study-dashboard.tsx` combines the Study shell and most feature views/forms.
-- Several older forms still use native `select` while newer surfaces use branded pickers.
-- Rich-note serialization is bounded and the Personal flow has behavioral focus/list/filing coverage;
-  representative 10k/50k/100k profiling and authenticated Study recovery/conflict coverage remain.
+- Rendered forms now share one branded choice primitive. A commented historical settings reference and
+  an unused pre-migration Deep Work reference remain source archaeology, not user-facing controls.
+- Rich-note serialization is bounded and authenticated 10k/50k/99.5k browser measurements are held to
+  an 8-second ceiling. Keep the gate before widening rich notes to Group.
 - CSP is report-only because current dynamic style attributes violate the intended enforced policy.
 
 Extract by feature responsibility behind characterization tests. Do not combine a broad visual

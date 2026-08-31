@@ -101,3 +101,13 @@ layer while open and title/module fields share one aligned control rhythm.
 Pinned Study modules appear before unpinned modules while retaining the existing display-order/code
 order inside each group. Pinning is a view preference recorded on the module; it must not imply Canvas
 selection, activation, mastery, or archival state.
+
+## Decision: one accessible choice language
+
+Personal, Group, and Study use the same branded choice primitive in rendered dashboard forms. Controlled
+screens use `StudyChoicePicker`; traditional form submissions use `StudyFormChoicePicker`, which preserves
+the selected value through a hidden input. The control must retain listbox/option semantics, arrow/home/end/
+escape behavior, focus return, searchable long lists, disabled states, mobile viewport containment, and
+light/dark accent tokens. Keep labels visible unless a compact toolbar or assignment footer already supplies
+the context, in which case preserve a screen-reader label. Do not style browser-native popup menus as a
+parallel design system.

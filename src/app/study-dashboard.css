@@ -5,6 +5,7 @@
 .study-shell {
   --study-blue: #315ea8;
   --study-blue-soft: color-mix(in srgb, var(--study-blue) 11%, var(--surface));
+  --choice-accent-soft: var(--study-blue-soft);
   --study-amber: #ad7223;
   min-height: 100vh;
   display: grid;
@@ -2326,7 +2327,7 @@
 .study-choice-popover > div { max-height: min(320px, 48vh); overflow-y: auto; overscroll-behavior: contain; }
 .study-choice-popover [role="option"] { width: 100%; min-height: 50px; padding: 8px 9px; display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 9px; align-items: center; border-radius: 8px; background: transparent; color: var(--ink); text-align: left; }
 .study-choice-popover [role="option"]:hover,
-.study-choice-popover [role="option"][aria-selected="true"] { background: var(--study-blue-soft); }
+.study-choice-popover [role="option"][aria-selected="true"] { background: var(--choice-accent-soft, var(--accent-soft)); }
 .study-choice-popover [role="option"] span { min-width: 0; display: grid; gap: 3px; }
 .study-choice-popover [role="option"] b { font-size: 13px; }
 .study-choice-popover [role="option"] small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }

@@ -3,6 +3,36 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("Study UI regressions", () => {
+  it("keeps every rendered dashboard choice on the shared accessible picker", () => {
+    const read = (name: string) => readFileSync(join(process.cwd(), "src", "components", name), "utf8");
+    const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//gu, "");
+    const studySource = withoutComments(read("study-dashboard.tsx"));
+    const renderedStudy = studySource.replace(/function DeepWork\([\s\S]*?\r?\n\}\r?\n\r?\ntype DeepWorkPhaseOneProps/u, "type DeepWorkPhaseOneProps");
+
+    for (const source of [
+      withoutComments(read("dashboard-app.tsx")),
+      withoutComments(read("group-scheduling.tsx")),
+      withoutComments(read("group-workspace.tsx")),
+      withoutComments(read("task-import-review.tsx")),
+      renderedStudy,
+    ]) expect(source).not.toContain("<select");
+
+    const picker = read("study-choice-picker.tsx");
+    expect(picker).toContain('name={name} value={value}');
+    expect(picker).toContain('role="listbox"');
+    expect(picker).toContain('role="option"');
+    expect(picker).toContain("StudyFormChoicePicker");
+  });
+
+  it("names image navigation and deletion actions for assistive technology", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src", "components", "dashboard-app.tsx"), "utf8");
+    const collections = readFileSync(join(process.cwd(), "src", "components", "phase-two-collections.tsx"), "utf8");
+
+    expect(dashboard).toContain('aria-label="Open saved images"');
+    expect(dashboard).toContain('aria-label={`Open ${image.caption ?? image.fileName ?? "saved image"}`}');
+    expect(collections).toContain('aria-label={`Delete ${image.caption ?? image.fileName ?? "image"}`}');
+  });
+
   it("keeps toolbar search inputs inside the shared 46px control height", () => {
     const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
     const genericFields = css.lastIndexOf(".study-shell input,");

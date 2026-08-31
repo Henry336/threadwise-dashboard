@@ -6,7 +6,7 @@ import { formatClock } from "@/lib/study-timetable";
 
 export type StudyChoice = { value: string; label: string; detail?: string };
 
-export function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, allowEmpty = true, onChange }: {
+type StudyChoicePickerProps = {
   label: string;
   value: string;
   placeholder?: string;
@@ -14,8 +14,13 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
   disabled?: boolean;
   searchable?: boolean;
   allowEmpty?: boolean;
+  name?: string;
+  required?: boolean;
+  className?: string;
   onChange: (value: string) => void;
-}) {
+};
+
+export function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, allowEmpty = true, name, required = false, className = "", onChange }: StudyChoicePickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -71,8 +76,9 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  return <div className="study-choice-field" ref={rootRef}>
+  return <div className={`study-choice-field${className ? ` ${className}` : ""}`} ref={rootRef}>
     <span>{label}</span>
+    {name && <input type="hidden" name={name} value={value} required={required} />}
     <button ref={triggerRef} type="button" className="study-choice-trigger" disabled={disabled} aria-label={`${label}: ${selected?.label ?? placeholder}`} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined} onClick={() => open ? close() : openAt(selectedIndex)} onKeyDown={onTriggerKeyDown}>
       <span><b>{selected?.label ?? placeholder}</b>{selected?.detail && <small>{selected.detail}</small>}</span><ChevronDown size={16} />
     </button>
@@ -85,6 +91,11 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
       </div>
     </div>}
   </div>;
+}
+
+export function StudyFormChoicePicker({ defaultValue = "", ...props }: Omit<StudyChoicePickerProps, "value" | "onChange"> & { defaultValue?: string }) {
+  const [value, setValue] = useState(defaultValue);
+  return <StudyChoicePicker {...props} value={value} onChange={setValue} />;
 }
 
 export function StudyTimePicker({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import type { DashboardSnapshot, TaskImportAssignee, TaskImportItem, TaskImportReview } from "@/lib/types";
+import { StudyChoicePicker } from "@/components/study-choice-picker";
 
 type Member = NonNullable<DashboardSnapshot["collaboration"]>["members"][number];
 type ApiError = { error?: string; message?: string };
@@ -287,11 +288,11 @@ function ImportRow({
           </div>
           <small>Choose the complete date and time, then press Done.</small>
         </div>
-        <label className="tw-import-field"><span>Status</span><select value={item.initialStatus} disabled={disabled} onChange={(event) => {
-          const initialStatus = event.target.value as "OPEN" | "DONE";
+        <StudyChoicePicker className="tw-import-field" label="Status" value={item.initialStatus} disabled={disabled} allowEmpty={false} options={[{ value: "OPEN", label: "Open" }, { value: "DONE", label: "Already done" }]} onChange={(value) => {
+          const initialStatus = value as "OPEN" | "DONE";
           onLocal({ initialStatus });
           onSave({ initialStatus });
-        }}><option value="OPEN">Open</option><option value="DONE">Already done</option></select></label>
+        }} />
       </div>}
     </div>
     {busy && <LoaderCircle className="tw-import-row-busy spin" size={16} />}
