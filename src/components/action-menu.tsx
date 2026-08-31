@@ -25,15 +25,17 @@ export function useActionMenu<T>() {
     if (!menu) return;
     const close = () => setMenu(null);
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (["Escape", "PageDown", "PageUp"].includes(event.key)) close();
     };
     window.addEventListener("keydown", keydown);
     window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("wheel", close, { capture: true, passive: true });
+    window.addEventListener("touchmove", close, { capture: true, passive: true });
     return () => {
       window.removeEventListener("keydown", keydown);
       window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("wheel", close, true);
+      window.removeEventListener("touchmove", close, true);
     };
   }, [menu]);
 
@@ -66,7 +68,7 @@ export function ActionMenu<T>({ state, label, actions, onClose }: {
     const menu = menuRef.current;
     if (!menu) return;
     if (window.matchMedia("(max-width: 640px)").matches) {
-      menu.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.focus();
+      menu.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.focus({ preventScroll: true });
       return;
     }
     const bounds = menu.getBoundingClientRect();
@@ -76,7 +78,7 @@ export function ActionMenu<T>({ state, label, actions, onClose }: {
       left: Math.max(12, Math.min(desiredLeft, window.innerWidth - bounds.width - 12)),
       top: Math.max(12, Math.min(desiredTop, window.innerHeight - bounds.height - 12)),
     });
-    menu.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.focus();
+    menu.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.focus({ preventScroll: true });
   }, [state]);
 
   if (typeof document === "undefined") return null;

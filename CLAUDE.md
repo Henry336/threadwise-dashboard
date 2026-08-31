@@ -9,8 +9,11 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
   after the three deployed audit-remediation phases. Logout now treats every non-2xx Render revocation
   response as failure and preserves the browser cookie for retry; the extracted Study dialog and global
   confirmation use the reference-counted body lock, and destructive confirmation makes the obscured page
-  inert. Complete local gates pass at 187 tests, 86 security checks, Playwright 17/5 intentional skips,
-  type/lint/build, secret scans, and zero-finding audits. Release/live verification is pending.
+  inert. A main-branch hosted run then exposed a pre-existing action-menu race: delayed programmatic
+  scroll could dismiss a newly opened note menu. Menus now prevent focus scrolling and close only on
+  explicit scroll intent; the exact export flow passes ten consecutive browser repetitions. Complete
+  local gates pass at 188 tests, 86 security checks, Playwright 17/5 intentional skips, type/lint/build,
+  secret scans, and zero-finding audits. Follow-up release/live verification is pending.
 
 - **2026-08-31 (Codex, deployed Phase 3):** Reduced the Study shell from 1,303 to 911
   lines by extracting Deep Work/session analysis to `study-deep-work.tsx` and the shared modal/focus
@@ -238,7 +241,9 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 - **2026-08-31 (Codex, Phase 1–3 regression audit validated):** Fixed false-success logout on rejected
   revocation plus the overlapping Study/confirmation scroll-lock and background-isolation defects.
-  Added focused and responsive browser regressions; all local release gates are green. Release pending.
+  Added focused and responsive browser regressions. The merged main browser gate then found a flaky
+  action menu caused by raw-scroll dismissal; the intent-based replacement passes 10/10 repetitions.
+  Follow-up release pending.
 
 - **2026-08-31 (Codex, deployed Phase 3):** Extracted Study Deep Work/module analysis and
   the shared Study dialog from the shell; updated source-aware regressions and contributor docs.

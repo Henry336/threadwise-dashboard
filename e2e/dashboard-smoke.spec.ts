@@ -112,9 +112,10 @@ test("Personal notes open as a large rich editor and align checklist controls wi
   if (!testInfo.project.name.startsWith("mobile")) {
     await page.goto("/dashboard?demo=1&view=notes", { waitUntil: "load" });
     await page.getByRole("button", { name: /Actions for/u }).first().click();
-    const download = page.waitForEvent("download");
-    await page.getByRole("menuitem", { name: "Export .md" }).click();
-    expect((await download).suggestedFilename()).toMatch(/\.md$/u);
+    const exportAction = page.getByRole("menuitem", { name: "Export .md" });
+    await expect(exportAction).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent("download"), exportAction.click()]);
+    expect(download.suggestedFilename()).toMatch(/\.md$/u);
   }
 });
 

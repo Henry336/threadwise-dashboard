@@ -12,8 +12,11 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
   overlaps the underlying editor.
 - Made the active destructive confirmation isolate all obscured page roots with `inert`, then restore
   their prior state and the original body overflow after dismissal.
+- Fixed a hosted-only action-menu race where a delayed programmatic scroll event could immediately
+  close a newly opened menu. Menus now suppress focus scrolling and close on actual wheel/touch/page
+  navigation intent; the exact note-export flow passes ten consecutive desktop browser repetitions.
 - Added focused session/structural regressions and desktop/mobile browser coverage. Complete local
-  gates pass at 187 unit tests, 86 security checks, 17 browser passes with 5 intentional mobile skips,
+  gates pass at 188 unit tests, 86 security checks, 17 browser passes with 5 intentional mobile skips,
   TypeScript, lint, optimized build, secret scan, and two zero-finding dependency audits.
 
 ### Phase 3 Study composition extraction (released 2026-08-31)

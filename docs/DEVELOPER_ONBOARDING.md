@@ -111,6 +111,10 @@ flows require the paired backend plus Telegram authentication. Never put secrets
 6. Test error, empty, loading, offline/reconnecting, stale/conflict, and partial provider states.
 7. Update architecture/design/changelog/handoff docs when product or trust behavior changes.
 
+Action menus focus their first item with `preventScroll`. Close them on explicit wheel, touch-move,
+resize, Escape, or page-navigation keys rather than every raw `scroll` event: browser focus/layout
+work can emit a delayed scroll immediately after mount and otherwise dismiss the menu before use.
+
 ## Validation gate
 
 ```powershell
