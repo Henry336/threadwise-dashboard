@@ -1656,3 +1656,90 @@ kbd { font-family: var(--sans); }
   .today-agenda-sortable { transition: none !important; }
   .today-agenda-grid article > .today-agenda-complete:hover { transform: none; }
 }
+
+/* Shared branded choice controls used outside Study mode. */
+.tw-task-sort {
+  min-width: 150px;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 0;
+  background: transparent;
+}
+.tw-task-sort > span,
+.tw-collab-sheet > footer .study-choice-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.tw-task-sort .study-choice-trigger {
+  min-height: 46px;
+  padding: 0 9px 0 12px;
+  border-color: var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+}
+.tw-task-sort .study-choice-trigger b { font-size: 12px; font-weight: 680; }
+
+.tw-availability-section > header > .study-choice-field {
+  min-width: 180px;
+  color: var(--faint);
+  font-size: 8px;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.tw-availability-section > header .study-choice-trigger {
+  min-height: 39px;
+  padding: 0 10px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tw-availability-section > header .study-choice-trigger b { font-size: 10px; }
+
+.tw-create-poll > .study-choice-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 720;
+}
+.tw-create-poll > .study-choice-field .study-choice-trigger {
+  min-height: 47px;
+  padding: 0 12px;
+  border-color: var(--line);
+  border-radius: 11px;
+  background: var(--surface-strong);
+}
+.tw-create-poll > .study-choice-field .study-choice-trigger:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.tw-collab-sheet > footer .study-choice-field { min-width: 0; gap: 4px; }
+.tw-collab-sheet > footer .study-choice-trigger {
+  min-height: 44px;
+  border-color: var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.tw-settings-choice { min-width: 0; display: grid; align-content: start; gap: 8px; }
+.tw-settings-choice > small { color: var(--faint); font-size: 10px; font-weight: 500; line-height: 1.5; }
+.tw-settings-panel .study-choice-trigger { min-height: 48px; border-color: var(--line); border-radius: 12px; }
+.tw-sheet .study-choice-field { color: var(--muted); font-size: 9px; font-weight: 650; }
+.tw-sheet .study-choice-trigger { min-height: 43px; border-color: var(--line); border-radius: 10px; }
+
+@media (max-width: 620px) {
+  .tw-availability-section > header > .study-choice-field { width: 100%; }
+}

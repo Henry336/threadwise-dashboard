@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { Ari } from "@/components/ari";
+import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { AvailabilityPoll } from "@/lib/types";
 import { useConfirmation } from "./confirmation-dialog";
 
@@ -150,7 +151,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
       </section>}
 
       <section className="tw-availability-section">
-        <header><div><h4>Your availability</h4><p>Tap every block when you are free.</p></div><label>Time zone<select value={timezone} onChange={(event) => setTimezone(event.target.value)}><TimezoneOptions current={timezone} organizer={poll.timezone} /></select></label></header>
+        <header><div><h4>Your availability</h4><p>Tap every block when you are free.</p></div><StudyChoicePicker label="Time zone" value={timezone} options={timezoneChoices(timezone, poll.timezone)} allowEmpty={false} searchable onChange={setTimezone} /></header>
         <div className="tw-availability-tools">
           <button onClick={() => setSelected(new Set(poll.slots))}>Select all</button>
           <button onClick={() => setSelected(new Set())}>Clear</button>
@@ -225,8 +226,8 @@ function CreatePollPanel({ timezone, anchorDate, busy, onClose, onCreate }: { ti
     <label className="wide">Meeting title<input autoFocus required maxLength={160} value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Project discussion" /></label>
     <label>From<input type="date" required value={draft.startDate} onChange={(event) => { const startDate = event.target.value; const lastDate = addCalendarDays(startDate, 13); setDraft({ ...draft, startDate, endDate: draft.endDate < startDate ? startDate : draft.endDate > lastDate ? lastDate : draft.endDate }); }} /></label>
     <label>To<input type="date" required min={draft.startDate} max={lastAllowedDate} value={draft.endDate} onChange={(event) => setDraft({ ...draft, endDate: event.target.value })} /></label>
-    <label>Duration<select value={draft.durationMinutes} onChange={(event) => setDraft({ ...draft, durationMinutes: Number(event.target.value) })}><option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={90}>1.5 hours</option><option value={120}>2 hours</option></select></label>
-    <label>Organizer time zone<select value={draft.timezone} onChange={(event) => setDraft({ ...draft, timezone: event.target.value })}><TimezoneOptions current={draft.timezone} organizer={timezone} /></select></label>
+    <StudyChoicePicker label="Duration" value={String(draft.durationMinutes)} options={[{ value: "30", label: "30 minutes" }, { value: "60", label: "1 hour" }, { value: "90", label: "1.5 hours" }, { value: "120", label: "2 hours" }]} allowEmpty={false} onChange={(value) => setDraft({ ...draft, durationMinutes: Number(value) })} />
+    <StudyChoicePicker label="Organizer time zone" value={draft.timezone} options={timezoneChoices(draft.timezone, timezone)} allowEmpty={false} searchable onChange={(value) => setDraft({ ...draft, timezone: value })} />
     <label>Day starts<input type="time" value={minutesToClock(draft.dayStartMinutes)} onChange={(event) => setDraft({ ...draft, dayStartMinutes: clockToMinutes(event.target.value) })} /></label>
     <label>Day ends<input type="time" value={minutesToClock(draft.dayEndMinutes)} onChange={(event) => setDraft({ ...draft, dayEndMinutes: clockToMinutes(event.target.value) })} /></label>
     <footer><button type="button" onClick={onClose}>Cancel</button><button className="tw-primary" disabled={busy || !draft.title.trim()}>{busy ? <LoaderCircle className="spin" size={17} /> : <ArrowRight size={17} />} Share poll</button></footer>
@@ -241,10 +242,10 @@ function PollStatus({ status }: { status: AvailabilityPoll["status"] }) {
   return <span className="tw-poll-status" data-status={status}><i />{status === "OPEN" ? "Collecting times" : status === "FINALIZED" ? "Confirmed" : "Closed"}</span>;
 }
 
-function TimezoneOptions({ current, organizer }: { current: string; organizer: string }) {
+function timezoneChoices(current: string, organizer: string) {
   const browser = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const zones = [...new Set([current, organizer, browser, "Asia/Singapore", "Asia/Kuala_Lumpur", "Asia/Yangon", "Europe/London", "America/New_York", "America/Los_Angeles"])];
-  return <>{zones.map((zone) => <option key={zone} value={zone}>{zone.replace(/_/g, " ")}</option>)}</>;
+  return zones.map((zone) => ({ value: zone, label: zone.replace(/_/g, " ") }));
 }
 
 async function scheduleApi<T>(path: string, method = "GET", body?: unknown): Promise<T> {

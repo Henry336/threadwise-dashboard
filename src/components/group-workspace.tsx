@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import type { AvailabilityPoll, DashboardSnapshot, DashboardTask, DashboardTaskAssignee } from "@/lib/types";
+import { StudyChoicePicker } from "@/components/study-choice-picker";
 
 type Collaboration = NonNullable<DashboardSnapshot["collaboration"]>;
 type Member = Collaboration["members"][number];
@@ -277,7 +278,7 @@ export function TaskCollaborationSheet({
           </article>)}
         {!assignees.length && <div className="tw-collab-empty"><UsersRound size={22} /><b>{task.audience === "EVERYONE" ? "Everyone" : "Unassigned"}</b><span>{task.audience === "EVERYONE" ? "Every group member is expected to take part." : canManage ? "Choose a specific member below, or leave it open for someone to claim." : "Claim this task if you are taking it."}</span>{!canManage && task.audience === "UNASSIGNED" && <button className="tw-primary" disabled={busy} onClick={() => onAction({ action: "claim" })}>Claim task</button>}</div>}
       </div>
-      {canManage ? <footer><label><UserPlus size={16} /><select value={target} onChange={(event) => setTarget(event.target.value)}><option value="">Add an assignee…</option>{available.map((member) => <option key={member.telegramId} value={member.telegramId}>{member.displayName}</option>)}</select></label><button className="tw-primary" disabled={busy || !target} onClick={() => onAction({ action: "assign", targetTelegramId: target })}>Assign</button></footer> : assignees.length > 0 ? <footer className="tw-collab-member-note"><ShieldCheck size={16} /><span><b>Assigned</b><small>The creator or a current Telegram group administrator can reassign this task.</small></span></footer> : null}
+      {canManage ? <footer><StudyChoicePicker label="Assignee" value={target} placeholder="Add an assignee…" options={available.map((member) => ({ value: member.telegramId, label: member.displayName }))} searchable onChange={setTarget} /><button className="tw-primary" disabled={busy || !target} onClick={() => onAction({ action: "assign", targetTelegramId: target })}>Assign</button></footer> : assignees.length > 0 ? <footer className="tw-collab-member-note"><ShieldCheck size={16} /><span><b>Assigned</b><small>The creator or a current Telegram group administrator can reassign this task.</small></span></footer> : null}
     </section>
   </div>;
 }
