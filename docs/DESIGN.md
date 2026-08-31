@@ -85,7 +85,12 @@ The compact toolbar may scroll horizontally on phones rather than wrapping over 
 one focused filing sheet for title and module, while an unobtrusive status line communicates encrypted
 cross-device autosave. Mermaid earns space only when the learner writes a diagram: selecting the canvas
 reveals its source, and Continue writing below provides an explicit exit. Raw HTML, plugins, tags, graph
-theatrics, and vault chrome do not enter the interface.
+theatrics, and vault chrome do not enter the interface. Keep diagram help as a searchable in-editor side
+panel rather than a nested modal: one toolbar disclosure opens quick syntax plus insertable examples for
+ordinary Mermaid and UML class, sequence, and state diagrams. Tab/Shift+Tab may nest list items and
+indent diagram/code lines, but normal prose must preserve native focus traversal because presentation-only
+paragraph indentation is not portable Markdown. Locally emitted Markdown must never be fed back through
+`setContent`; only a genuinely external body replacement may reset the editor document.
 
 ## Identity system
 

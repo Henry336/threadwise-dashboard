@@ -61,6 +61,10 @@ Browser → same-origin Next.js BFF → 60-second EdDSA JWT → Render dashboard
 - Study rich-note scratch text lives in encrypted backend `StudyNoteDraft` rows, not local storage.
 - A filed Study note is a canonical `StudyResource`; Telegram, Library, search, backlinks, revisions,
   sessions, and analysis share it.
+- `study-rich-note-body.tsx` owns Tiptap integration; `study-editor-sync.ts` distinguishes local updates
+  from external replacements; `study-editor-indentation.ts` keeps Tab behavior independently testable;
+  `study-mermaid-templates.ts` is the reviewed local syntax/template catalog. New diagram kinds must
+  stay within `study-mermaid.ts` budgets and pass the browser parser contract before release.
 - Personal Today ordering is a private projection. It must not mutate Group/Study source ordering,
   deadlines, reminders, or provider priority.
 

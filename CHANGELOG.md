@@ -4,6 +4,18 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Study editor reliability and diagram guidance
+- Prevented parent autosave renders from reapplying locally emitted Markdown and resetting the active
+  selection, while retaining explicit replacement for genuinely newer cross-device content.
+- Added Tab/Shift+Tab indentation for list items and selected Mermaid/code-block lines. Normal prose
+  keeps native Tab focus movement so the editor does not become a keyboard trap or corrupt portable
+  Markdown with presentation-only indentation.
+- Added a searchable, responsive Mermaid and UML guide with a 38-entry quick reference and insertable
+  flowchart, sequence, class, state, ER, mind-map, Gantt, timeline, journey, pie, Git, and quadrant
+  examples. All examples pass the installed Mermaid browser parser.
+- Kept UML inside the existing strict, bounded, sanitized Mermaid renderer; no PlantUML server,
+  plugin execution, new note format, or third-party content handoff was introduced.
+
 ### Post-release audit and contributor handoff
 - Added a dashboard-specific new-developer map covering component ownership, BFF/auth boundaries,
   state ownership, accessible UI workflow, validation, hotspots, and deployment order.

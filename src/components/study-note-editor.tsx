@@ -87,6 +87,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
       return next;
     });
   }, []);
+  const updateBody = useCallback((body: string) => update({ body }), [update]);
 
   const persistDraft = useCallback((snapshot = draftRef.current) => {
     if (!loaded) return Promise.resolve(false);
@@ -222,7 +223,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
       {message && <p className="study-note-save-message">{message}</p>}
       {recovered && <p className="study-note-recovered"><Check size={14} /> Continued from your encrypted cross-device draft.</p>}
       <main className="study-note-writing-space">
-        {loaded ? <StudyRichNoteBody value={draft.body} onChange={(body) => update({ body })} /> : <div className="study-rich-loading"><LoaderCircle className="spin" size={20} /> Preparing your writing space…</div>}
+        {loaded ? <StudyRichNoteBody value={draft.body} onChange={updateBody} /> : <div className="study-rich-loading"><LoaderCircle className="spin" size={20} /> Preparing your writing space…</div>}
       </main>
       {filing && <div className="study-note-filing-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setFiling(false); }}>
         <form className="study-note-filing" onSubmit={fileNote} aria-labelledby="study-note-file-title">

@@ -74,3 +74,9 @@ scrollable, communicate encrypted cross-device autosave in one quiet status line
 and module in the final filing sheet. A Mermaid canvas opens its source when selected and provides an
 explicit **Continue writing below** exit. Do not expose tags, raw HTML, plugin chrome, or a second note
 store. Personal and Group editors remain unchanged until the Study rollout is checked live.
+
+Diagram help is one searchable side panel inside the writing space, not another modal. It combines a
+compact quick reference with insertable examples, including Mermaid-native UML class, sequence, and
+state diagrams. Tab/Shift+Tab nests list items and edits selected diagram/code indentation; normal prose
+retains native focus traversal. Parent autosave renders must not replace locally emitted editor content
+or move the learner's selection.

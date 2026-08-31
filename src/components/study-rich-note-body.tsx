@@ -7,6 +7,7 @@ import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import { Markdown } from "@tiptap/markdown";
+import { Extension, type Editor } from "@tiptap/core";
 import {
   EditorContent,
   NodeViewContent,
@@ -17,12 +18,15 @@ import {
 } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
-  Bold, Braces, CheckSquare, Code2, Heading2, Italic, Link as LinkIcon,
+  Bold, Braces, CheckSquare, CircleHelp, Code2, Heading2, Italic, Link as LinkIcon,
   List, ListOrdered, Network, Redo2, Table2, Underline as UnderlineIcon, Undo2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DEFAULT_INDENT, indentationRemovalWidth, selectedLineStarts } from "../lib/study-editor-indentation";
+import { shouldReplaceEditorDocument } from "../lib/study-editor-sync";
 import { safeMarkdownLink } from "../lib/study-markdown-security";
 import { MarkdownImage, MermaidDiagram } from "./study-markdown-media";
+import { StudyMermaidHelp } from "./study-mermaid-help";
 
 function RichImageView({ node }: ReactNodeViewProps) {
   return <NodeViewWrapper className="study-rich-image" contentEditable={false}>
@@ -66,6 +70,47 @@ const RichCodeBlock = CodeBlock.extend({
   },
 });
 
+function changeCodeBlockIndentation(editor: Editor, direction: "indent" | "outdent"): boolean {
+  const { selection } = editor.state;
+  if (selection.$from.parent.type.name !== "codeBlock" || selection.$from.parent !== selection.$to.parent) return false;
+
+  const blockStart = selection.$from.start();
+  const text = selection.$from.parent.textContent;
+  const lineStarts = selectedLineStarts(text, selection.from - blockStart, selection.to - blockStart);
+  let transaction = editor.state.tr;
+
+  for (const lineStart of [...lineStarts].reverse()) {
+    const position = blockStart + lineStart;
+    if (direction === "indent") transaction = transaction.insertText(DEFAULT_INDENT, position);
+    else {
+      const width = indentationRemovalWidth(text, lineStart);
+      if (width) transaction = transaction.delete(position, position + width);
+    }
+  }
+
+  if (transaction.docChanged) editor.view.dispatch(transaction);
+  return true;
+}
+
+const StudyIndentation = Extension.create({
+  name: "studyIndentation",
+  priority: 1_100,
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        if (this.editor.isActive("taskItem") && this.editor.commands.sinkListItem("taskItem")) return true;
+        if (this.editor.isActive("listItem") && this.editor.commands.sinkListItem("listItem")) return true;
+        return changeCodeBlockIndentation(this.editor, "indent");
+      },
+      "Shift-Tab": () => {
+        if (this.editor.isActive("taskItem") && this.editor.commands.liftListItem("taskItem")) return true;
+        if (this.editor.isActive("listItem") && this.editor.commands.liftListItem("listItem")) return true;
+        return changeCodeBlockIndentation(this.editor, "outdent");
+      },
+    };
+  },
+});
+
 const SafeLink = Link.extend({
   parseMarkdown(token, helpers) {
     const children = helpers.parseInline(token.tokens || []);
@@ -103,12 +148,21 @@ export const studyRichNoteExtensions = [
   TableHeader,
   TableCell,
   Markdown.configure({ markedOptions: { gfm: true, breaks: false } }),
+  StudyIndentation,
 ];
 
 export function StudyRichNoteBody({ value, onChange, onReady }: { value: string; onChange: (markdown: string) => void; onReady?: () => void }) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState("");
   const [linkError, setLinkError] = useState("");
+  const [diagramHelpOpen, setDiagramHelpOpen] = useState(false);
+  const onChangeRef = useRef(onChange);
+  const onReadyRef = useRef(onReady);
+  const lastLocallyEmittedMarkdownRef = useRef(value);
+
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: studyRichNoteExtensions,
@@ -121,15 +175,36 @@ export function StudyRichNoteBody({ value, onChange, onReady }: { value: string;
         spellcheck: "true",
       },
     },
-    onCreate: () => onReady?.(),
-    onUpdate: ({ editor: current }) => onChange(current.getMarkdown()),
+    onCreate: () => onReadyRef.current?.(),
+    onUpdate: ({ editor: current }) => {
+      const markdown = current.getMarkdown();
+      lastLocallyEmittedMarkdownRef.current = markdown;
+      onChangeRef.current(markdown);
+    },
   });
 
   useEffect(() => {
     if (!editor) return;
+    if (value === lastLocallyEmittedMarkdownRef.current) return;
     const current = editor.getMarkdown();
-    if (current !== value) editor.commands.setContent(value || "", { contentType: "markdown", emitUpdate: false });
+    if (shouldReplaceEditorDocument(value, lastLocallyEmittedMarkdownRef.current, current)) {
+      editor.commands.setContent(value || "", { contentType: "markdown", emitUpdate: false });
+    }
+    lastLocallyEmittedMarkdownRef.current = value;
   }, [editor, value]);
+
+  useEffect(() => {
+    if (!editor || !diagramHelpOpen) return;
+    const closeHelp = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDiagramHelpOpen(false);
+      editor.chain().focus().run();
+    };
+    document.addEventListener("keydown", closeHelp, true);
+    return () => document.removeEventListener("keydown", closeHelp, true);
+  }, [diagramHelpOpen, editor]);
 
   if (!editor) return <div className="study-rich-loading">Preparing your writing space…</div>;
 
@@ -145,11 +220,14 @@ export function StudyRichNoteBody({ value, onChange, onReady }: { value: string;
     setLink("");
     setLinkError("");
   };
-  const insertDiagram = () => editor.chain().focus().insertContent({
+  const insertDiagram = (source = "flowchart TD\n  A[Start] --> B[Next step]") => {
+    setDiagramHelpOpen(false);
+    editor.chain().focus().insertContent({
     type: "codeBlock",
     attrs: { language: "mermaid" },
-    content: [{ type: "text", text: "flowchart TD\n  A[Start] --> B[Next step]" }],
-  }).run();
+    content: [{ type: "text", text: source }],
+    }).run();
+  };
 
   return <div className="study-rich-editor">
     <div className="study-rich-toolbar" role="toolbar" aria-label="Note formatting">
@@ -172,7 +250,8 @@ export function StudyRichNoteBody({ value, onChange, onReady }: { value: string;
       <div className="study-rich-toolbar-group">
         <ToolbarButton label="Link" active={editor.isActive("link")} onClick={() => { setLink(editor.getAttributes("link").href ?? ""); setLinkOpen((value) => !value); }}><LinkIcon size={17} /></ToolbarButton>
         <ToolbarButton label="Table" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={17} /></ToolbarButton>
-        <ToolbarButton label="Mermaid diagram" onClick={insertDiagram}><Network size={17} /></ToolbarButton>
+        <ToolbarButton label="Insert Mermaid diagram" onClick={() => insertDiagram()}><Network size={17} /></ToolbarButton>
+        <ToolbarButton label="Mermaid and UML syntax help" expanded={diagramHelpOpen} controls="study-mermaid-help" onClick={() => { setLinkOpen(false); setDiagramHelpOpen((open) => !open); }}><CircleHelp size={17} /></ToolbarButton>
         <ToolbarButton label="Inline code" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}><Braces size={17} /></ToolbarButton>
       </div>
       {linkOpen && <form className="study-rich-link-popover" onSubmit={(event) => { event.preventDefault(); applyLink(); }}>
@@ -183,10 +262,11 @@ export function StudyRichNoteBody({ value, onChange, onReady }: { value: string;
         {linkError && <p role="alert">{linkError}</p>}
       </form>}
     </div>
-    <EditorContent editor={editor} />
+    <EditorContent className="study-rich-editor-scroll" editor={editor} />
+    <StudyMermaidHelp open={diagramHelpOpen} onClose={() => { setDiagramHelpOpen(false); editor.chain().focus().run(); }} onInsert={insertDiagram} />
   </div>;
 }
 
-function ToolbarButton({ label, active = false, disabled = false, onClick, children }: { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" title={label} aria-label={label} aria-pressed={active || undefined} disabled={disabled} onClick={onClick}>{children}</button>;
+function ToolbarButton({ label, active = false, disabled = false, expanded, controls, onClick, children }: { label: string; active?: boolean; disabled?: boolean; expanded?: boolean; controls?: string; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" title={label} aria-label={label} aria-pressed={active || undefined} aria-expanded={expanded} aria-controls={controls} disabled={disabled} onClick={onClick}>{children}</button>;
 }

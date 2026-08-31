@@ -157,9 +157,13 @@ describe("Study UI regressions", () => {
     expect(body).toContain('contentType: "markdown"');
     expect(body).toContain("current.getMarkdown()");
     expect(body).toContain("Mermaid diagram");
+    expect(body).toContain("Mermaid and UML syntax help");
+    expect(body).toContain("lastLocallyEmittedMarkdownRef");
+    expect(body).toContain('"Shift-Tab"');
     expect(body).toContain("Continue writing below");
     expect(body).not.toContain("Preview");
     expect(css).toContain(".study-note-fullscreen");
+    expect(css).toContain(".study-mermaid-help");
     expect(css).toContain("height: calc(100dvh - 32px)");
     expect(css).toContain("@media (max-width: 700px)");
   });
