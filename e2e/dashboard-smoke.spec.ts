@@ -1,16 +1,29 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-test("unauthenticated dashboard access fails closed and carries the staged nonce CSP", async ({ page }) => {
+function trackCspViolations(page: Page) {
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (/content security policy|refused to (?:apply|execute|load)/iu.test(message.text())) {
+      violations.push(message.text());
+    }
+  });
+  return violations;
+}
+
+test("unauthenticated dashboard access fails closed under the enforced nonce CSP", async ({ page }) => {
+  const violations = trackCspViolations(page);
   const response = await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
   // A cold production worker may stream the route loading state before the server redirect arrives.
   await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: /your day/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /switch workspace/i })).toHaveCount(0);
 
-  const policy = response?.headers()["content-security-policy-report-only"];
+  const policy = response?.headers()["content-security-policy"];
   expect(policy).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/u);
-  expect(policy).not.toContain("'unsafe-inline'");
+  expect(policy?.match(/script-src [^;]+/u)?.[0]).not.toContain("'unsafe-inline'");
+  expect(policy).toContain("style-src-attr 'unsafe-inline'");
   expect(policy).not.toContain("'unsafe-eval'");
+  expect(violations).toEqual([]);
 });
 
 test("command palette owns focus, dismisses by keyboard, and restores its trigger", async ({ page }, testInfo) => {
@@ -26,6 +39,7 @@ test("command palette owns focus, dismisses by keyboard, and restores its trigge
 });
 
 test("demo remains scrollable without viewport-wide horizontal overflow", async ({ page }) => {
+  const violations = trackCspViolations(page);
   await page.goto("/dashboard?demo=1&view=tasks", { waitUntil: "load" });
   const dimensions = await page.evaluate(() => ({
     viewportWidth: window.innerWidth,
@@ -37,6 +51,7 @@ test("demo remains scrollable without viewport-wide horizontal overflow", async 
   expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.viewportHeight);
   await page.mouse.wheel(0, 700);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(violations).toEqual([]);
 });
 
 test("private briefing controls are accessible and responsive in Personal settings", async ({ page }) => {

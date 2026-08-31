@@ -31,8 +31,8 @@ headers, then update the handoff when truth changes.
 | Study writing | `study-note-editor.tsx`, `study-rich-note-body.tsx`, `study-markdown-media.tsx` | Draft lifecycle, Tiptap Markdown, Mermaid/media |
 | Browser BFF | `src/app/api/threadwise/[...path]/route.ts` | Session, same-origin mutation check, path/method allowlist, body caps |
 | Server API client | `src/lib/threadwise-api.ts` | 60-second EdDSA service tokens and backend response parsing |
-| Authentication | `src/lib/auth.ts`, `src/app/api/auth/*` | Telegram OIDC/Mini App verification and signed browser session |
-| CSP/PWA | `src/proxy.ts`, `src/lib/content-security-policy.ts`, `public/sw.js` | Nonce policy staging and static-only offline shell |
+| Authentication | `src/lib/auth.ts`, `src/lib/browser-session-registry.ts`, `src/app/api/auth/*` | Telegram proof, signed cookie, backend revocation check, logout |
+| CSP/PWA | `src/proxy.ts`, `src/lib/content-security-policy.ts`, `public/sw.js` | Enforced nonce policy and static-only offline shell |
 | Contracts | `src/lib/types.ts`, `study-types.ts`, snapshot schemas, backend `src/dashboard/study.ts` | Browser-facing DTOs and validation; Study drafts are explicitly minimized server-side |
 | Styling | `src/app/globals.css`, `src/app/study-dashboard.css` | Shared/Study tokens, responsive behavior, themes |
 
@@ -138,7 +138,8 @@ It is local-only and skips whenever `PLAYWRIGHT_BASE_URL` points at a hosted env
   an unused pre-migration Deep Work reference remain source archaeology, not user-facing controls.
 - Rich-note serialization is bounded and authenticated 10k/50k/99.5k browser measurements are held to
   an 8-second ceiling. Keep the gate before widening rich notes to Group.
-- CSP is report-only because current dynamic style attributes violate the intended enforced policy.
+- CSP is enforced by default. Scripts/style elements stay nonce-bound; only bounded dynamic React style
+  attributes use the explicit `style-src-attr` compatibility lane documented in `docs/CSP_ROLLOUT.md`.
 
 Extract by feature responsibility behind characterization tests. Do not combine a broad visual
 refactor, API change, auth change, and CSP rollout in one release.
@@ -148,7 +149,8 @@ refactor, API change, auth change, and CSP rollout in one release.
 - Vercel hosts this repo. Backend API/schema changes deploy first.
 - Verify both GitHub validation jobs, the Vercel production deployment, and the canonical dashboard
   route after release.
-- Keep `THREADWISE_CSP_MODE` report-only until `docs/CSP_ROLLOUT.md` passes in synthetic staging.
+- Keep enforcement as the default. Use `THREADWISE_CSP_MODE=report-only` only as a temporary rollback
+  and record why before redeploying.
 - Do not treat a preview/demo pass as proof of owner-gated authenticated Study behavior.
 
 ## Definition of done

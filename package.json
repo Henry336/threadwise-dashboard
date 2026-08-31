@@ -13,7 +13,7 @@
     "security:scan-secrets": "node scripts/scan-tracked-secrets.mjs",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "security:audit:all": "npm audit --audit-level=high",
-    "security:assurance": "vitest run src/lib/auth.test.ts src/lib/proxy-allowlist.test.ts src/lib/proxy-security.test.ts src/app/api/threadwise/study-proxy.test.ts src/lib/content-security-policy.test.ts src/lib/study-markdown-security.test.ts src/lib/study-mermaid.test.ts src/lib/browser-drafts.test.ts src/lib/study-access.test.ts"
+    "security:assurance": "vitest run src/lib/auth.test.ts src/lib/browser-session-registry.test.ts src/app/api/auth/logout/route.test.ts src/lib/proxy-allowlist.test.ts src/lib/proxy-security.test.ts src/app/api/threadwise/study-proxy.test.ts src/lib/content-security-policy.test.ts src/lib/study-markdown-security.test.ts src/lib/study-mermaid.test.ts src/lib/browser-drafts.test.ts src/lib/study-access.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

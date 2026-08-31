@@ -110,4 +110,10 @@ Vercel is the intended host. Preview deployments can safely run in demo mode. Be
 3. Add the Ed25519 `DASHBOARD_API_PRIVATE_KEY` described in the architecture document.
 4. Add the matching public verification key to the Render bot service and deploy its authenticated `/api/v1/dashboard/*` routes.
 
+Dashboard login also depends on the backend browser-session registry. Deploy the additive backend
+migration and routes before the dashboard consumer. A cookie issued before the revocable-session
+release intentionally requires one fresh Telegram sign-in; subsequent logout revokes the server record
+instead of merely deleting the local cookie. CSP enforcement is the default; use
+`THREADWISE_CSP_MODE=report-only` only as a temporary rollback.
+
 Never add database credentials to a `NEXT_PUBLIC_*` variable.

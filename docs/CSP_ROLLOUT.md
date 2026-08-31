@@ -1,31 +1,33 @@
 # Content Security Policy rollout
 
 Threadwise generates one unpredictable nonce per browser document in `src/proxy.ts`. The nonce is
-passed to Next.js and the Telegram bootstrap script. The policy intentionally contains neither
-`unsafe-inline` nor `unsafe-eval`.
+passed to Next.js and the Telegram bootstrap script. Script execution contains neither `unsafe-inline`
+nor `unsafe-eval` and is enforced by default.
 
 ## Current stage
 
-`THREADWISE_CSP_MODE` defaults to `report-only`. This is deliberate: browser QA currently reports
-React `style` attributes used for bounded visual values such as colors, widths, and progress. An
-enforced `style-src 'self' 'nonce-…'` policy would block those attributes. Do not hide that work with
-`unsafe-inline`, and do not set production to `enforce` yet.
+`THREADWISE_CSP_MODE` now defaults to `enforce`. Next/Telegram scripts and style elements are
+nonce-bound. The UI still needs bounded dynamic React style attributes for timetable coordinates,
+progress widths, module accents, and drag transforms. Those attributes are isolated under the CSP
+Level 3 directive `style-src-attr 'unsafe-inline'`; the allowance does not apply to scripts or style
+elements. Raw user HTML remains disabled and accepted Mermaid SVG remains sanitized.
 
-Latest evidence (2026-08-31): a fresh live demo load produced at least five report-only `style-src`
-violations for legitimate inline style attributes. The page remained functional because the policy is
-not enforced. No script error or exploit was observed; the result confirms that the enforcement gate
-below is still open.
+Latest local evidence (2026-08-31): the optimized production build completed and the full 20-case
+desktop/mobile Playwright gate exercised the enforced header, public/demo routes, responsive scrolling,
+rich-note rendering, Mermaid/UML examples, and the cryptographically authenticated synthetic Study
+draft lifecycle without a CSP break. Record the canonical hosted evidence in the release checkpoint.
 
-## Enforcement gate
+## Maintenance gate
 
-1. Deploy report-only to staging with synthetic accounts.
-2. Exercise public, personal, group, and Study routes in desktop/mobile Chromium and the Telegram
-   Mini App. Include Markdown, Mermaid, protected images, dialogs, timers, and PWA registration.
-3. Inventory violations without recording user content or full URLs containing sensitive query data.
-4. Replace required style attributes with classes, CSS custom-property patterns that satisfy the
-   selected policy, or another nonce-compatible approach. Keep the policy free of broad unsafe terms.
+1. Exercise public, Personal, Group, and Study routes in desktop/mobile Chromium and the Telegram Mini
+   App after changes to dynamic styling, scripts, Markdown/Mermaid, dialogs, timers, or PWA startup.
+2. Treat any script/style-element violation as a release blocker. Do not add `unsafe-inline` to
+   `script-src` or `style-src-elem`, and do not add `unsafe-eval`.
+3. Keep dynamic style values bounded or enum-derived; move stable presentation to classes. Do not place
+   user-authored CSS into the style-attribute compatibility lane.
+4. Inventory reports without recording user content or sensitive query strings.
 5. Run unit, browser, TypeScript, lint, build, secret, and dependency gates again.
-6. Set `THREADWISE_CSP_MODE=enforce` in staging first. Promote it separately only after a clean soak.
 
-Rollback is immediate and data-free: set `THREADWISE_CSP_MODE=report-only` (or remove it) and redeploy.
+Rollback is immediate and data-free: set `THREADWISE_CSP_MODE=report-only` and redeploy. Removing the
+variable restores enforcement; it no longer disables the policy.
 No database migration, key rotation, or content rewrite is involved.

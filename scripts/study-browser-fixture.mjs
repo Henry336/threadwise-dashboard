@@ -4,6 +4,7 @@ import { importSPKI, jwtVerify } from "jose";
 const PORT = Number(process.env.STUDY_FIXTURE_PORT ?? 3107);
 const WORKSPACE_ID = "10000000-0000-4000-8000-000000000001";
 const MODULE_ID = "20000000-0000-4000-8000-000000000001";
+const SESSION_ID = "60000000-0000-4000-8000-000000000001";
 const now = () => new Date().toISOString();
 let draft = null;
 let resources = [];
@@ -77,6 +78,9 @@ createServer(async (request, response) => {
   if (!url.pathname.startsWith("/api/v1/dashboard") || !await authorize(request)) return json(response, 401, { error: "unauthorized" });
 
   const path = url.pathname.slice("/api/v1/dashboard".length).replace(/^\/+|\/+$/gu, "");
+  if (path === `browser-sessions/${SESSION_ID}` && request.method === "GET") {
+    return json(response, 200, { session: { id: SESSION_ID, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } });
+  }
   if (path === "workspaces" && request.method === "GET") {
     return json(response, 200, { workspaces: [dashboard().workspace] });
   }
