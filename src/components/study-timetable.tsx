@@ -18,6 +18,7 @@ import { scheduleBlockPlaceId, StudyPlaceCombobox } from "./study-place-combobox
 import { StudyChoicePicker, StudyTimePicker } from "./study-choice-picker";
 import { IntegerInput } from "./integer-input";
 import { clampInteger } from "@/lib/numeric-input";
+import { useBodyScrollLock } from "@/lib/body-scroll-lock";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
 type WeekOrientation = StudyOrientation;
@@ -205,7 +206,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       </section>
     </div>
 
-    {panel.mode === "details" && panelBlock && <TimetableBlockDetails
+    {panel.mode === "details" && panelBlock && !deleteOpen && <TimetableBlockDetails
       key={`details-${panelBlock.id}`}
       block={panelBlock}
       busy={busy}
@@ -406,11 +407,7 @@ function TimetableOverlay({ children, busy, onClose, className = "" }: {
   onClose: () => void;
   className?: string;
 }) {
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, []);
+  useBodyScrollLock();
 
   if (typeof document === "undefined") return null;
   return createPortal(<div className={`study-timetable-overlay ${className}`.trim()} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>

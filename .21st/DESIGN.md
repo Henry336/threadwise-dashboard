@@ -51,6 +51,10 @@ Saved Library images open fitted to the available viewer for orientation. A labe
 
 Primary Study overflow controls are part of the visual system. On desktop, the sidebar navigation and horizontal timetable use slim rounded thumbs derived from theme tokens, transparent tracks, and a restrained Study-blue hover state. Preserve native scrolling and Firefox/WebKit support; the mobile drawer continues to hide its scrollbar.
 
+Destructive timetable confirmation replaces block details instead of stacking another exposed modal.
+Only one `aria-modal` may own focus at a time. Any genuinely overlapping overlays share a reference-counted
+body scroll lock so closing siblings in either order restores the page's original scrolling state.
+
 ## Decision: one cross-mode Today planner
 
 Personal, Group, and Study overviews reuse one Today planner. It presents Today, Carryover, and Deadline watch as three bounded columns on wide screens and one readable stack on mobile. Batch capture exposes one review surface, a secondary Add more action, focused row corrections, and one atomic Save action. Planned days and deadlines remain separate labelled fields; creating planned work never implies a reminder.

@@ -89,7 +89,9 @@ flows require the paired backend plus Telegram authentication. Never put secrets
    one feature.
 3. Preserve keyboard, screen-reader, touch, reduced-motion, dark-mode, mobile, and zoom behavior.
 4. Keep buttons named after their action. If responsive CSS hides visible text, provide an `aria-label`.
-5. Keep modal focus inside the active visual layer and restore it to the invoking control.
+5. Keep modal focus inside the active visual layer and restore it to the invoking control. Expose only
+   one destructive `aria-modal` at a time; overlays that can overlap must use `useBodyScrollLock` rather
+   than independently saving and restoring `document.body.style.overflow`.
 6. Test error, empty, loading, offline/reconnecting, stale/conflict, and partial provider states.
 7. Update architecture/design/changelog/handoff docs when product or trust behavior changes.
 

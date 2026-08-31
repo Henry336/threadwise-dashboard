@@ -44,7 +44,8 @@
       "theme-aware restrained scrollbars on primary Study navigation and timetable overflow",
       "bounded personal Overview quote manager with explicit add, remove, and save actions",
       "private Personal Today ordering with empty completion controls and dedicated drag handles",
-      "full-screen Study writing with inline rich Markdown, selection-safe autosave, and searchable Mermaid/UML guidance"
+      "full-screen Study writing with inline rich Markdown, selection-safe autosave, and searchable Mermaid/UML guidance",
+      "single-active-modal destructive flows with reference-counted body scroll locking"
     ]
   },
   "constraints": {
@@ -139,6 +140,11 @@
       "date": "2026-08-31",
       "decision": "Reuse the validated full-screen rich editor in Personal mode with Personal styling, title-only filing, and owner-scoped encrypted drafts; keep Group unchanged.",
       "reason": "Personal notes need the same uninterrupted writing, direct formatting, diagrams, portability, and cross-device recovery without inventing a module choice. A separate Personal draft scope preserves ownership and conflict guarantees, while deferring Group avoids guessing at shared-note permissions."
+    },
+    {
+      "date": "2026-08-31",
+      "decision": "Replace timetable block details with the destructive confirmation instead of stacking two exposed modals, and share body scroll locking across overlapping timetable overlays.",
+      "reason": "Independent modal cleanup can restore another overlay's hidden overflow value and permanently disable page scrolling. One active focus layer plus reference-counted restoration is accessible and remains correct regardless of React cleanup order."
     }
   ],
   "evidence": [
@@ -146,5 +152,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-31T13:10:00.000+08:00"
+  "generatedAt": "2026-08-31T15:43:00.000+08:00"
 }

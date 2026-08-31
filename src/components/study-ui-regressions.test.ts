@@ -112,6 +112,14 @@ describe("Study UI regressions", () => {
     expect(agenda).not.toContain('<article className="study-agenda-block"');
   });
 
+  it("replaces block details with one deletion dialog and uses the shared scroll lock", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
+
+    expect(component).toContain('panel.mode === "details" && panelBlock && !deleteOpen');
+    expect(component).toContain("useBodyScrollLock();");
+    expect(component).not.toContain('document.body.style.overflow = "hidden"');
+  });
+
   it("keeps the top-three plan at its content height", () => {
     const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
     const ruleStart = css.indexOf(".study-plan { grid-column: 2;");
