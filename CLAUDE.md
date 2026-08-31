@@ -13,7 +13,8 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
   scroll could dismiss a newly opened note menu. Menus now prevent focus scrolling and close only on
   explicit scroll intent; the exact export flow passes ten consecutive browser repetitions. Complete
   local gates pass at 188 tests, 86 security checks, Playwright 17/5 intentional skips, type/lint/build,
-  secret scans, and zero-finding audits. Follow-up release/live verification is pending.
+  secret scans, and zero-finding audits. PRs `#11`/`#12` are live at `ff2a153` through Ready Vercel
+  deployment `GaG1hmE5iGoBRuFurrkB1RgYPCdQ`; main CI and all seven applicable production desktop smokes pass.
 
 - **2026-08-31 (Codex, deployed Phase 3):** Reduced the Study shell from 1,303 to 911
   lines by extracting Deep Work/session analysis to `study-deep-work.tsx` and the shared modal/focus
@@ -239,11 +240,11 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-31 (Codex, Phase 1–3 regression audit validated):** Fixed false-success logout on rejected
+- **2026-09-01 (Codex, Phase 1–3 regression audit released):** Fixed false-success logout on rejected
   revocation plus the overlapping Study/confirmation scroll-lock and background-isolation defects.
   Added focused and responsive browser regressions. The merged main browser gate then found a flaky
   action menu caused by raw-scroll dismissal; the intent-based replacement passes 10/10 repetitions.
-  Follow-up release pending.
+  Dashboard `ff2a153` is deployed, main CI is green, and seven live desktop smoke journeys pass.
 
 - **2026-08-31 (Codex, deployed Phase 3):** Extracted Study Deep Work/module analysis and
   the shared Study dialog from the shell; updated source-aware regressions and contributor docs.
