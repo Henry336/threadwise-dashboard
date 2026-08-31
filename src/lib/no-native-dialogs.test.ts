@@ -18,4 +18,11 @@ describe("dashboard dialog consistency", () => {
       expect(source, file).not.toContain("window.alert(");
     }
   });
+
+  it("uses the reference-counted body lock for the shared confirmation layer", () => {
+    const source = readFileSync(resolve(process.cwd(), "src", "components", "confirmation-dialog.tsx"), "utf8");
+    expect(source).toContain("useBodyScrollLock();");
+    expect(source).toContain('element.setAttribute("inert", "")');
+    expect(source).not.toContain('document.body.style.overflow = "hidden"');
+  });
 });

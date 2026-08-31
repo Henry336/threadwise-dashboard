@@ -22,6 +22,8 @@ describe("Study component boundaries", () => {
     expect(deepWork).toContain("export function StudyDeepWork");
     expect(deepWork).toContain("function StudyModuleAnalysisPanel");
     expect(dialog).toContain("export function StudyDialog");
+    expect(dialog).toContain("useBodyScrollLock();");
+    expect(dialog).not.toContain('document.body.style.overflow = "hidden"');
     expect(lineCount(shell)).toBeLessThanOrEqual(1_000);
     expect(lineCount(deepWork)).toBeLessThanOrEqual(500);
   });

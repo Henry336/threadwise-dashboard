@@ -4,6 +4,18 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Phase 1–3 regression correction
+- Made logout fail closed for every non-successful backend revocation response. A rejected service
+  token can no longer be mistaken for a revoked browser session while the local cookie is deleted.
+- Moved the extracted Study dialog and the global destructive confirmation layer onto the shared
+  reference-counted body scroll lock, eliminating cleanup-order races when dirty-close confirmation
+  overlaps the underlying editor.
+- Made the active destructive confirmation isolate all obscured page roots with `inert`, then restore
+  their prior state and the original body overflow after dismissal.
+- Added focused session/structural regressions and desktop/mobile browser coverage. Complete local
+  gates pass at 187 unit tests, 86 security checks, 17 browser passes with 5 intentional mobile skips,
+  TypeScript, lint, optimized build, secret scan, and two zero-finding dependency audits.
+
 ### Phase 3 Study composition extraction (released 2026-08-31)
 - Moved Deep Work session building, history/editing, and evidence-backed module analysis out of the
   Study shell into `study-deep-work.tsx` without changing rendered behavior or API paths.
