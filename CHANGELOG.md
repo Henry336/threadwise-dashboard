@@ -15,6 +15,9 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
   examples. All examples pass the installed Mermaid browser parser.
 - Kept UML inside the existing strict, bounded, sanitized Mermaid renderer; no PlantUML server,
   plugin execution, new note format, or third-party content handoff was introduced.
+- Passed 162 unit/regression tests, 72 focused security checks, TypeScript, lint, production build,
+  tracked-secret scan, both zero-finding dependency audits, and responsive Chromium checks (8 passed,
+  2 intentional skips). Runtime `e9e21b192f15` passed hosted CI and completed its Vercel deployment.
 
 ### Post-release audit and contributor handoff
 - Added a dashboard-specific new-developer map covering component ownership, BFF/auth boundaries,

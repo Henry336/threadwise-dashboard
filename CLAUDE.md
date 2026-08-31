@@ -5,12 +5,14 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, release in progress):** Hardened the Study rich editor against selection loss by
+- **2026-08-31 (Codex, deployed):** Hardened the Study rich editor against selection loss by
   separating locally emitted Markdown from genuine external replacements. Added Tab/Shift+Tab nesting
   for lists and indentation for Mermaid/code lines, plus a searchable responsive Mermaid/UML guide with
   insertable examples. UML remains Mermaid-native and local; no PlantUML service or trust-boundary
-  expansion was added. Focused unit/regression tests, TypeScript, lint, and installed-browser Mermaid
-  parsing are green; full release gates and production deployment are pending this checkpoint.
+  expansion was added. Runtime `e9e21b192f15` passed GitHub CI run `33353462062` and completed its
+  Vercel production deployment; the canonical dashboard returns HTTP 200. All 162 unit/regression tests,
+  72 security checks, typecheck, lint, production build, secret/dependency scans, and browser checks
+  (8 passed, 2 intentional skips) are green.
 
 - **2026-08-31 (Codex, deployed and audited):** Released dashboard runtime `b81f57fc3594` after
   backend runtime `0adbf0be688f`: one Study Overview writing entry point, a near/full-screen inline
@@ -169,10 +171,10 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-31 (Codex):** Fixed intermittent Study editor selection resets, stabilized the parent body
+- **2026-08-31 (Codex, deployed):** Fixed intermittent Study editor selection resets, stabilized the parent body
   callback, added accessible diagram-help disclosure/Escape behavior, portable list/code indentation,
-  and 12 browser-validated Mermaid/UML templates with a 38-entry quick reference. Documentation and
-  release validation are being reconciled before push.
+  and 12 browser-validated Mermaid/UML templates with a 38-entry quick reference. Runtime `e9e21b1`
+  is live after complete local and hosted gates; only this documentation checkpoint follows it.
 
 - **2026-08-31 (Codex):** Completed a post-release static, dependency, test, and live responsive
   audit across both repos. Added the dashboard developer map; reconciled README, architecture, CSP
