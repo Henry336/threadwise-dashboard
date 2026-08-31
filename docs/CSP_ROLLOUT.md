@@ -16,7 +16,8 @@ Latest evidence (2026-08-31): the optimized production build completed and the f
 desktop/mobile Playwright gate exercised the enforced header, public/demo routes, responsive scrolling,
 rich-note rendering, Mermaid/UML examples, and the cryptographically authenticated synthetic Study
 draft lifecycle without a CSP break. Dashboard PR `#6` passed validate/browser/Vercel checks, and
-production deployment `dpl_Bhk9yjShbMNnYu4gxYkbCgojHoDp` completed Ready with the canonical alias.
+production code deployment `dpl_Bhk9yjShbMNnYu4gxYkbCgojHoDp` completed Ready. Later
+documentation-only `main` deployments retain the same enforced-policy runtime.
 
 ## Maintenance gate
 
