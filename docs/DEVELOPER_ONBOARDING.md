@@ -27,7 +27,7 @@ headers, then update the handoff when truth changes.
 | Personal/group shell | `src/components/dashboard-app.tsx` | Navigation, Personal and Group composition, shared dialogs |
 | Study shell | `src/components/study-dashboard.tsx` | Study navigation, synchronization, and feature composition |
 | Study Deep Work | `src/components/study-deep-work.tsx` | Session builder/history/editor and module analysis |
-| Study dialogs | `src/components/study-dialog.tsx` | Shared focus trap, dirty-close confirmation, and focus restoration |
+| Study dialogs | `src/components/study-dialog.tsx`, `confirmation-dialog.tsx`, `src/lib/body-scroll-lock.ts` | Shared focus traps, dirty-close confirmation, background isolation, and reference-counted scroll restoration |
 | Timetable | `src/components/study-timetable.tsx` | Week/day layout, block/details/editor state |
 | Today | `src/components/today-planner.tsx` | Cross-mode agenda projection and Personal ordering |
 | Study writing | `study-note-editor.tsx`, `study-rich-note-body.tsx`, `study-markdown-media.tsx` | Draft lifecycle, Tiptap Markdown, Mermaid/media |
@@ -52,6 +52,9 @@ Browser → same-origin Next.js BFF → 60-second EdDSA JWT → Render dashboard
   navigation or API responses.
 - Mutations must use the same-origin BFF, an allowlisted method/path, a bounded JSON body, and a
   short-lived backend token. Render consumes mutation JTIs and applies shared rate limits.
+- Logout deletes the signed browser cookie only after Render returns a successful idempotent session
+  revocation. Treat every non-2xx registry response, including authorization failure, as an incomplete
+  logout so a stolen cookie cannot silently remain usable after the UI reports success.
 - User content renders through React or bounded Markdown/Mermaid/media components. Do not add raw HTML,
   arbitrary script execution, protocol-relative images, or provider-hosted secrets.
 
@@ -103,7 +106,8 @@ flows require the paired backend plus Telegram authentication. Never put secrets
 4. Keep buttons named after their action. If responsive CSS hides visible text, provide an `aria-label`.
 5. Keep modal focus inside the active visual layer and restore it to the invoking control. Expose only
    one destructive `aria-modal` at a time; overlays that can overlap must use `useBodyScrollLock` rather
-   than independently saving and restoring `document.body.style.overflow`.
+   than independently saving and restoring `document.body.style.overflow`. The global confirmation
+   layer also marks obscured body roots inert and must restore their prior inert state on cleanup.
 6. Test error, empty, loading, offline/reconnecting, stale/conflict, and partial provider states.
 7. Update architecture/design/changelog/handoff docs when product or trust behavior changes.
 

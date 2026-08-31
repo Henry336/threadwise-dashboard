@@ -37,4 +37,11 @@ describe("browser session registry client", () => {
     await expect(revokeBrowserSession("123456789", sessionId)).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith(`https://api.example.test/api/v1/dashboard/browser-sessions/${sessionId}`, expect.objectContaining({ method: "DELETE" }));
   });
+
+  it("does not claim logout succeeded when upstream rejected revocation", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 }));
+    await expect(revokeBrowserSession("123456789", sessionId)).rejects.toThrow(
+      "Threadwise could not revoke the browser session.",
+    );
+  });
 });

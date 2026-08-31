@@ -72,7 +72,7 @@ export async function browserSessionIsActive(telegramId: string, sessionId: stri
 export async function revokeBrowserSession(telegramId: string, sessionId: string): Promise<void> {
   if (!SESSION_ID.test(sessionId)) return;
   const response = await registryFetch(telegramId, sessionId, { method: "DELETE" });
-  if (!response.ok && response.status !== 401 && response.status !== 404) {
+  if (!response.ok) {
     throw new Error("Threadwise could not revoke the browser session.");
   }
 }

@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useBodyScrollLock } from "@/lib/body-scroll-lock";
 
 export type ConfirmationRequest = {
   title?: string;
@@ -42,15 +43,21 @@ export function useConfirmation() {
 }
 
 function ThreadwiseConfirmationDialog({ request, onSettle }: { request: PendingConfirmation; onSettle: (confirmed: boolean) => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  useBodyScrollLock();
 
   useEffect(() => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancelRef.current?.focus();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const overlay = overlayRef.current;
+    const background = overlay
+      ? [...document.body.children].filter((element): element is HTMLElement => element instanceof HTMLElement && element !== overlay)
+      : [];
+    const alreadyInert = new Map(background.map((element) => [element, element.hasAttribute("inert")]));
+    for (const element of background) element.setAttribute("inert", "");
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onSettle(false);
       if (event.key !== "Tab") return;
@@ -64,12 +71,14 @@ function ThreadwiseConfirmationDialog({ request, onSettle }: { request: PendingC
     document.addEventListener("keydown", keydown);
     return () => {
       document.removeEventListener("keydown", keydown);
-      document.body.style.overflow = previousOverflow;
+      for (const element of background) {
+        if (!alreadyInert.get(element)) element.removeAttribute("inert");
+      }
       returnFocus.current?.focus();
     };
   }, [onSettle]);
 
-  return createPortal(<div className="threadwise-confirm-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onSettle(false); }}>
+  return createPortal(<div ref={overlayRef} className="threadwise-confirm-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onSettle(false); }}>
     <section ref={dialogRef} className="threadwise-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="threadwise-confirm-title" aria-describedby="threadwise-confirm-message">
       <span className="threadwise-confirm-icon"><AlertTriangle size={19} /></span>
       <div><p className="threadwise-confirm-kicker">Confirm action</p><h2 id="threadwise-confirm-title">{request.title ?? "Are you sure?"}</h2><p id="threadwise-confirm-message">{request.message}</p></div>

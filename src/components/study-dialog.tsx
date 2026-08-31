@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useBodyScrollLock } from "@/lib/body-scroll-lock";
 import { useConfirmation } from "./confirmation-dialog";
 
 export function StudyDialog({ kicker, title, dirty = false, wide = false, onClose, children }: { kicker: string; title: string; dirty?: boolean; wide?: boolean; onClose: () => void; children: (requestClose: () => void) => ReactNode }) {
   const dialogRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const confirm = useConfirmation();
+  useBodyScrollLock();
   const requestClose = useCallback(() => {
     void (async () => {
       if (dirty && !await confirm({ title: "Discard unsaved changes?", message: "Your changes in this editor will be lost.", confirmLabel: "Discard", tone: "danger" })) return;
@@ -17,13 +19,10 @@ export function StudyDialog({ kicker, title, dirty = false, wide = false, onClos
 
   useEffect(() => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const dialog = dialogRef.current;
     const first = dialog?.querySelector<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])");
     first?.focus();
     return () => {
-      document.body.style.overflow = previousOverflow;
       returnFocus.current?.focus();
     };
   }, []);

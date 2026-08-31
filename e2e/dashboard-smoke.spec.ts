@@ -69,6 +69,22 @@ test("private briefing controls are accessible and responsive in Personal settin
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
+test("destructive confirmation isolates the background and releases the page lock", async ({ page }) => {
+  await page.goto("/dashboard?demo=1&view=settings&tab=privacy", { waitUntil: "load" });
+  await page.getByRole("textbox", { name: "DELETE MY THREADWISE DATA" }).fill("DELETE MY THREADWISE DATA");
+  await page.getByRole("button", { name: "Delete account and data" }).click();
+
+  const confirmation = page.getByRole("alertdialog", { name: "Permanently delete your account?" });
+  await expect(confirmation).toBeVisible();
+  await expect(page.locator("body > [inert]")).not.toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+
+  await confirmation.getByRole("button", { name: "Cancel" }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.locator("body > [inert]")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
+});
+
 test("Personal notes open as a large rich editor and align checklist controls with their text", async ({ page }, testInfo) => {
   await page.goto("/dashboard?demo=1", { waitUntil: "load" });
   await page.getByRole("button", { name: "Write note" }).click();
