@@ -5,12 +5,14 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-08-31 (Codex, release in progress):** Removed the remaining rich-note typing friction by
+- **2026-08-31 (Codex, deployed):** Removed the remaining rich-note typing friction by
   coalescing Markdown conversion and making dashboard shortcuts contenteditable-aware; restored visible
   ordered/unordered markers and added a continuous browser typing regression. Study/Personal filing is
   now one aligned active modal layer, import/conflict feedback is code-driven, mobile search names are
   stable, and page-hide makes a best-effort draft handoff. Study modules can be pinned, while timetable
   dates and the optional leave-reminder row align and empty optional values no longer trigger raw errors.
+  Backend `4689c8d` released first with its additive module-pin migration; dashboard `5e831a9` passed
+  GitHub CI run `33376998070`, completed Vercel, and passed 12 hosted browser checks.
 
 - **2026-08-31 (Codex, deployed):** Fixed the fatal Study timetable scroll lock after deleting
   any occurrence scope. The deletion confirmation now replaces, rather than stacks over, block details;
@@ -196,10 +198,11 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-08-31 (Codex, release in progress):** Fixed the actual `n`-key Quick Capture focus theft,
+- **2026-08-31 (Codex, deployed):** Fixed the actual `n`-key Quick Capture focus theft,
   bounded Markdown synchronization, restored list markers, aligned/isolated note filing, added persistent
   Study module pins, and corrected optional timetable layout/payload/error handling. Updated design and
-  developer documentation; complete gates and paired backend-first release remain.
+  developer documentation. Backend `4689c8d` and dashboard `5e831a9` are live; local, CI, Vercel,
+  and hosted desktop/mobile gates pass.
 
 - **2026-08-31 (Codex, deployed):** Diagnosed Study block deletion as two sibling modal effects
   independently saving and restoring `body.style.overflow`. Replaced the underlying details layer during
