@@ -6,8 +6,8 @@ Documentation verified against the Threadwise stack: **2026-09-04**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
-The current release candidate pairs this v0.10.0 dashboard with backend v0.35.0. Release the additive
-backend migration/runtime first, then this dashboard; exact live commits are recorded after deployment.
+Dashboard v0.10.0 is live at commit `c7746c5`, paired with backend v0.35.0 at `e4c50a2d7008`. The
+additive backend migration/runtime was released and health-checked before this dashboard deployment.
 
 New developers should start with [docs/DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md).
 The current cross-repository audit is in the backend at

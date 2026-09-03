@@ -4,7 +4,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
-### Study Calendar mirror and overlap guidance (v0.10.0; 2026-09-04)
+### Study Calendar mirror and overlap guidance (v0.10.0; released 2026-09-04)
 - Added a secondary Timetable Calendar control with a branded consent/status dialog, encrypted Google
   OAuth continuation, automatic return-and-resume, Sync now, and non-destructive Stop syncing.
 - Added occurrence-aware overlap detection after recurrence exclusions. Vertical, Horizontal, and Day
@@ -19,6 +19,8 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Final local gates pass at 195 unit tests, 91 security checks, 19 browser passes with 7 intentional
   device/fixture skips, type/lint/build, tracked-secret scan, and two zero-finding dependency audits.
   A newly disclosed high-severity development-only Browserslist issue was patched to 4.28.8.
+- Released after backend v0.35.0 health was green. Commit `c7746c5` completed Vercel deployment
+  `7CqgVDmYuE4EBReD8mR6teLEbvHA` for the canonical dashboard.
 
 ### Phase 1–3 regression correction
 - Made logout fail closed for every non-successful backend revocation response. A rejected service

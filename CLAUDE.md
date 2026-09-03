@@ -5,13 +5,14 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
-- **2026-09-04 (Codex, Study timetable release in progress):** Added the explicit Study Timetable
+- **2026-09-04 (Codex, Study timetable release):** Added the explicit Study Timetable
   Calendar mirror interaction: branded privacy consent, existing Google OAuth return/resume, sync
   status/counts, manual retry, and non-destructive stop. Added accessible amber conflict warnings in
   Vertical/Horizontal/Day, persistent touch details, side-by-side vertical lanes, and quiet post-save
   conflict confirmation. The BFF exposes only the three exact owner-gated Study mutation paths and a
-  minimized Calendar DTO. Backend v0.35.0 migration/runtime must release first; final live evidence is
-  tracked in the backend `PROJECT_CONTEXT.md`.
+  minimized Calendar DTO. Backend v0.35.0 `e4c50a2d7008` released first; dashboard `c7746c5` then
+  completed Vercel deployment `7CqgVDmYuE4EBReD8mR6teLEbvHA`. Exact evidence is tracked in the
+  backend `PROJECT_CONTEXT.md`.
 
 - **2026-08-31 (Codex, Phase 1–3 regression audit validated):** Corrected two defects found
   after the three deployed audit-remediation phases. Logout now treats every non-2xx Render revocation
@@ -248,9 +249,9 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
-- **2026-09-04 (Codex):** Implemented and validated the paired v0.10.0 Timetable Calendar/overlap UI.
-  Preserve the existing Threadwise primitives and privacy copy; release only after backend v0.35.0 is
-  migrated and healthy, then verify OAuth resume and overlap behavior on the canonical site.
+- **2026-09-04 (Codex):** Released the paired v0.10.0 Timetable Calendar/overlap UI after backend
+  v0.35.0 was migrated and healthy. Preserve the existing Threadwise primitives and privacy copy;
+  dashboard commit `c7746c5` is live through deployment `7CqgVDmYuE4EBReD8mR6teLEbvHA`.
 
 - **2026-09-01 (Codex, Phase 1–3 regression audit released):** Fixed false-success logout on rejected
   revocation plus the overlapping Study/confirmation scroll-lock and background-isolation defects.
