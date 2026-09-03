@@ -102,4 +102,34 @@ test.describe("authenticated Study note lifecycle", () => {
     console.info(`Rich-note benchmark: ${JSON.stringify(measurements)}`);
     await testInfo.attach("rich-note-benchmark.json", { body: JSON.stringify(measurements, null, 2), contentType: "application/json" });
   });
+
+  test("explains Calendar consent and exposes each overlapping occurrence accessibly", async ({ page }) => {
+    await page.goto("/dashboard?view=study-timetable", { waitUntil: "load" });
+    await expect(page.getByRole("heading", { name: "Timetable" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Sync Calendar" }).click();
+    const calendar = page.getByRole("dialog", { name: "Keep your calendar in step" });
+    await expect(calendar).toContainText("Threadwise remains the source of truth");
+    await expect(calendar).toContainText("Origins, coordinates, routes, and preparation notes never leave Threadwise");
+    await calendar.getByRole("button", { name: "Close", exact: true }).click();
+
+    await expect(page.getByRole("button", { name: /CS2100 Lecture.*Overlaps with CS2100 Project studio/u })).toBeVisible();
+    await expect(page.getByRole("button", { name: /CS2100 Project studio.*Overlaps with CS2100 Lecture/u })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Overlaps with/u })).toHaveCount(2);
+
+    await page.getByRole("button", { name: "Horizontal" }).click();
+    await expect(page.getByRole("button", { name: /CS2100 Lecture.*Overlaps with CS2100 Project studio/u })).toBeVisible();
+  });
+});
+
+test("mobile Study details retain a persistent conflict warning", async ({ context, page }, testInfo) => {
+  test.skip(Boolean(process.env.PLAYWRIGHT_BASE_URL), "Synthetic credentials are only valid against the isolated local fixture.");
+  test.skip(!testInfo.project.name.startsWith("mobile"), "This assertion targets the touch-first Study agenda.");
+  await authenticate(context);
+  await page.goto("/dashboard?view=study-timetable", { waitUntil: "load" });
+  await page.getByRole("button", { name: /Open Monday,.*in day view/u }).click();
+  await page.getByRole("button", { name: /CS2100 Lecture.*Overlaps with CS2100 Project studio/u }).click();
+  const details = page.getByRole("dialog", { name: "CS2100 Lecture" });
+  await expect(details.getByText("Schedule overlap", { exact: true })).toBeVisible();
+  await expect(details).toContainText("Overlaps with CS2100 Project studio, 10:30 AM–11:30 AM.");
 });

@@ -151,6 +151,20 @@ describe("Study UI regressions", () => {
     expect(component).not.toContain('document.body.style.overflow = "hidden"');
   });
 
+  it("keeps Calendar consent and overlap warnings explicit and accessible", () => {
+    const component = readFileSync(join(process.cwd(), "src", "components", "study-timetable.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
+
+    expect(component).toContain("Threadwise remains the source of truth");
+    expect(component).toContain("Origins, coordinates, routes, and preparation notes never leave Threadwise");
+    expect(component).toContain('aria-label={scheduleBlockAccessibleLabel(block, overlapping)}');
+    expect(component).toContain("<ConflictBadge conflicts={overlapping} />");
+    expect(component).toContain('role="status"><span><AlertTriangle');
+    expect(css).toContain("--block-left");
+    expect(css).toContain("--block-width");
+    expect(css).toContain(".study-conflict-badge::after");
+  });
+
   it("keeps the top-three plan at its content height", () => {
     const css = readFileSync(join(process.cwd(), "src", "app", "study-dashboard.css"), "utf8");
     const ruleStart = css.indexOf(".study-plan { grid-column: 2;");

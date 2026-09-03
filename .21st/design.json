@@ -46,7 +46,9 @@
       "private Personal Today ordering with empty completion controls and dedicated drag handles",
       "full-screen Study writing with inline rich Markdown, selection-safe autosave, and searchable Mermaid/UML guidance",
       "single-active-modal destructive flows with reference-counted body scroll locking",
-      "pinned Study modules ordered ahead of the existing stable module order"
+      "pinned Study modules ordered ahead of the existing stable module order",
+      "branded Study Calendar consent and compact synchronization status",
+      "accessible amber timetable conflicts with touch details and vertical lanes"
     ]
   },
   "constraints": {
@@ -151,6 +153,11 @@
       "date": "2026-08-31",
       "decision": "Keep rich-note typing local and selection-stable, use one aligned active filing layer, and let learners pin Study modules without changing their academic state.",
       "reason": "Bounded Markdown synchronization and contenteditable-aware shortcuts remove writing friction; one focused filing rhythm prevents obscured controls; nullable pin state improves scan order without conflating preference with Canvas activation or archival."
+    },
+    {
+      "date": "2026-09-04",
+      "decision": "Keep one-way Google Calendar consent and occurrence overlap guidance inside the Study timetable.",
+      "reason": "Calendar is a secondary projection of canonical Threadwise blocks, so explicit privacy copy and non-destructive controls belong beside timetable actions. Overlap is valid capture state but must remain visible and accessible without blocking the save."
     }
   ],
   "evidence": [
@@ -158,5 +165,5 @@
     { "fact": "project.stack:nextjs-react", "source": "package.json" },
     { "fact": "project.assets", "source": "public/brand" }
   ],
-  "generatedAt": "2026-08-31T17:10:00.000+08:00"
+  "generatedAt": "2026-09-04T00:00:00.000+08:00"
 }

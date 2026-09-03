@@ -1,8 +1,8 @@
 # Dashboard architecture
 
-Updated: 2026-08-31
+Updated: 2026-09-04
 
-Current dashboard release: v0.9.0; paired backend release: v0.32.0
+Current dashboard release: v0.10.0; paired backend release: v0.35.0
 
 ## Boundary
 
@@ -137,6 +137,20 @@ Existing block selection enters a reducer-backed details state before entering e
 density is derived deterministically from the duration-accurate rendered width, while overlap lanes
 are assigned client-side for legibility. New blocks may enter create state directly. All states use
 the same authenticated Study mutation routes and reconcile from the canonical snapshot afterward.
+
+Conflict calculation runs over each displayed day's already-expanded occurrences, after exclusions and
+series ends have been applied. Strict interval intersection includes partial, full, nested, and multiple
+overlaps but excludes exact adjacency. Each affected card's accessible name includes direct conflict
+copy; the amber badge exposes the same copy to hover/focus, touch details list every conflicting block,
+and Vertical uses the existing lane allocator so no card completely obscures another. Saving remains
+non-blocking and announces the resulting conflict count.
+
+Calendar synchronization is initiated only from the Timetable's secondary control. The branded dialog
+explains one-way authority and the exact privacy boundary before redirecting to the existing encrypted
+Google OAuth flow. Its bounded return parameters automatically resume the requested sync. Connected
+state exposes only safe status/count/timestamp fields plus Sync now and non-destructive Stop syncing.
+The same-origin proxy allowlists only POST connect/sync/stop; all provider tokens, payload mapping,
+retry, reconciliation, and event identity remain in backend v0.35.0.
 
 ## Production surface
 

@@ -1,5 +1,5 @@
 const UUID_SEGMENT = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}";
-const STUDY_PATH = new RegExp(`^study/(?:snapshot|search|places|modules(?:/[A-Za-z0-9_-]+(?:/analysis)?)?|analysis-suggestions/[A-Za-z0-9_-]+|items(?:/[A-Za-z0-9_-]+(?:/complete)?)?|resources(?:/[A-Za-z0-9_-]+(?:/content)?)?|note-drafts(?:/${UUID_SEGMENT})?|sessions/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:/[A-Za-z0-9_-]+/resolve)?|weekly-plan|review|settings|canvas/sync|canvas/assignments/[A-Za-z0-9_-]+|origins(?:/[A-Za-z0-9_-]+)?|schedule(?:/[A-Za-z0-9_-]+)?|nusmods/import)$`);
+const STUDY_PATH = new RegExp(`^study/(?:snapshot|search|places|calendar/(?:connect|sync|stop)|modules(?:/[A-Za-z0-9_-]+(?:/analysis)?)?|analysis-suggestions/[A-Za-z0-9_-]+|items(?:/[A-Za-z0-9_-]+(?:/complete)?)?|resources(?:/[A-Za-z0-9_-]+(?:/content)?)?|note-drafts(?:/${UUID_SEGMENT})?|sessions/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:/[A-Za-z0-9_-]+/resolve)?|weekly-plan|review|settings|canvas/sync|canvas/assignments/[A-Za-z0-9_-]+|origins(?:/[A-Za-z0-9_-]+)?|schedule(?:/[A-Za-z0-9_-]+)?|nusmods/import)$`);
 const PERSONAL_NOTE_DRAFT_PATH = new RegExp(`^note-drafts(?:/${UUID_SEGMENT})?$`);
 
 export function isAllowedThreadwiseProxyPath(path: string) {
@@ -9,6 +9,7 @@ export function isAllowedThreadwiseProxyPath(path: string) {
 export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (path === "study/snapshot" || path === "study/search" || path === "study/places" || /^study\/resources\/[A-Za-z0-9_-]+\/content$/.test(path)) return method === "GET";
   if (path === "study/modules") return method === "POST";
+  if (/^study\/calendar\/(?:connect|sync|stop)$/.test(path)) return method === "POST";
   if (/^study\/modules\/[A-Za-z0-9_-]+\/analysis$/.test(path)) return method === "GET" || method === "POST";
   if (/^study\/analysis-suggestions\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH";
   if (/^study\/modules\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH";

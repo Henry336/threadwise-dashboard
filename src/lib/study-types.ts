@@ -241,6 +241,19 @@ export type StudyModuleAnalysisResponse = {
 
 export type StudySnapshot = {
   generatedAt: string;
+  calendar: {
+    configured: boolean;
+    connected: boolean;
+    reconnectRequired: boolean;
+    email?: string;
+    enabled: boolean;
+    status: string;
+    syncedBlocks: number;
+    pendingBlocks: number;
+    failedBlocks: number;
+    lastSuccessfulAt?: string;
+    error?: string;
+  };
   workspace: {
     id: string;
     semesterName: string;

@@ -1,8 +1,20 @@
 # Design direction: the quiet operations desk
 
-Current dashboard release: **v0.9.0**
+Current dashboard release: **v0.10.0**
 
-Design guidance verified: **2026-08-13**
+## Study timetable Calendar and conflict language
+
+Calendar is a secondary timetable action, never an onboarding interruption. Before OAuth, use one
+branded consent dialog with a short authority statement, a three-item data boundary, and one primary
+Continue action. Connected state replaces consent with email, last-success/count status, Sync now, and
+non-destructive Stop syncing. Do not add a provider-colored parallel design system.
+
+Overlaps are warnings rather than validation errors. Use the semantic amber token, a compact
+exclamation badge, and direct `Overlaps with …` copy on hover, focus, screen readers, and touch details.
+Keep exact adjacency unmarked. Vertical lanes must keep all conflicting cards visible; post-save copy is
+quiet and should not demand immediate repair.
+
+Design guidance verified: **2026-09-04**
 
 Threadwise is used to get thoughts out of the way. Its dashboard should return that information without becoming another source of noise.
 

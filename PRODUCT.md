@@ -2,9 +2,9 @@
 
 <!-- impeccable:product-schema 1 -->
 
-Current dashboard release: **v0.9.0**
+Current dashboard release: **v0.10.0**
 
-Product definition verified: **2026-08-28**
+Product definition verified: **2026-09-04**
 
 ## Platform
 
@@ -19,6 +19,12 @@ Threadwise serves Telegram users who capture useful messages, coordinate work, a
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is the calm, editable web surface for the same stored work. Success means capture stays quick in Telegram, larger review and editing tasks are clearer on the web, and both surfaces remain synchronized without duplicate data entry.
 
 ## Positioning
+
+Study Timetable can explicitly mirror its canonical blocks one-way into the owner's primary Google
+Calendar. Consent precedes OAuth and names the exact shared fields; provider edits are not imported,
+stopping is non-destructive, and retry/reconciliation are visible without exposing provider details.
+Overlaps remain permitted for quick capture but are never silent: every affected occurrence carries an
+accessible warning and remains inspectable on touch, keyboard, and pointer layouts.
 
 Threadwise is quiet infrastructure inside Telegram. It organizes information that already originates in conversation into three product pillars: **Capture**, **Coordinate**, and **Recall**. It does not aim to replace a calendar, learning-management system, project-management suite, or notes editor.
 

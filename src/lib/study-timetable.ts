@@ -134,6 +134,22 @@ export function timetableBlockLanes<T extends { id: string; startTime: string; e
   return { laneCount: maximumLaneCount, lanes, groupLaneCounts };
 }
 
+export function timetableBlockConflicts<T extends { id: string; startTime: string; endTime: string }>(blocks: T[]): Map<string, T[]> {
+  const conflicts = new Map<string, T[]>();
+  for (let leftIndex = 0; leftIndex < blocks.length; leftIndex += 1) {
+    const left = blocks[leftIndex]!;
+    const leftBounds = timetableBlockBounds(left.startTime, left.endTime);
+    for (let rightIndex = leftIndex + 1; rightIndex < blocks.length; rightIndex += 1) {
+      const right = blocks[rightIndex]!;
+      const rightBounds = timetableBlockBounds(right.startTime, right.endTime);
+      if (leftBounds.start >= rightBounds.end || rightBounds.start >= leftBounds.end) continue;
+      conflicts.set(left.id, [...(conflicts.get(left.id) ?? []), right]);
+      conflicts.set(right.id, [...(conflicts.get(right.id) ?? []), left]);
+    }
+  }
+  return conflicts;
+}
+
 export function timetableBlockBounds(startTime: string, endTime: string): { start: number; end: number } {
   const start = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, clockMinutes(startTime)));
   const parsedEnd = Math.max(FULL_DAY_START_MINUTE, Math.min(FULL_DAY_END_MINUTE, clockMinutes(endTime)));

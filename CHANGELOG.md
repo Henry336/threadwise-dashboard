@@ -4,6 +4,22 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Study Calendar mirror and overlap guidance (v0.10.0; 2026-09-04)
+- Added a secondary Timetable Calendar control with a branded consent/status dialog, encrypted Google
+  OAuth continuation, automatic return-and-resume, Sync now, and non-destructive Stop syncing.
+- Added occurrence-aware overlap detection after recurrence exclusions. Vertical, Horizontal, and Day
+  views now expose amber warnings with direct hover/focus/screen-reader copy; touch details list every
+  conflict, and Vertical places intersecting blocks side by side.
+- Added a quiet `Saved with … overlaps to resolve` confirmation without blocking deliberately
+  overlapping schedules. The same intersection treats partial/full/nested times as conflicts while
+  allowing exactly adjacent blocks.
+- Added BFF allowlist, DTO, helper, accessibility/source, responsive-style, and theme regression
+  coverage. The paired v0.35.0 backend owns the encrypted connection, deterministic events, retries,
+  reconciliation, and occurrence reminder sequences.
+- Final local gates pass at 195 unit tests, 91 security checks, 19 browser passes with 7 intentional
+  device/fixture skips, type/lint/build, tracked-secret scan, and two zero-finding dependency audits.
+  A newly disclosed high-severity development-only Browserslist issue was patched to 4.28.8.
+
 ### Phase 1–3 regression correction
 - Made logout fail closed for every non-successful backend revocation response. A rejected service
   token can no longer be mistaken for a revoked browser session while the local cookie is deleted.

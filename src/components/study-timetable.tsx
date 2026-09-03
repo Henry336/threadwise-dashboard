@@ -3,14 +3,14 @@
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
-  CalendarDays, Check, ChevronLeft, ChevronRight,
-  Clock3, Columns3, Focus, MapPin, Pencil, Plus, Rows3, Trash2, Upload, X,
+  AlertTriangle, CalendarDays, Check, ChevronLeft, ChevronRight,
+  Clock3, Columns3, Focus, MapPin, Pencil, Plus, RefreshCw, Rows3, Trash2, Upload, X,
 } from "lucide-react";
 import type { StudyItem, StudySnapshot } from "@/lib/study-types";
 import {
   academicWeekForDate, addDays, buildTimetableDays, clockMinutes, currentMinutesInZone, dateKeyInZone,
   formatClock, formatWeekRange, FULL_DAY_END_MINUTE, FULL_DAY_START_MINUTE, initialTimetableWeek,
-  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableBlockDensity, timetableBlockLanes, timetableBlockPayload, timetableDuePreview,
+  preferredTimetableMinute, startOfWeek, timetableBlockBounds, timetableBlockConflicts, timetableBlockDensity, timetableBlockLanes, timetableBlockPayload, timetableDuePreview,
   timetableHorizontalBlockWidth, timetableIndicatorOffset, timetablePanelReducer,
 } from "@/lib/study-timetable";
 import { parseStudyOrientation, studyTimetablePreferenceKey, type StudyOrientation } from "@/lib/study-preferences";
@@ -42,11 +42,14 @@ type Props = {
   onUpdateBlock: (id: string, body: unknown) => Promise<unknown>;
   onDeleteBlock: (id: string, body: { scope: "occurrence" | "future" | "series"; weekNumber?: number; occurrenceDate?: string }) => Promise<unknown>;
   onImportNusmods: (url: string) => Promise<unknown>;
+  onConnectCalendar: () => Promise<unknown>;
+  onSyncCalendar: () => Promise<unknown>;
+  onStopCalendar: () => Promise<unknown>;
   onEditItem: (item: StudyItem) => void;
   onFocusItem: (item: StudyItem) => void;
 };
 
-export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDeleteBlock, onImportNusmods, onEditItem, onFocusItem }: Props) {
+export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDeleteBlock, onImportNusmods, onConnectCalendar, onSyncCalendar, onStopCalendar, onEditItem, onFocusItem }: Props) {
   const [weekStart, setWeekStart] = useState(() => initialTimetableWeek(study));
   const [selectedDay, setSelectedDay] = useState(() => {
     const week = initialTimetableWeek(study);
@@ -59,10 +62,13 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const orientationReady = useRef(false);
   const [panel, dispatchPanel] = useReducer(timetablePanelReducer, { mode: "closed" });
   const [importOpen, setImportOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [saveNotice, setSaveNotice] = useState("");
   const verticalScrollRef = useRef<HTMLElement>(null);
   const horizontalScrollRef = useRef<HTMLElement>(null);
   const days = useMemo(() => buildTimetableDays(study, weekStart), [study, weekStart]);
+  const conflictsByDay = useMemo(() => new Map(days.map((day) => [day.key, timetableBlockConflicts(day.blocks)])), [days]);
   const activeDay = days.find((day) => day.key === selectedDay) ?? days[0]!;
   const academicWeek = academicWeekForDate(weekStart, study.workspace.semesterStartDate);
   const blockCount = days.reduce((sum, day) => sum + day.blocks.length, 0);
@@ -82,6 +88,11 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const panelBlock = panel.mode === "details" || panel.mode === "edit"
     ? study.scheduleBlocks.find((block) => block.id === panel.blockId)
     : undefined;
+  const panelOccurrenceDate = panel.mode === "details" || panel.mode === "edit" ? panel.occurrenceDate : undefined;
+  const panelConflicts = panelBlock && panelOccurrenceDate
+    ? conflictsByDay.get(panelOccurrenceDate)?.get(panelBlock.id) ?? []
+    : [];
+  const resumedCalendarSync = useRef(false);
 
   useLayoutEffect(() => {
     const storedOrientation = parseStudyOrientation(window.localStorage.getItem(orientationKey));
@@ -104,6 +115,26 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     return () => window.cancelAnimationFrame(frame);
   }, [mode, orientation, preferredMinute, weekStart]);
 
+  useEffect(() => {
+    if (resumedCalendarSync.current) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("resume") !== "study-calendar-sync") return;
+    resumedCalendarSync.current = true;
+    const connected = url.searchParams.get("connection") === "calendar" && url.searchParams.get("result") === "connected";
+    url.searchParams.delete("resume");
+    url.searchParams.delete("connection");
+    url.searchParams.delete("result");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    if (connected) void onSyncCalendar();
+    else queueMicrotask(() => setCalendarOpen(true));
+  }, [onSyncCalendar]);
+
+  useEffect(() => {
+    if (!saveNotice) return;
+    const timer = window.setTimeout(() => setSaveNotice(""), 5000);
+    return () => window.clearTimeout(timer);
+  }, [saveNotice]);
+
   const moveWeek = (amount: number) => {
     const next = addDays(weekStart, amount * 7);
     setWeekStart(next);
@@ -120,10 +151,12 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     <header className="study-timetable-head">
       <div><span>Study Mode</span><h1>Timetable</h1></div>
       <div className="study-timetable-actions">
+        <button className="study-secondary" onClick={() => setCalendarOpen(true)}><RefreshCw size={16} /> {study.calendar.connected && study.calendar.enabled ? "Calendar synced" : "Sync Calendar"}</button>
         <button className="study-secondary" onClick={() => setImportOpen(true)}><Upload size={16} /> Import NUSMods</button>
         <button className="study-primary" onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday, occurrenceDate: activeDay.key })}><Plus size={16} /> Add block</button>
       </div>
     </header>
+    {saveNotice && <p className="study-timetable-save-notice" role="status"><AlertTriangle size={15} /> {saveNotice}</p>}
 
     <div className="study-timetable-summary" aria-label="Timetable summary">
       <div><CalendarDays size={18} /><span><b>{blockCount}</b><small>blocks this week</small></span></div>
@@ -165,17 +198,20 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       {orientation === "vertical" && <section ref={verticalScrollRef} className="study-week-grid" aria-label={`Vertical timetable for ${formatWeekRange(weekStart)}`} style={{ "--grid-height": `${verticalExtent}px` } as CSSProperties}>
         <div className="study-time-rail">{hours.map((hour) => <span key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }}>{formatClock(`${String(hour).padStart(2, "0")}:00`)}</span>)}{showingCurrentWeek && <strong className="study-now-label" style={{ top: `${verticalNowOffset}px` }}>Now</strong>}</div>
         <div className="study-week-columns">
-          {days.map((day) => <div className={`study-week-day ${day.isToday ? "today" : ""}`} key={day.key}>
+          {days.map((day) => { const layout = timetableBlockLanes(day.blocks); const conflicts = conflictsByDay.get(day.key)!; return <div className={`study-week-day ${day.isToday ? "today" : ""}`} key={day.key}>
             {hours.map((hour) => <i key={hour} style={{ top: `${(hour * 60 - gridStart) * VERTICAL_MINUTE_SCALE}px` }} />)}
             {day.isToday && nowMinutes >= gridStart && nowMinutes < gridEnd && <span className="study-now-line" style={{ top: `${verticalNowOffset}px` }} />}
-            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); return <button key={block.id} className="study-schedule-block" style={{
+            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); const overlapping = conflicts.get(block.id) ?? []; const groupLaneCount = layout.groupLaneCounts.get(block.id) ?? 1; const lane = layout.lanes.get(block.id) ?? 0; return <button key={block.id} className="study-schedule-block" style={{
               "--block-top": `${(bounds.start - gridStart) * VERTICAL_MINUTE_SCALE}px`,
               "--block-height": `${Math.max(42, (bounds.end - bounds.start) * VERTICAL_MINUTE_SCALE - 4)}px`,
+              "--block-left": `calc(${(lane / groupLaneCount) * 100}% + 4px)`,
+              "--block-width": `calc(${100 / groupLaneCount}% - 8px)`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
-            } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: day.key })}>
+            } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: day.key })} aria-label={scheduleBlockAccessibleLabel(block, overlapping)}>
+              {overlapping.length > 0 && <ConflictBadge conflicts={overlapping} />}
               <b>{block.label}</b><span>{block.module?.code ?? block.blockType}</span><small>{formatClock(block.startTime)}–{formatClock(block.endTime)}</small>{block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
             </button>; })}
-          </div>)}
+          </div>; })}
         </div>
       </section>}
 
@@ -198,9 +234,9 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       <section className="study-day-agenda" aria-label={`${activeDay.longLabel} agenda`}>
         <header><div><span>{activeDay.longLabel}</span><h2>{activeDay.dateLabel}</h2></div><button onClick={() => dispatchPanel({ type: "create", day: activeDay.weekday, occurrenceDate: activeDay.key })}><Plus size={15} /> Add block</button></header>
         {activeDay.blocks.length === 0 && activeDay.dueItems.length === 0 ? <div className="study-agenda-empty"><CalendarDays size={23} /><b>Nothing scheduled.</b><p>Keep the space open or add a study block.</p></div> : <>
-          {activeDay.blocks.map((block) => <button className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: activeDay.key })} aria-label={`View ${block.label}`}>
-            <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div><span className="study-agenda-block-arrow" aria-hidden="true"><ChevronRight size={17} /></span>
-          </button>)}
+          {activeDay.blocks.map((block) => { const overlapping = conflictsByDay.get(activeDay.key)?.get(block.id) ?? []; return <button className="study-agenda-block" key={block.id} style={{ "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83" } as CSSProperties} onClick={() => dispatchPanel({ type: "open-details", blockId: block.id, occurrenceDate: activeDay.key })} aria-label={scheduleBlockAccessibleLabel(block, overlapping)}>
+            <time>{formatClock(block.startTime)}<span>{formatClock(block.endTime)}</span></time><div><span>{block.module?.code ?? block.blockType}</span><h3>{block.label}</h3>{block.venueName && <p><MapPin size={13} /> {block.venueName}</p>}</div>{overlapping.length > 0 ? <ConflictBadge conflicts={overlapping} /> : <span className="study-agenda-block-arrow" aria-hidden="true"><ChevronRight size={17} /></span>}
+          </button>; })}
           {activeDay.dueItems.length > 0 && <div className="study-agenda-due"><span>Deadlines</span>{activeDay.dueItems.map((item) => <article key={item.id} style={{ "--module-color": item.module.color ?? "#168b83" } as CSSProperties}><button onClick={() => onEditItem(item)}><small>{item.module.code} · {item.plannedMinutes ? `${item.plannedMinutes} min` : "unestimated"}</small><b>{item.title}</b></button><button onClick={() => onFocusItem(item)} aria-label={`Focus on ${item.title}`}><Focus size={16} /></button></article>)}</div>}
         </>}
       </section>
@@ -209,6 +245,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     {panel.mode === "details" && panelBlock && !deleteOpen && <TimetableBlockDetails
       key={`details-${panelBlock.id}`}
       block={panelBlock}
+      conflicts={panelConflicts}
       busy={busy}
       onClose={() => dispatchPanel({ type: "close" })}
       onEdit={() => dispatchPanel({ type: "edit" })}
@@ -233,11 +270,14 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
       defaultDate={panel.mode === "create" || panel.mode === "edit" ? panel.occurrenceDate : activeDay.key}
       busy={busy}
       onClose={() => dispatchPanel({ type: "close" })}
-      onSave={async (body) => {
+      onSave={async (body, overlapCount) => {
         const saved = panel.mode === "edit" && panelBlock
           ? await onUpdateBlock(panelBlock.id, body)
           : await onAddBlock(body);
-        if (saved !== undefined) dispatchPanel({ type: "close" });
+        if (saved !== undefined) {
+          setSaveNotice(overlapCount > 0 ? `Saved with ${overlapCount} overlap${overlapCount === 1 ? "" : "s"} to resolve.` : "");
+          dispatchPanel({ type: "close" });
+        }
       }}
     />}
     {importOpen && <NusmodsImportDialog
@@ -247,6 +287,14 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
         const saved = await onImportNusmods(url);
         if (saved !== undefined) setImportOpen(false);
       }}
+    />}
+    {calendarOpen && <StudyCalendarDialog
+      calendar={study.calendar}
+      busy={busy}
+      onClose={() => setCalendarOpen(false)}
+      onConnect={onConnectCalendar}
+      onSync={onSyncCalendar}
+      onStop={onStopCalendar}
     />}
   </section>;
 }
@@ -273,6 +321,42 @@ function NusmodsImportDialog({ busy, onClose, onImport }: {
         <p>Imports class types, times, weeks, and venues. Manual blocks stay unchanged.</p>
         <footer><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="study-primary" disabled={busy || !url.trim()}><Upload size={16} /> {busy ? "Importing…" : "Import"}</button></footer>
       </form>
+    </section>
+  </TimetableOverlay>;
+}
+
+function StudyCalendarDialog({ calendar, busy, onClose, onConnect, onSync, onStop }: {
+  calendar: StudySnapshot["calendar"];
+  busy: boolean;
+  onClose: () => void;
+  onConnect: () => Promise<unknown>;
+  onSync: () => Promise<unknown>;
+  onStop: () => Promise<unknown>;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(dialogRef, busy, onClose);
+  const connected = calendar.connected && !calendar.reconnectRequired;
+  const lastSync = calendar.lastSuccessfulAt
+    ? new Intl.DateTimeFormat("en-SG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(calendar.lastSuccessfulAt))
+    : "Not synced yet";
+  return <TimetableOverlay busy={busy} onClose={onClose} className="calendar-overlay">
+    <section ref={dialogRef} className="study-calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="study-calendar-title" tabIndex={-1}>
+      <header><div><span>Google Calendar</span><h2 id="study-calendar-title">{connected ? "Calendar mirror" : "Keep your calendar in step"}</h2></div><button onClick={onClose} disabled={busy} aria-label="Close Calendar settings"><X size={20} /></button></header>
+      {!connected ? <div className="study-calendar-consent">
+        <p>Threadwise will add your Study timetable to your primary Google Calendar after you approve access.</p>
+        <ul>
+          <li>Threadwise remains the source of truth; Google-side edits are not imported.</li>
+          <li>Only title, module, time, recurrence, venue, and a Threadwise reference are shared.</li>
+          <li>Origins, coordinates, routes, and preparation notes never leave Threadwise.</li>
+        </ul>
+        {calendar.error && <p className="study-calendar-error"><AlertTriangle size={16} /> {calendar.error}</p>}
+      </div> : <div className="study-calendar-status">
+        <p><b>{calendar.enabled ? "Calendar synced" : "Sync is stopped"}</b><span>{calendar.email ?? "Primary Google Calendar"}</span></p>
+        <dl><div><dt>Last successful sync</dt><dd>{lastSync}</dd></div><div><dt>Mirrored blocks</dt><dd>{calendar.syncedBlocks}</dd></div><div><dt>Waiting / failed</dt><dd>{calendar.pendingBlocks} / {calendar.failedBlocks}</dd></div></dl>
+        {calendar.error && <p className="study-calendar-error"><AlertTriangle size={16} /> {calendar.error}</p>}
+        <small>Stopping sync leaves existing Google events intact. Re-enabling reconciliation will restore Threadwise’s version.</small>
+      </div>}
+      <footer><button type="button" className="study-secondary" disabled={busy} onClick={onClose}>Close</button>{connected ? <><button type="button" className="study-secondary" disabled={busy} onClick={() => void onStop()}>Stop syncing</button><button type="button" className="study-primary" disabled={busy} onClick={() => void onSync()}><RefreshCw size={16} /> {busy ? "Syncing…" : "Sync now"}</button></> : <button type="button" className="study-primary" disabled={busy || !calendar.configured} onClick={() => void onConnect()}>{calendar.reconnectRequired ? "Reconnect Google" : "Continue to Google"}</button>}</footer>
     </section>
   </TimetableOverlay>;
 }
@@ -332,6 +416,7 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
         {days.map((day) => {
           const due = timetableDuePreview(day.dueItems);
           const layout = timetableBlockLanes(day.blocks);
+          const conflicts = timetableBlockConflicts(day.blocks);
           const laneGap = 8;
           const rowPadding = 10;
           const rowHeight = Math.max(82, rowPadding + layout.laneCount * 58 + (layout.laneCount - 1) * laneGap);
@@ -345,13 +430,14 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
           <div className="study-horizontal-track">
             {hours.map((hour) => <i key={hour} style={{ left: `${(hour * 60 - gridStart) * HORIZONTAL_MINUTE_SCALE}px` }} />)}
             {day.isToday && nowMinutes >= gridStart && nowMinutes < gridEnd && <span className="study-horizontal-now" style={{ left: `${horizontalNowOffset}px` }} />}
-            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); const width = timetableHorizontalBlockWidth(block.startTime, block.endTime, HORIZONTAL_MINUTE_SCALE); const density = timetableBlockDensity(width); const label = scheduleBlockAccessibleLabel(block); const groupLaneCount = layout.groupLaneCounts.get(block.id) ?? 1; const blockHeight = (rowHeight - rowPadding - (groupLaneCount - 1) * laneGap) / groupLaneCount; return <button key={block.id} className={`study-horizontal-block density-${density}`} style={{
+            {day.blocks.map((block) => { const bounds = timetableBlockBounds(block.startTime, block.endTime); const width = timetableHorizontalBlockWidth(block.startTime, block.endTime, HORIZONTAL_MINUTE_SCALE); const density = timetableBlockDensity(width); const overlapping = conflicts.get(block.id) ?? []; const label = scheduleBlockAccessibleLabel(block, overlapping); const groupLaneCount = layout.groupLaneCounts.get(block.id) ?? 1; const blockHeight = (rowHeight - rowPadding - (groupLaneCount - 1) * laneGap) / groupLaneCount; return <button key={block.id} className={`study-horizontal-block density-${density}`} style={{
               "--block-left": `${(bounds.start - gridStart) * HORIZONTAL_MINUTE_SCALE + 3}px`,
               "--block-width": `${width}px`,
               "--block-top": `${5 + (layout.lanes.get(block.id) ?? 0) * (blockHeight + laneGap)}px`,
               "--block-height": `${blockHeight}px`,
               "--module-color": study.modules.find((module) => module.id === block.moduleId)?.color ?? "#168b83",
             } as CSSProperties} onClick={() => onOpenBlock(block, day.key)} aria-label={label} title={label}>
+              {overlapping.length > 0 && <ConflictBadge conflicts={overlapping} />}
               <b>{block.label}</b>
               {density !== "narrow" && <span>{block.module?.code ?? block.blockType}</span>}
               {density === "full" && block.venueName && <em><MapPin size={11} />{block.venueName}</em>}
@@ -366,9 +452,21 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function scheduleBlockAccessibleLabel(block: ScheduleBlock): string {
-  return [block.label, block.module?.code, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName]
+function scheduleBlockAccessibleLabel(block: ScheduleBlock, conflicts: ScheduleBlock[] = []): string {
+  return [block.label, block.module?.code, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName, conflictDescription(conflicts)]
     .filter(Boolean).join(" · ");
+}
+
+function conflictDescription(conflicts: ScheduleBlock[]): string {
+  if (!conflicts.length) return "";
+  const first = conflicts[0]!;
+  const extra = conflicts.length > 1 ? ` and ${conflicts.length - 1} more block${conflicts.length === 2 ? "" : "s"}` : "";
+  return `Overlaps with ${first.label}, ${formatClock(first.startTime)}–${formatClock(first.endTime)}${extra}.`;
+}
+
+function ConflictBadge({ conflicts }: { conflicts: ScheduleBlock[] }) {
+  const copy = conflictDescription(conflicts);
+  return <span className="study-conflict-badge" role="img" aria-label={copy} data-tooltip={copy} title={copy}><AlertTriangle size={13} aria-hidden="true" /></span>;
 }
 
 function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean, onClose: () => void) {
@@ -440,8 +538,9 @@ function scheduleRecurrenceLabel(block: ScheduleBlock): string {
   return `Weeks ${block.startWeek ?? 1}–${block.endWeek ?? "end"}`;
 }
 
-function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
+function TimetableBlockDetails({ block, conflicts, busy, onClose, onEdit, onDelete }: {
   block: ScheduleBlock;
+  conflicts: ScheduleBlock[];
   busy: boolean;
   onClose: () => void;
   onEdit: () => void;
@@ -457,6 +556,7 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
     <section ref={dialogRef} className="study-timetable-detail" role="dialog" aria-modal="true" aria-labelledby="timetable-details-title" tabIndex={-1}>
       <header><div><span>Timetable block</span><h2 id="timetable-details-title">{block.label}</h2></div><button onClick={onClose} disabled={busy} aria-label="Close block details"><X size={20} /></button></header>
       <div className="study-timetable-detail-body">
+        {conflicts.length > 0 && <section className="study-timetable-conflicts" role="status"><span><AlertTriangle size={17} /> Schedule overlap</span><p>{conflictDescription(conflicts)}</p><ul>{conflicts.map((conflict) => <li key={conflict.id}><b>{conflict.label}</b><small>{formatClock(conflict.startTime)}–{formatClock(conflict.endTime)}</small></li>)}</ul></section>}
         <dl>
           {block.module && <div><dt>Module</dt><dd>{block.module.code} · {block.module.name}</dd></div>}
           <div><dt>Type</dt><dd>{block.blockType === "other" && block.customTypeLabel ? block.customTypeLabel : block.blockType.replace(/_/g, " ")}</dd></div>
@@ -464,7 +564,7 @@ function TimetableBlockDetails({ block, busy, onClose, onEdit, onDelete }: {
           <div><dt>Repeats</dt><dd>{recurrence}</dd></div>
           {block.venueName && <div><dt>Venue</dt><dd>{block.venueName}</dd></div>}
         </dl>
-        {travelConfigured && <section className="study-timetable-detail-travel"><span><MapPin size={16} /> Travel reminder</span><p>{block.defaultOrigin?.name ? `From ${block.defaultOrigin.name}` : "Uses your current or default origin"}</p><small>{block.travelBufferMinutes} min buffer · {block.reminderLeadMinutes} min reminder lead</small></section>}
+        {travelConfigured && <section className="study-timetable-detail-travel"><span><MapPin size={16} /> Travel reminder</span><p>{block.defaultOrigin?.name ? `From ${block.defaultOrigin.name}` : "Uses your current or default origin"}</p><small>{block.travelBufferMinutes} min buffer · starts at least 45 minutes before class</small></section>}
         {travelState && <section className="study-timetable-detail-travel" data-status={travelState.status}><span><Clock3 size={16} /> Latest journey · {travelState.status.toLowerCase()}</span><p>{travelState.lastError || [travelState.originName, travelState.boardingStop, travelState.services.join(" → ")].filter(Boolean).join(" · ") || "Travel state recorded."}</p><small>{travelState.live ? "Live bus data" : "Estimated route"} · {formatCalendarDate(travelState.occurrenceDate.slice(0, 10))}</small></section>}
         {block.reminderReadiness && <section className="study-timetable-reminder-readiness" data-status={block.reminderReadiness.status}><span><Clock3 size={16} /> Reminder status</span><b>{block.reminderReadiness.status === "READY" ? "Ready to send" : block.reminderReadiness.status === "OUT_OF_RANGE" ? "Not scheduled this week" : "Needs attention"}</b>{block.reminderReadiness.reasons.map((reason) => <p key={reason}>{reason}</p>)}</section>}
       </div>
@@ -506,7 +606,7 @@ function TimetableEditor({ study, block, defaultDay, defaultDate, busy, onClose,
   defaultDate: string;
   busy: boolean;
   onClose: () => void;
-  onSave: (body: unknown) => Promise<void>;
+  onSave: (body: unknown, overlapCount: number) => Promise<void>;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const [moduleId, setModuleId] = useState(block?.moduleId ?? "");
@@ -532,7 +632,7 @@ function TimetableEditor({ study, block, defaultDay, defaultDate, busy, onClose,
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    void onSave(timetableBlockPayload({
+    const payload = timetableBlockPayload({
       moduleId,
       dayOfWeek: recurrenceMode === "once" ? weekdayForCalendarDate(recurrenceStartDate) : day,
       startTime: start,
@@ -547,7 +647,15 @@ function TimetableEditor({ study, block, defaultDay, defaultDate, busy, onClose,
       destinationPlaceId,
       defaultOriginId: originId,
       travelBufferMinutes: clampInteger(buffer, 0, 90),
-    }, Boolean(block)));
+    }, Boolean(block));
+    const candidateBounds = timetableBlockBounds(start, end);
+    const comparisonDate = recurrenceStartDate || defaultDate;
+    const comparisonDay = buildTimetableDays(study, startOfWeek(comparisonDate)).find((entry) => entry.key === comparisonDate);
+    const overlapCount = (comparisonDay?.blocks ?? []).filter((candidate) => candidate.id !== block?.id).filter((candidate) => {
+      const bounds = timetableBlockBounds(candidate.startTime, candidate.endTime);
+      return candidateBounds.start < bounds.end && bounds.start < candidateBounds.end;
+    }).length;
+    void onSave(payload, overlapCount);
   };
 
   return <TimetableOverlay busy={busy} onClose={onClose}>

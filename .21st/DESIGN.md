@@ -1,9 +1,9 @@
 <!-- Project-grounded 21st design context. Source of truth: .21st/design.json. -->
 # Project Design Context
 
-Current dashboard release: **v0.9.0**
+Current dashboard release: **v0.10.0**
 
-Context verified: **2026-08-31**
+Context verified: **2026-09-04**
 
 ## Product
 
@@ -101,6 +101,16 @@ layer while open and title/module fields share one aligned control rhythm.
 Pinned Study modules appear before unpinned modules while retaining the existing display-order/code
 order inside each group. Pinning is a view preference recorded on the module; it must not imply Canvas
 selection, activation, mastery, or archival state.
+
+## Decision: Calendar consent and overlap warnings belong to the timetable
+
+Keep Google Calendar as one secondary Timetable control. Its Threadwise-native dialog explains one-way
+authority and the exact shared/excluded fields before OAuth, then presents compact sync health and
+non-destructive actions. Do not use Google branding as a second visual language.
+
+Treat overlap as actionable context, not a save error. Amber exclamation badges repeat direct conflict
+copy in the accessible name, hover/focus tooltip, and touch details. Lay vertical conflicts side by side,
+retain full access in horizontal/day views, and acknowledge a saved conflict with one quiet status line.
 
 ## Decision: one accessible choice language
 

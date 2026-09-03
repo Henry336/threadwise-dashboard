@@ -1,13 +1,13 @@
 # Threadwise Dashboard
 
-Current dashboard release: **v0.9.0**
+Current dashboard release: **v0.10.0**
 
-Documentation verified against the deployed Threadwise stack: **2026-08-31**
+Documentation verified against the Threadwise stack: **2026-09-04**
 
 Threadwise turns Telegram messages into things people can find, remember, and finish. The dashboard is its calm web surface for scanning, editing, and coordinating captured work.
 
-The owner-gated Today-planning stack and Study/Personal rich-note releases are merged and live at dashboard
-runtime commit `7bf90df1a75a` with backend runtime commit `25f80939b8e2`.
+The current release candidate pairs this v0.10.0 dashboard with backend v0.35.0. Release the additive
+backend migration/runtime first, then this dashboard; exact live commits are recorded after deployment.
 
 New developers should start with [docs/DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md).
 The current cross-repository audit is in the backend at
@@ -28,6 +28,11 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - Distinct group workspaces with Overview, Work, People, Progress, Activity, Resources, immediate assignments, unassigned claiming, creator/admin reassignment, and a seven-day summary
 - A sealed, module-first Study workspace with Overview, Timetable, Work, Deep Work, Modules, Library, Search, Review, and Settings for the one configured owner and actively bound Study group
 - A responsive, scrollable 24-hour Study Timetable that combines recurring module blocks, planned work, assignment deadlines, and optional class-travel configuration without pretending every deadline is a scheduled study block
+- An explicit one-way Study Timetable mirror to primary Google Calendar, with branded data consent,
+  automatic OAuth return/resume, sync health, manual retry, and non-destructive stop; Threadwise remains
+  authoritative and travel-private data never enters Calendar
+- Accessible amber overlap warnings in every timetable orientation, persistent touch details, and
+  side-by-side vertical lanes; overlaps remain saveable and exact adjacency remains conflict-free
 - One truthful weekday axis per Timetable orientation: Vertical keeps a week deadline shelf, while Horizontal puts a two-item Due rail beside each day and sends overflow to the day agenda
 - Explicit inactive-module review and restore controls; Canvas refreshes never decide which courses belong in the active semester
 - A visible ten-minute Telegram capture target plus a same-origin Study image lightbox with caption/search context and graceful retry, expiry, and sign-in states

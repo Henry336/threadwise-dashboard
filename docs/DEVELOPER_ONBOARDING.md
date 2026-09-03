@@ -28,7 +28,7 @@ headers, then update the handoff when truth changes.
 | Study shell | `src/components/study-dashboard.tsx` | Study navigation, synchronization, and feature composition |
 | Study Deep Work | `src/components/study-deep-work.tsx` | Session builder/history/editor and module analysis |
 | Study dialogs | `src/components/study-dialog.tsx`, `confirmation-dialog.tsx`, `src/lib/body-scroll-lock.ts` | Shared focus traps, dirty-close confirmation, background isolation, and reference-counted scroll restoration |
-| Timetable | `src/components/study-timetable.tsx` | Week/day layout, block/details/editor state |
+| Timetable | `src/components/study-timetable.tsx`, `src/lib/study-timetable.ts` | Week/day layout, block/details/editor state, Calendar consent/status, and occurrence conflict/lane calculation |
 | Today | `src/components/today-planner.tsx` | Cross-mode agenda projection and Personal ordering |
 | Study writing | `study-note-editor.tsx`, `study-rich-note-body.tsx`, `study-markdown-media.tsx` | Draft lifecycle, Tiptap Markdown, Mermaid/media |
 | Browser BFF | `src/app/api/threadwise/[...path]/route.ts` | Session, same-origin mutation check, path/method allowlist, body caps |
@@ -159,6 +159,8 @@ refactor, API change, auth change, and CSP rollout in one release.
 ## Deployment
 
 - Vercel hosts this repo. Backend API/schema changes deploy first.
+- Calendar/occurrence-reminder releases require backend v0.35.0 and its additive migration before this
+  dashboard. The UI must not infer provider state or expose Calendar controls through a client-side SDK.
 - Verify both GitHub validation jobs, the Vercel production deployment, and the canonical dashboard
   route after release.
 - Keep enforcement as the default. Use `THREADWISE_CSP_MODE=report-only` only as a temporary rollback

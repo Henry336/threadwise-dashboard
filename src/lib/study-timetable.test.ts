@@ -6,6 +6,7 @@ import {
   preferredTimetableMinute,
   timetableIndicatorOffset,
   timetableBlockBounds,
+  timetableBlockConflicts,
   timetableBlockDensity,
   timetableBlockLanes,
   timetableBlockPayload,
@@ -103,6 +104,20 @@ describe("Study timetable day bounds", () => {
     expect(layout.groupLaneCounts.get("b")).toBe(2);
     expect(layout.groupLaneCounts.get("c")).toBe(2);
     expect(layout.groupLaneCounts.get("solo")).toBe(1);
+  });
+
+  it("flags partial, full, nested, and multiple overlaps but not adjacent blocks", () => {
+    const blocks = [
+      { id: "base", startTime: "10:00", endTime: "12:00" },
+      { id: "partial", startTime: "11:30", endTime: "12:30" },
+      { id: "nested", startTime: "10:30", endTime: "11:00" },
+      { id: "full", startTime: "10:00", endTime: "12:00" },
+      { id: "adjacent", startTime: "12:00", endTime: "13:00" },
+    ];
+    const conflicts = timetableBlockConflicts(blocks);
+    expect(conflicts.get("base")?.map((block) => block.id).sort()).toEqual(["full", "nested", "partial"]);
+    expect(conflicts.get("adjacent")?.map((block) => block.id)).toEqual(["partial"]);
+    expect(conflicts.get("base")?.some((block) => block.id === "adjacent")).toBe(false);
   });
 
   it("moves a selected block from details to edit and closes cleanly", () => {

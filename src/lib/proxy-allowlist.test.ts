@@ -24,6 +24,9 @@ describe("dashboard BFF allowlist", () => {
     ["GET", "note-drafts"],
     ["PATCH", "note-drafts"],
     ["DELETE", "note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
+    ["POST", "study/calendar/connect"],
+    ["POST", "study/calendar/sync"],
+    ["POST", "study/calendar/stop"],
   ])("allows the reviewed %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path)).toBe(true);
     expect(isAllowedThreadwiseProxyMethod(method, path)).toBe(true);
@@ -47,6 +50,8 @@ describe("dashboard BFF allowlist", () => {
     ["POST", "note-drafts"],
     ["GET", "note-drafts/0c68a350-c061-4a86-a63f-842c132dc77d"],
     ["DELETE", "note-drafts/not-a-uuid"],
+    ["GET", "study/calendar/sync"],
+    ["DELETE", "study/calendar/stop"],
   ])("rejects the forged %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);
   });

@@ -43,9 +43,32 @@ const studySnapshot = () => ({
     pinnedAt: null, color: "#168b83", workloadGroup: null, currentMastery: "UNASSESSED",
     masteryReason: null, canvasCourseId: null, canvasLastSeenAt: null, userArchivedAt: null, updatedAt: now(),
   }],
-  inactiveModules: [], items: [], resources, mistakes: [], sessions: [], reviews: [], scheduleBlocks: [],
+  inactiveModules: [], items: [], resources, mistakes: [], sessions: [], reviews: [], scheduleBlocks: [
+    {
+      id: "70000000-0000-4000-8000-000000000001", moduleId: MODULE_ID, active: true,
+      dayOfWeek: 1, startTime: "10:00", endTime: "11:00", label: "CS2100 Lecture",
+      blockType: "lecture", customTypeLabel: null, startWeek: null, endWeek: null,
+      recurrenceStartDate: "2026-08-10", recurrenceEndDate: "2026-12-01", excludedDates: [], excludedWeeks: [],
+      venueName: "LT17", destinationStopId: null, preparation: [], defaultOriginId: null,
+      travelBufferMinutes: 15, reminderLeadMinutes: 10, source: "MANUAL", sourceRef: null,
+      module: { id: MODULE_ID, code: "CS2100", name: "Computer Organisation", color: "#168b83" },
+    },
+    {
+      id: "70000000-0000-4000-8000-000000000002", moduleId: MODULE_ID, active: true,
+      dayOfWeek: 1, startTime: "10:30", endTime: "11:30", label: "CS2100 Project studio",
+      blockType: "class", customTypeLabel: null, startWeek: null, endWeek: null,
+      recurrenceStartDate: "2026-08-10", recurrenceEndDate: "2026-12-01", excludedDates: [], excludedWeeks: [],
+      venueName: "COM3", destinationStopId: null, preparation: [], defaultOriginId: null,
+      travelBufferMinutes: 15, reminderLeadMinutes: 10, source: "MANUAL", sourceRef: null,
+      module: { id: MODULE_ID, code: "CS2100", name: "Computer Organisation", color: "#168b83" },
+    },
+  ],
   canvas: { configured: false, state: null, missingAssignments: [] },
   origins: [],
+  calendar: {
+    configured: true, connected: false, reconnectRequired: false, enabled: false,
+    status: "DISCONNECTED", syncedBlocks: 0, pendingBlocks: 0, failedBlocks: 0,
+  },
 });
 
 function json(response, status, body) {
