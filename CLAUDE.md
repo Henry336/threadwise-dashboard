@@ -11,7 +11,8 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
   keyboard-accessible layout menu only for flow/class/state diagrams. Passive autosave preserves active
   shorthand; Done and final Save normalize to portable Mermaid. Local validation covers all bundled
   rendered templates, light/dark class text, desktop/mobile interaction, unit/type/lint/build, and the
-  existing security boundary. Release details follow after the production gate completes.
+  existing security boundary. Dashboard `5e598e9` completed Vercel deployment
+  `8kdgg4fHEnhE63eYK9GvZrxC5fRw`; the hosted shared-editor UML check passed after publication.
 
 - **2026-09-04 (Codex, Study timetable release):** Added the explicit Study Timetable
   Calendar mirror interaction: branded privacy consent, existing Google OAuth return/resume, sync

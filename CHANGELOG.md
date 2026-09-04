@@ -4,7 +4,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
-### Native-text UML and friendlier diagrams (v0.10.1)
+### Native-text UML and friendlier diagrams (v0.10.1; released 2026-09-04)
 - Fixed textless Mermaid class/UML output by making Mermaid emit native SVG text that survives the
   existing strict sanitizer. HTML-bearing `foreignObject` labels remain disallowed.
 - Added deterministic easy syntax for diagram headers, class members/relationships, sequence
@@ -16,6 +16,7 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 - Expanded the in-editor guide and browser coverage. Every bundled template now renders—not merely
   parses—with visible sanitized labels; class text is proven in both themes, and the shared
   Study/Individual editor flow is covered at desktop and mobile widths.
+- Released dashboard commit `5e598e9` to Vercel and passed a post-deployment hosted editor check.
 
 ### Study Calendar mirror and overlap guidance (v0.10.0; released 2026-09-04)
 - Added a secondary Timetable Calendar control with a branded consent/status dialog, encrypted Google
