@@ -38,7 +38,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   const filingModalRef = useRef<HTMLFormElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const draftRef = useRef(draft);
-  const bodyFlushRef = useRef<() => string>(() => draftRef.current.body);
+  const bodyFlushRef = useRef<(canonicalize?: boolean) => string>(() => draftRef.current.body);
   const draftIdRef = useRef<string | undefined>(undefined);
   const revisionRef = useRef(0);
   const noteVersionRef = useRef(noteUpdatedAt);
@@ -143,7 +143,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
 
   useEffect(() => {
     const preserveLatestDraft = () => {
-      bodyFlushRef.current();
+      bodyFlushRef.current(false);
       if (dirtyRef.current) void persistDraft(draftRef.current, true);
     };
     window.addEventListener("pagehide", preserveLatestDraft);
@@ -156,13 +156,13 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     return () => window.clearTimeout(timer);
   }, [dirty, draft, loaded, persistDraft, saveState]);
 
-  const registerBodyFlush = useCallback((flush: (() => string) | null) => {
+  const registerBodyFlush = useCallback((flush: ((canonicalize?: boolean) => string) | null) => {
     bodyFlushRef.current = flush ?? (() => draftRef.current.body);
   }, []);
 
   const requestClose = useCallback(async () => {
     if (closingRef.current) return;
-    bodyFlushRef.current();
+    bodyFlushRef.current(false);
     closingRef.current = true;
     setClosing(true);
     const safe = !dirtyRef.current || await persistDraft(draftRef.current);
@@ -202,7 +202,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   }, [requestClose]);
 
   const openFiling = () => {
-    const body = bodyFlushRef.current();
+    const body = bodyFlushRef.current(true);
     if (!draftRef.current.title.trim()) update({ title: suggestedTitle(body) });
     setFiling(true);
   };
@@ -220,7 +220,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   };
   const fileNote = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    bodyFlushRef.current();
+    bodyFlushRef.current(true);
     const snapshot = draftRef.current;
     if (dirtyRef.current && !await persistDraft(snapshot)) return;
     const saved = await onSave({ title: snapshot.title.trim(), body: snapshot.body }, value);

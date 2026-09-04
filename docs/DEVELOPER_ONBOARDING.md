@@ -73,15 +73,19 @@ Browser → same-origin Next.js BFF → 60-second EdDSA JWT → Render dashboard
   from external replacements; `study-editor-indentation.ts` keeps Tab behavior independently testable;
   `study-mermaid-templates.ts` is the reviewed local syntax/template catalog. New diagram kinds must
   stay within `study-mermaid.ts` budgets and pass the browser parser contract before release.
+- `study-mermaid.ts` also owns the bounded easy-syntax normalizer, diagram-kind detection, and portable
+  layout rewrites. Keep these deterministic and line-oriented. Draft autosave may retain shorthand;
+  Done and final Save canonicalize it. Mermaid must emit native SVG text because the strict sanitizer
+  intentionally removes `foreignObject` HTML.
 - Personal Today ordering is a private projection. It must not mutate Group/Study source ordering,
   deadlines, reminders, or provider priority.
 - Study module pinning is canonical `StudyModule.pinnedAt` state. Pinned active modules sort before
   unpinned modules, then retain the existing display-order/code ordering; pinning does not alter Canvas
   activation or archival state.
 - Rich-note transactions schedule Markdown conversion after a 140 ms quiet window with a 900 ms upper
-  bound. Filing, explicit close, and page-hide handoff call the registered flush first; do not restore
-  per-transaction parent serialization. Global shortcuts must treat any `contenteditable` descendant as
-  a typing surface.
+  bound. Filing canonicalizes Mermaid aliases; explicit close and page-hide flush the recoverable draft
+  without rewriting active shorthand. Do not restore per-transaction parent serialization. Global
+  shortcuts must treat any `contenteditable` descendant as a typing surface.
 - Use `StudyChoicePicker` for controlled dashboard choices and `StudyFormChoicePicker` for traditional
   `FormData` submissions. Both share keyboard listbox semantics, focus return, searchable lists, mobile
   containment, and theme tokens. Do not reintroduce browser-native selectors in rendered forms.

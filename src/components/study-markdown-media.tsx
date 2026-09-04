@@ -3,7 +3,7 @@
 import DOMPurify from "dompurify";
 import { AlertCircle, ImageOff, LoaderCircle, ShieldCheck } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { validateMermaidSource, withTimeout } from "@/lib/study-mermaid";
+import { mermaidRenderConfiguration, validateMermaidSource, withTimeout } from "@/lib/study-mermaid";
 import { markdownImagePolicy } from "@/lib/study-markdown-security";
 
 let mermaidQueue: Promise<void> = Promise.resolve();
@@ -42,13 +42,7 @@ export function MermaidDiagram({ source }: { source: string }) {
     let active = true;
     void enqueueMermaid(async () => {
       const { default: mermaid } = await import("mermaid");
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        suppressErrorRendering: true,
-        theme: document.documentElement.dataset.theme === "dark" ? "dark" : "neutral",
-        fontFamily: "inherit",
-      });
+      mermaid.initialize(mermaidRenderConfiguration(document.documentElement.dataset.theme === "dark" ? "dark" : "neutral"));
       const id = `threadwise-mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/gu, "")}`;
       return withTimeout(mermaid.render(id, source));
     }).then((rendered) => {

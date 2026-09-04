@@ -48,7 +48,8 @@
       "single-active-modal destructive flows with reference-counted body scroll locking",
       "pinned Study modules ordered ahead of the existing stable module order",
       "branded Study Calendar consent and compact synchronization status",
-      "accessible amber timetable conflicts with touch details and vertical lanes"
+      "accessible amber timetable conflicts with touch details and vertical lanes",
+      "native-text Mermaid UML with deterministic easy syntax and compact supported-layout controls"
     ]
   },
   "constraints": {
@@ -158,6 +159,11 @@
       "date": "2026-09-04",
       "decision": "Keep one-way Google Calendar consent and occurrence overlap guidance inside the Study timetable.",
       "reason": "Calendar is a secondary projection of canonical Threadwise blocks, so explicit privacy copy and non-destructive controls belong beside timetable actions. Overlap is valid capture state but must remain visible and accessible without blocking the save."
+    },
+    {
+      "date": "2026-09-04",
+      "decision": "Render Mermaid with native SVG labels and simplify UML through deterministic aliases plus one supported-layout menu.",
+      "reason": "Strict SVG sanitization must not be weakened to preserve UML text. Line-oriented aliases can preview without guessing and normalize at deliberate Done/Save boundaries, while one compact orientation control avoids teaching direction syntax or exposing ineffective choices."
     }
   ],
   "evidence": [

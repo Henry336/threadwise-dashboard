@@ -15,12 +15,28 @@ export type MermaidSyntaxSection = {
 
 export const MERMAID_SYNTAX_SECTIONS: MermaidSyntaxSection[] = [
   {
+    title: "Threadwise easy syntax",
+    entries: [
+      { syntax: "uml class · uml sequence · uml state", meaning: "Start a UML diagram without remembering Mermaid's header names." },
+      { syntax: "flow", meaning: "Start a vertical flowchart." },
+      { syntax: "Child extends Parent", meaning: "Class inheritance." },
+      { syntax: "Class implements Interface", meaning: "Interface implementation." },
+      { syntax: "Whole contains Part · Whole has Part", meaning: "Composition or aggregation." },
+      { syntax: "A uses B", meaning: "Class dependency." },
+      { syntax: "public title: String", meaning: "Public class field; private, protected, and package also work." },
+      { syntax: "public save()", meaning: "Public class method." },
+      { syntax: "A sends B: message", meaning: "Sequence request." },
+      { syntax: "B replies A: message", meaning: "Sequence response." },
+      { syntax: "start -> Draft · Draft -> end", meaning: "Initial or final state transition." },
+    ],
+  },
+  {
     title: "Every diagram",
     entries: [
       { syntax: "%% comment", meaning: "Add a comment on its own line." },
       { syntax: "Tab / Shift+Tab", meaning: "Indent or outdent selected diagram lines." },
       { syntax: '"Label with punctuation"', meaning: "Quote labels that contain punctuation or Unicode." },
-      { syntax: "TD · TB · BT · LR · RL", meaning: "Choose a flowchart direction." },
+      { syntax: "Layout menu", meaning: "Choose vertical or horizontal flowchart, class, and state layouts without editing syntax." },
     ],
   },
   {
@@ -97,7 +113,7 @@ export const MERMAID_TEMPLATES: MermaidTemplate[] = [
       '  Decide -->|No| Draft["Keep autosaving"]',
       "  Draft --> Capture",
     ].join("\n"),
-    tips: ["Use TD for top-to-bottom or LR for left-to-right.", "Quote labels with punctuation.", "Lowercase end can confuse flowchart parsing; use End or quote it."],
+    tips: ["Use the diagram card's Layout menu for top-to-bottom or left-to-right.", "You can type `flow` as the first line.", "Quote labels with punctuation."],
     docsUrl: "https://mermaid.js.org/syntax/flowchart.html",
   },
   {
@@ -117,7 +133,7 @@ export const MERMAID_TEMPLATES: MermaidTemplate[] = [
       "  deactivate API",
       "  Dashboard-->>Student: Saved across devices",
     ].join("\n"),
-    tips: ["Participants appear in declaration order.", "Use ->> for a message and -->> for a response.", "Wrap alternatives in alt / else / end."],
+    tips: ["Participants appear in declaration order.", "Easy syntax accepts `A sends B: message` and `B replies A: message`.", "Sequence diagrams keep participants across and time flowing downward."],
     docsUrl: "https://mermaid.js.org/syntax/sequenceDiagram.html",
   },
   {
@@ -137,7 +153,7 @@ export const MERMAID_TEMPLATES: MermaidTemplate[] = [
       "  }",
       '  Module "1" o-- "many" Note : contains',
     ].join("\n"),
-    tips: ["Use +, -, #, and ~ for visibility.", "Use <|-- for inheritance, *-- for composition, and o-- for aggregation.", "Put methods in parentheses."],
+    tips: ["Try `public title: String` or `public save()` inside a class.", "Try `Child extends Parent`, `Whole contains Part`, or `Whole has Part`.", "Use the card's Layout menu instead of typing a direction."],
     docsUrl: "https://mermaid.js.org/syntax/classDiagram.html",
   },
   {
@@ -153,7 +169,7 @@ export const MERMAID_TEMPLATES: MermaidTemplate[] = [
       "  Saved --> Filed : choose module",
       "  Filed --> [*]",
     ].join("\n"),
-    tips: ["[*] is the initial or final state.", "Add transition text after a colon.", "Use state Name { … } for nested states."],
+    tips: ["Easy syntax accepts `start -> Draft`, `Draft -> Saved: autosave`, and `Saved -> end`.", "Use the card's Layout menu instead of typing a direction.", "Use state Name { … } for nested states."],
     docsUrl: "https://mermaid.js.org/syntax/stateDiagram.html",
   },
   {

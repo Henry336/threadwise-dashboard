@@ -37,7 +37,8 @@ The application is intentionally a separate Next.js frontend and backend-for-fro
 - Explicit inactive-module review and restore controls; Canvas refreshes never decide which courses belong in the active semester
 - A visible ten-minute Telegram capture target plus a same-origin Study image lightbox with caption/search context and graceful retry, expiry, and sign-in states
 - Threadwise-native Study notes with a full-screen inline rich Markdown/Mermaid editor, searchable
-  Mermaid/UML syntax help and templates, Tab-indented lists/diagram source, selection-safe encrypted
+  Mermaid/UML help, deterministic easy syntax, visible native-SVG labels, per-diagram layout controls,
+  Tab-indented lists/diagram source, and selection-safe encrypted
   cross-device draft recovery, `[[wiki links]]` and backlinks, bounded history, and portable `.md`
   import/export
 - Personal notes reuse the same full-screen WYSIWYG Markdown/Mermaid/UML writing surface, `.md`

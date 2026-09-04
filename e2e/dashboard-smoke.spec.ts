@@ -142,3 +142,65 @@ test("rich notes keep typing focus, show list markers, and isolate the filing di
   await expect(page.locator(".study-note-fullscreen > main")).toHaveAttribute("inert", "");
   await expect(filingDialog.getByRole("textbox", { name: "Title" })).toBeFocused();
 });
+
+test("Personal and Study's shared editor normalizes UML shorthand and exposes only useful layout controls", async ({ page }, testInfo) => {
+  await page.goto("/dashboard?demo=1", { waitUntil: "load" });
+  await page.getByRole("button", { name: "Write note" }).click();
+  const dialog = page.locator(".study-note-fullscreen");
+  await expect(dialog).toBeVisible();
+  if (testInfo.project.name.startsWith("mobile")) {
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: "friendly-flow.md",
+      mimeType: "text/markdown",
+      buffer: Buffer.from("```mermaid\nflow\n  A[Start] --> B[Next step]\n```"),
+    });
+  } else await dialog.getByRole("button", { name: "Insert Mermaid diagram" }).click();
+
+  const diagramCard = dialog.locator(".study-rich-mermaid:has(> .study-rich-mermaid-head)").first();
+  await expect(diagramCard.getByText("Flowchart", { exact: true })).toBeVisible();
+  await diagramCard.getByRole("button", { name: "Layout: Vertical" }).click();
+  await diagramCard.getByRole("menuitemradio", { name: "Horizontal" }).press("Enter");
+  await expect(diagramCard.locator(".study-rich-mermaid-source")).toContainText("flowchart LR");
+
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: "friendly-uml.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from([
+      "# Friendly UML",
+      "",
+      "```mermaid",
+      "uml class",
+      "  class Note {",
+      "    public title: String",
+      "  }",
+      "  class Module",
+      "  Module has Note",
+      "```",
+    ].join("\n")),
+  });
+  await diagramCard.getByRole("button", { name: "Edit diagram" }).click();
+  const source = diagramCard.locator(".study-rich-mermaid-source");
+  await expect(diagramCard.getByText("Class diagram", { exact: true })).toBeVisible();
+  await expect(diagramCard.getByText(/Easy syntax previews here/u)).toBeVisible();
+  await expect(diagramCard.locator("figure.study-mermaid")).toContainText("Note");
+  await expect(diagramCard.locator("figure.study-mermaid")).toContainText("title");
+
+  await diagramCard.getByRole("button", { name: "Done" }).click();
+  await expect(source).toContainText("classDiagram");
+  await expect(source).toContainText("+String title");
+  await expect(source).toContainText("Module o-- Note");
+  await expect(diagramCard.getByText(/Easy syntax previews here/u)).toHaveCount(0);
+
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: "friendly-sequence.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from("```mermaid\numl sequence\n  Student sends API: Save\n  API replies Student: Saved\n```"),
+  });
+  const sequenceCard = dialog.locator(".study-rich-mermaid:has(> .study-rich-mermaid-head)").first();
+  await expect(sequenceCard.getByText("Sequence diagram", { exact: true })).toBeVisible();
+  await expect(sequenceCard.getByRole("button", { name: /^Layout:/u })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Give this note a home." })).toBeVisible();
+  await expect(sequenceCard.locator(".study-rich-mermaid-source")).toContainText("sequenceDiagram");
+  await expect(sequenceCard.locator(".study-rich-mermaid-source")).not.toContainText("uml sequence");
+});

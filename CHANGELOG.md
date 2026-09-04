@@ -4,6 +4,19 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Native-text UML and friendlier diagrams (v0.10.1)
+- Fixed textless Mermaid class/UML output by making Mermaid emit native SVG text that survives the
+  existing strict sanitizer. HTML-bearing `foreignObject` labels remain disallowed.
+- Added deterministic easy syntax for diagram headers, class members/relationships, sequence
+  messages, and state transitions. Live previews understand shorthand, while Done and final Save
+  convert it to portable standard Mermaid without rewriting active typing during draft autosave.
+- Added accurate diagram-type labels and one compact, keyboard-accessible Vertical/Horizontal/reset
+  menu only for flowcharts, class diagrams, and state diagrams. Fixed-layout diagrams do not show a
+  misleading control.
+- Expanded the in-editor guide and browser coverage. Every bundled template now renders—not merely
+  parses—with visible sanitized labels; class text is proven in both themes, and the shared
+  Study/Individual editor flow is covered at desktop and mobile widths.
+
 ### Study Calendar mirror and overlap guidance (v0.10.0; released 2026-09-04)
 - Added a secondary Timetable Calendar control with a branded consent/status dialog, encrypted Google
   OAuth continuation, automatic return-and-resume, Sync now, and non-destructive Stop syncing.

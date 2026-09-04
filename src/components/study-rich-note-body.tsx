@@ -18,13 +18,14 @@ import {
 } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
-  Bold, Braces, CheckSquare, CircleHelp, Code2, Heading2, Italic, Link as LinkIcon,
+  Bold, Braces, Check, CheckSquare, ChevronDown, CircleHelp, Code2, Heading2, Italic, Link as LinkIcon,
   List, ListOrdered, Network, Redo2, Table2, Underline as UnderlineIcon, Undo2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { DEFAULT_INDENT, indentationRemovalWidth, selectedLineStarts } from "../lib/study-editor-indentation";
 import { shouldReplaceEditorDocument } from "../lib/study-editor-sync";
 import { safeMarkdownLink } from "../lib/study-markdown-security";
+import { getMermaidDiagramInfo, normalizeMermaidSource, setMermaidLayout, type MermaidLayoutChoice } from "../lib/study-mermaid";
 import { MarkdownImage, MermaidDiagram } from "./study-markdown-media";
 import { StudyMermaidHelp } from "./study-mermaid-help";
 
@@ -35,9 +36,89 @@ function RichImageView({ node }: ReactNodeViewProps) {
   </NodeViewWrapper>;
 }
 
+function DiagramLayoutMenu({ layout, onSelect }: { layout: "vertical" | "horizontal"; onSelect: (choice: MermaidLayoutChoice) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const menuId = useId();
+  const options: Array<{ value: MermaidLayoutChoice; label: string }> = [
+    { value: "vertical", label: "Vertical" },
+    { value: "horizontal", label: "Horizontal" },
+    { value: "default", label: "Reset to default" },
+  ];
+  const close = (returnFocus = false) => {
+    setOpen(false);
+    if (returnFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+  const choose = (choice: MermaidLayoutChoice) => {
+    onSelect(choice);
+    close(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) close();
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      close(true);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onEscape, true);
+    window.requestAnimationFrame(() => optionRefs.current[layout === "horizontal" ? 1 : 0]?.focus());
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onEscape, true);
+    };
+  }, [layout, open]);
+
+  const moveFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const active = optionRefs.current.findIndex((entry) => entry === document.activeElement);
+    const last = options.length - 1;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? last
+      : event.key === "ArrowDown" ? (active < 0 || active === last ? 0 : active + 1)
+        : (active <= 0 ? last : active - 1);
+    optionRefs.current[next]?.focus();
+  };
+
+  return <div className="study-rich-mermaid-layout" ref={rootRef}>
+    <button ref={triggerRef} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen((value) => !value)}>
+      Layout: {layout === "horizontal" ? "Horizontal" : "Vertical"} <ChevronDown size={13} />
+    </button>
+    {open && <div id={menuId} role="menu" aria-label="Diagram layout" onKeyDown={moveFocus}>
+      {options.map((option, index) => <button
+        key={option.value}
+        ref={(element) => { optionRefs.current[index] = element; }}
+        type="button"
+        role={option.value === "default" ? "menuitem" : "menuitemradio"}
+        aria-checked={option.value === "default" ? undefined : option.value === layout}
+        onClick={() => choose(option.value)}
+      >
+        <span>{option.label}</span>{option.value !== "default" && option.value === layout && <Check size={13} />}
+      </button>)}
+    </div>}
+  </div>;
+}
+
 function RichCodeBlockView({ node, editor, getPos }: ReactNodeViewProps) {
   const isMermaid = node.attrs.language === "mermaid";
   const [editing, setEditing] = useState(!isMermaid || !node.textContent.trim());
+  const normalized = isMermaid ? normalizeMermaidSource(node.textContent) : null;
+  const diagram = isMermaid ? getMermaidDiagramInfo(normalized?.source ?? node.textContent) : null;
+  const replaceSource = (source: string) => {
+    const position = typeof getPos === "function" ? getPos() : undefined;
+    if (typeof position !== "number" || source === node.textContent) return;
+    editor.view.dispatch(editor.state.tr.insertText(source, position + 1, position + node.nodeSize - 1));
+  };
+  const finishEditing = () => {
+    if (normalized?.changed) replaceSource(normalized.source);
+    setEditing(false);
+  };
   const continueWriting = () => {
     const position = typeof getPos === "function" ? getPos() : undefined;
     if (typeof position !== "number") return;
@@ -53,13 +134,20 @@ function RichCodeBlockView({ node, editor, getPos }: ReactNodeViewProps) {
 
   return <NodeViewWrapper className={`study-rich-mermaid${editing ? " editing" : ""}`}>
     <div className="study-rich-mermaid-head" contentEditable={false}>
-      <span><Network size={14} /> Mermaid diagram</span>
-      <button type="button" onClick={() => setEditing((value) => !value)}>{editing ? "Done" : "Edit diagram"}</button>
+      <span><Network size={14} /> {diagram?.label ?? "Mermaid diagram"}</span>
+      <div className="study-rich-mermaid-actions">
+        {diagram?.layoutSupported && diagram.layout && <DiagramLayoutMenu layout={diagram.layout} onSelect={(choice) => replaceSource(setMermaidLayout(node.textContent, choice))} />}
+        <button type="button" onClick={() => editing ? finishEditing() : setEditing(true)}>{editing ? "Done" : "Edit diagram"}</button>
+      </div>
     </div>
     <div className="study-rich-mermaid-preview" contentEditable={false} role="button" tabIndex={0} onClick={() => setEditing(true)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setEditing(true); } }} aria-label="Edit Mermaid diagram source">
-      {node.textContent.trim() ? <MermaidDiagram source={node.textContent} /> : <span>Add Mermaid source below to draw the diagram.</span>}
+      {node.textContent.trim() ? <MermaidDiagram source={normalized?.source ?? node.textContent} /> : <span>Add Mermaid source below to draw the diagram.</span>}
     </div>
     <NodeViewContent className="study-rich-mermaid-source" />
+    {editing && normalized?.changed && !normalized.issues.length && <p className="study-rich-mermaid-guidance" contentEditable={false}>Easy syntax previews here and becomes portable Mermaid when you finish.</p>}
+    {editing && normalized?.issues.length ? <div className="study-rich-mermaid-guidance error" contentEditable={false} role="status">
+      {normalized.issues.map((issue) => <p key={`${issue.line}-${issue.message}`}>Line {issue.line}: {issue.message}</p>)}
+    </div> : null}
     <button type="button" className="study-rich-continue" contentEditable={false} onClick={continueWriting}>Continue writing below</button>
   </NodeViewWrapper>;
 }
@@ -69,6 +157,20 @@ const RichCodeBlock = CodeBlock.extend({
     return ReactNodeViewRenderer(RichCodeBlockView);
   },
 });
+
+function normalizeEditorMermaidBlocks(editor: Editor): boolean {
+  const replacements: Array<{ from: number; to: number; source: string }> = [];
+  editor.state.doc.descendants((node, position) => {
+    if (node.type.name !== "codeBlock" || node.attrs.language !== "mermaid") return;
+    const normalized = normalizeMermaidSource(node.textContent);
+    if (normalized.changed) replacements.push({ from: position + 1, to: position + node.nodeSize - 1, source: normalized.source });
+  });
+  if (!replacements.length) return false;
+  let transaction = editor.state.tr;
+  for (const replacement of replacements.reverse()) transaction = transaction.insertText(replacement.source, replacement.from, replacement.to);
+  editor.view.dispatch(transaction);
+  return true;
+}
 
 function changeCodeBlockIndentation(editor: Editor, direction: "indent" | "outdent"): boolean {
   const { selection } = editor.state;
@@ -155,7 +257,7 @@ type StudyRichNoteBodyProps = {
   value: string;
   onChange: (markdown: string) => void;
   onReady?: () => void;
-  onFlushReady?: (flush: (() => string) | null) => void;
+  onFlushReady?: (flush: ((canonicalize?: boolean) => string) | null) => void;
   ariaLabel?: string;
 };
 
@@ -170,6 +272,7 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
   const onChangeRef = useRef(onChange);
   const onReadyRef = useRef(onReady);
   const lastLocallyEmittedMarkdownRef = useRef(value);
+  const editorRef = useRef<Editor | null>(null);
   const pendingEditorRef = useRef<Editor | null>(null);
   const quietSyncTimerRef = useRef<number | null>(null);
   const maxSyncTimerRef = useRef<number | null>(null);
@@ -184,10 +287,14 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
     maxSyncTimerRef.current = null;
   }, []);
 
-  const flushMarkdown = useCallback(() => {
-    const current = pendingEditorRef.current;
+  const flushMarkdown = useCallback((canonicalize = false) => {
+    const current = pendingEditorRef.current ?? editorRef.current;
     clearMarkdownSyncTimers();
     if (!current) return lastLocallyEmittedMarkdownRef.current;
+    if (canonicalize) {
+      normalizeEditorMermaidBlocks(current);
+      clearMarkdownSyncTimers();
+    }
     pendingEditorRef.current = null;
     const markdown = current.getMarkdown();
     if (markdown !== lastLocallyEmittedMarkdownRef.current) {
@@ -200,9 +307,9 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
   const scheduleMarkdownSync = useCallback((current: Editor) => {
     pendingEditorRef.current = current;
     if (quietSyncTimerRef.current !== null) window.clearTimeout(quietSyncTimerRef.current);
-    quietSyncTimerRef.current = window.setTimeout(flushMarkdown, MARKDOWN_SYNC_DELAY_MS);
+    quietSyncTimerRef.current = window.setTimeout(() => flushMarkdown(false), MARKDOWN_SYNC_DELAY_MS);
     if (maxSyncTimerRef.current === null) {
-      maxSyncTimerRef.current = window.setTimeout(flushMarkdown, MARKDOWN_SYNC_MAX_WAIT_MS);
+      maxSyncTimerRef.current = window.setTimeout(() => flushMarkdown(false), MARKDOWN_SYNC_MAX_WAIT_MS);
     }
   }, [flushMarkdown]);
 
@@ -218,9 +325,14 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
         spellcheck: "true",
       },
     },
-    onCreate: () => onReadyRef.current?.(),
+    onCreate: ({ editor: current }) => { editorRef.current = current; onReadyRef.current?.(); },
     onUpdate: ({ editor: current }) => scheduleMarkdownSync(current),
   }, [ariaLabel]);
+
+  useEffect(() => {
+    editorRef.current = editor;
+    return () => { if (editorRef.current === editor) editorRef.current = null; };
+  }, [editor]);
 
   useEffect(() => {
     onFlushReady?.(flushMarkdown);

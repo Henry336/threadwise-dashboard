@@ -104,6 +104,13 @@ indent diagram/code lines, but normal prose must preserve native focus traversal
 paragraph indentation is not portable Markdown. Locally emitted Markdown must never be fed back through
 `setContent`; only a genuinely external body replacement may reset the editor document.
 
+Diagram cards name the detected format rather than exposing one generic Mermaid label. Flowchart,
+class, and state diagrams offer a single compact layout menu; fixed-layout formats do not show a dead
+control. Threadwise easy syntax is deliberately line-oriented, previews while editing, and becomes
+standard Mermaid only at Done or final Save. Passive autosave must preserve the shorthand and active
+selection. Keep SVG sanitization strict and request native SVG text from Mermaid instead of permitting
+HTML label containers.
+
 ## Identity system
 
 - The faceless threaded-path mark represents Threadwise as a product. It is one optically centered vector with identical geometry in light and dark themes; only its theme token changes.

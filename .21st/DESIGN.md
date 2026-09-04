@@ -102,6 +102,12 @@ Pinned Study modules appear before unpinned modules while retaining the existing
 order inside each group. Pinning is a view preference recorded on the module; it must not imply Canvas
 selection, activation, mastery, or archival state.
 
+Diagram cards use native SVG text so strict sanitization does not erase UML labels. Name the detected
+diagram kind and expose one compact Vertical/Horizontal/reset menu only for flowcharts, class diagrams,
+and state diagrams. Easy syntax stays bounded and line-oriented, previews without mutating the active
+code block, and converts to portable Mermaid only on Done or final Save. Draft autosave must not rewrite
+shorthand underneath the user's cursor.
+
 ## Decision: Calendar consent and overlap warnings belong to the timetable
 
 Keep Google Calendar as one secondary Timetable control. Its Threadwise-native dialog explains one-way
