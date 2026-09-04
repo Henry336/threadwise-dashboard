@@ -5,6 +5,14 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-09-04 (Codex, UML rendering implementation):** Repaired blank Mermaid class/UML labels
+  without loosening SVG sanitization by switching Mermaid to native SVG text. The shared Study/Personal
+  editor now recognizes a bounded easy-syntax grammar, labels diagram kinds accurately, and offers one
+  keyboard-accessible layout menu only for flow/class/state diagrams. Passive autosave preserves active
+  shorthand; Done and final Save normalize to portable Mermaid. Local validation covers all bundled
+  rendered templates, light/dark class text, desktop/mobile interaction, unit/type/lint/build, and the
+  existing security boundary. Release details follow after the production gate completes.
+
 - **2026-09-04 (Codex, Study timetable release):** Added the explicit Study Timetable
   Calendar mirror interaction: branded privacy consent, existing Google OAuth return/resume, sync
   status/counts, manual retry, and non-destructive stop. Added accessible amber conflict warnings in
@@ -248,6 +256,12 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-09-04 (Codex):** Implemented native-text Mermaid rendering, deterministic UML shorthand,
+  deliberate-boundary canonicalization, accurate diagram labels, and compact supported-layout controls
+  in the shared Study/Personal editor. A browser test caught and prevented alias conversion during the
+  quiet autosave window; draft sync now preserves the active source and selection. Runtime is under final
+  validation before publication.
 
 - **2026-09-04 (Codex):** Released the paired v0.10.0 Timetable Calendar/overlap UI after backend
   v0.35.0 was migrated and healthy. Preserve the existing Threadwise primitives and privacy copy;

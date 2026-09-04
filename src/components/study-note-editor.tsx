@@ -33,7 +33,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   const filingModalRef = useRef<HTMLFormElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const draftRef = useRef(draft);
-  const bodyFlushRef = useRef<() => string>(() => draftRef.current.body);
+  const bodyFlushRef = useRef<(canonicalize?: boolean) => string>(() => draftRef.current.body);
   const draftIdRef = useRef<string | undefined>(undefined);
   const revisionRef = useRef(0);
   const resourceVersionRef = useRef(resourceUpdatedAt);
@@ -132,7 +132,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
 
   useEffect(() => {
     const preserveLatestDraft = () => {
-      bodyFlushRef.current();
+      bodyFlushRef.current(false);
       if (dirtyRef.current) void persistDraft(draftRef.current, true);
     };
     window.addEventListener("pagehide", preserveLatestDraft);
@@ -145,13 +145,13 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
     return () => window.clearTimeout(timer);
   }, [dirty, draft, loaded, persistDraft, saveState]);
 
-  const registerBodyFlush = useCallback((flush: (() => string) | null) => {
+  const registerBodyFlush = useCallback((flush: ((canonicalize?: boolean) => string) | null) => {
     bodyFlushRef.current = flush ?? (() => draftRef.current.body);
   }, []);
 
   const requestClose = useCallback(async () => {
     if (closingRef.current) return;
-    bodyFlushRef.current();
+    bodyFlushRef.current(false);
     closingRef.current = true;
     setClosing(true);
     const safe = !dirtyRef.current || await persistDraft(draftRef.current);
@@ -191,7 +191,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   }, [requestClose]);
 
   const openFiling = () => {
-    const body = bodyFlushRef.current();
+    const body = bodyFlushRef.current(true);
     if (!draftRef.current.title.trim()) update({ title: suggestedTitle(body) });
     setFiling(true);
   };
@@ -209,7 +209,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   };
   const fileNote = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    bodyFlushRef.current();
+    bodyFlushRef.current(true);
     const snapshot = draftRef.current;
     if (dirtyRef.current && !await persistDraft(snapshot)) return;
     const saved = await onSave(value ? `study/resources/${value.id}` : "study/resources", value ? "PATCH" : "POST", {

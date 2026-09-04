@@ -20,7 +20,7 @@ export function StudyMermaidHelp({ open, onClose, onInsert }: { open: boolean; o
       <button type="button" onClick={onClose} aria-label="Close diagram guide"><X size={18} /></button>
     </header>
     <div className="study-mermaid-help-body">
-      <p className="study-mermaid-help-intro">Choose an example or use the quick reference. UML class, sequence, and state diagrams render locally through Mermaid; PlantUML files and configuration directives are intentionally not accepted.</p>
+      <p className="study-mermaid-help-intro">Start with an example or use Threadwise easy syntax. Recognized shorthand previews immediately and becomes portable Mermaid when you finish; diagrams still render locally, and PlantUML or configuration directives remain unsupported.</p>
       <label className="study-mermaid-help-search">
         <Search size={15} />
         <span className="sr-only">Search diagram syntax</span>
@@ -42,9 +42,9 @@ export function StudyMermaidHelp({ open, onClose, onInsert }: { open: boolean; o
             </footer>
           </div>
         </details>)}
-        {!templates.length && <p className="study-mermaid-help-empty">No matching example. Try “UML”, “flowchart”, “state”, or “planning”.</p>}
+        {!templates.length && <p className="study-mermaid-help-empty">No matching example. Try “easy syntax”, “class”, “sequence”, “state”, or “planning”.</p>}
       </div>
-      <p className="study-mermaid-help-footnote"><b>Indentation:</b> Tab and Shift+Tab nest list items or adjust selected diagram/code lines. In normal paragraphs, Tab keeps its accessible browser behavior and moves to the next control.</p>
+      <p className="study-mermaid-help-footnote"><b>Portable by default:</b> Easy syntax is converted to standard Mermaid when you select Done or save the note. Tab and Shift+Tab still adjust selected diagram lines.</p>
     </div>
   </aside>;
 }

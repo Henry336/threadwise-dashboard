@@ -752,9 +752,27 @@
 .study-rich-code-source { overflow: auto; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; line-height: 1.55; white-space: pre; }
 .study-rich-mermaid { margin: 1.35em 0; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-soft); }
 .study-rich-mermaid-head { min-height: 42px; padding: 0 11px 0 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
-.study-rich-mermaid-head span { display: inline-flex; align-items: center; gap: 7px; color: var(--study-blue); font-size: 10px; font-weight: 780; }
+.study-rich-mermaid-head > span { min-width: 0; display: inline-flex; align-items: center; gap: 7px; color: var(--study-blue); font-size: 10px; font-weight: 780; white-space: nowrap; }
 .study-rich-mermaid-head button,
 .study-rich-continue { min-height: 31px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font-size: 9px; font-weight: 720; }
+.study-rich-mermaid-actions { display: flex; align-items: center; gap: 6px; }
+.study-rich-mermaid-layout { position: relative; }
+.study-rich-mermaid-layout > button { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.study-rich-mermaid-layout > div {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 154px;
+  padding: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.study-rich-mermaid-layout > div > button { width: 100%; min-height: 34px; display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; text-align: left; }
+.study-rich-mermaid-layout > div > button:hover,
+.study-rich-mermaid-layout > div > button:focus-visible { background: var(--study-blue-soft); outline: none; }
 .study-rich-mermaid-preview { width: 100%; padding: 2px 16px; display: block; background: transparent; color: var(--muted); text-align: center; cursor: text; }
 .study-rich-mermaid-preview:focus-visible { outline: 2px solid var(--study-blue); outline-offset: -3px; }
 .study-rich-mermaid-preview .study-mermaid,
@@ -762,6 +780,10 @@
 .study-rich-mermaid-source { min-height: 96px; display: none; margin: 0; overflow: auto; padding: 16px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: color-mix(in srgb, var(--canvas) 72%, var(--surface)); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; line-height: 1.55; white-space: pre; }
 .study-rich-mermaid.editing .study-rich-mermaid-source { display: block; }
 .study-rich-mermaid.editing .study-rich-mermaid-preview { opacity: .72; }
+.study-rich-mermaid-guidance { margin: 0; padding: 9px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.45; }
+.study-rich-mermaid-guidance.error { color: var(--danger); }
+.study-rich-mermaid-guidance p { margin: 0; }
+.study-rich-mermaid-guidance p + p { margin-top: 4px; }
 .study-rich-continue { margin: 0 12px 12px; }
 .study-mermaid-help {
   position: absolute;

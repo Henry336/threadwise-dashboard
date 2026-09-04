@@ -51,7 +51,9 @@ Threadwise is quiet infrastructure inside Telegram. It organizes information tha
   portable Markdown canonical while rendering formatting and Mermaid inline, autosaves encrypted drafts
   across devices without replacing the active local selection, and files completed notes into an
   existing module-owned Library resource. A searchable in-editor guide provides insertable Mermaid
-  examples plus class, sequence, and state UML through the same local renderer. Tab/Shift+Tab nests list
+  examples plus class, sequence, and state UML through the same local renderer. Bounded easy syntax
+  previews immediately and normalizes to portable Mermaid only at Done/Save boundaries; supported
+  flow, class, and state diagrams expose one compact orientation control. Tab/Shift+Tab nests list
   items or adjusts diagram/code lines; normal prose keeps accessible focus traversal. Personal and Group
   retain their existing note editors until this Study trial is reviewed.
 - User-facing tags are retired from Personal, Group, and Study notes/ideas. Historical values remain a dormant compatibility detail and are not part of current capture or retrieval UX.
