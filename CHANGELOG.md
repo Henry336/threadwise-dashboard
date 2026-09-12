@@ -4,6 +4,16 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Background synchronization egress repair (v0.10.2)
+- Personal, Group, and Study now share one visibility/network-aware background sync lifecycle.
+  Hidden/offline pages close their event stream and stop reconciliation timers. Return, network
+  recovery, and reconnect refresh the snapshot without duplicate focus/visibility requests.
+- Visible-page fallback reconciliation runs every five minutes instead of every minute; server change
+  events and explicit mutations still refresh promptly. Backend v0.35.4 checks external changes within
+  30 seconds. No change to editing, note autosave, authorization, or feature availability.
+- Adds behavioral fake-browser tests for hourly request budgets, hidden tabs, reconnect, cleanup,
+  stale stream events, and browser back-forward cache recovery.
+
 ### Native-text UML and friendlier diagrams (v0.10.1; released 2026-09-04)
 - Fixed textless Mermaid class/UML output by making Mermaid emit native SVG text that survives the
   existing strict sanitizer. HTML-bearing `foreignObject` labels remain disallowed.

@@ -1,8 +1,17 @@
 # Dashboard architecture
 
-Updated: 2026-09-04
+Updated: 2026-09-12
 
-Current dashboard release: v0.10.0; paired backend release: v0.35.0
+Current dashboard target: v0.10.2; paired backend target: v0.35.4 (release evidence in backend PROJECT_CONTEXT.md)
+
+## Background refresh lifecycle
+
+`src/lib/dashboard-live-sync.ts` owns the shared Personal/Group/Study event stream. Hidden/offline pages
+close the stream and clear the timer; visibility/network return and stream reconnection reconcile the
+snapshot. Focus/visibility signals are coalesced. Visible fallback reconciliation is five minutes,
+alongside backend change events checked every 30 seconds. Explicit mutations refresh immediately;
+note autosave is independent and unchanged. Cleanup removes every listener/timer and stale streams
+cannot trigger updates. No additional browser credential or persistent content cache is introduced.
 
 ## Boundary
 

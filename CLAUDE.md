@@ -5,6 +5,11 @@ pointers below. **Ground answers in the live code and deployment, not in this fi
 
 ## Latest implementation checkpoint
 
+- **2026-09-12 (Codex, validating background-sync repair):** v0.10.2 shares a visibility/network-aware
+  live-sync lifecycle across Personal/Group/Study, closes streams/timers while hidden, reconciles on
+  return/reconnect, and reduces visible fallback to five minutes. Paired backend v0.35.4 uses 30-second
+  revisions and repairs Calendar queue starvation. See backend `PROJECT_CONTEXT.md` for release gates.
+
 - **2026-09-04 (Codex, UML rendering implementation):** Repaired blank Mermaid class/UML labels
   without loosening SVG sanitization by switching Mermaid to native SVG text. The shared Study/Personal
   editor now recognizes a bounded easy-syntax grammar, labels diagram kinds accurately, and offers one
@@ -257,6 +262,11 @@ The owner works between Claude Code and Codex interchangeably. Canonical context
 updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
+
+- **2026-09-12 (Codex):** Added shared background sync and eight lifecycle/request-budget tests.
+  Dashboard's full 210-test suite, types/lint/build/secret scans, and browser checks (20 passed,
+  6 intentional platform skips) pass. Backend v0.35.4 is live and its pending queue is draining;
+  dashboard publication follows. Explicit mutations, note autosave, and authorization remain unchanged.
 
 - **2026-09-04 (Codex):** Implemented native-text Mermaid rendering, deterministic UML shorthand,
   deliberate-boundary canonicalization, accurate diagram labels, and compact supported-layout controls

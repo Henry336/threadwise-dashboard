@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
 import {
   AlertCircle, AlertTriangle, Archive, ArrowRight, BookOpen, Brain, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, Cloud, Download, ExternalLink,
@@ -222,18 +223,11 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     return () => window.removeEventListener(STUDY_CONFIRM_EVENT, openConfirmation);
   }, []);
   useEffect(() => {
-    const events = new EventSource("/api/threadwise/events");
-    const ready = () => setSync("live");
-    const update = () => { setSync("live"); void refresh(); };
-    const retry = () => setSync("reconnecting");
-    events.addEventListener("ready", ready);
-    events.addEventListener("refresh", update);
-    events.addEventListener("sync-error", retry);
-    events.onerror = retry;
-    const reconcile = window.setInterval(() => void refresh(), 60_000);
-    const visible = () => { if (document.visibilityState === "visible") void refresh(); };
-    document.addEventListener("visibilitychange", visible);
-    return () => { events.close(); window.clearInterval(reconcile); document.removeEventListener("visibilitychange", visible); };
+    return startDashboardLiveSync({
+      refresh: () => refresh(),
+      onLive: () => setSync("live"),
+      onRetry: () => setSync("reconnecting"),
+    });
   }, [refresh]);
 
   const navigate = useCallback((next: StudyView) => {

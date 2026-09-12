@@ -1,4 +1,6 @@
 "use client";
+
+import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
 /* Authenticated image responses must stay on the browser's same-origin cookie path. */
 /* eslint-disable @next/next/no-img-element */
 
@@ -419,25 +421,11 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
 
   useEffect(() => {
     if (isDemo) return;
-    const events = new EventSource("/api/threadwise/events");
-    const ready = () => setSyncState("live");
-    const refresh = () => { setSyncState("live"); void refreshSnapshot(); };
-    const retrying = () => setSyncState("reconnecting");
-    events.addEventListener("ready", ready);
-    events.addEventListener("refresh", refresh);
-    events.addEventListener("sync-error", retrying);
-    events.onerror = retrying;
-    const reconcile = window.setInterval(() => void refreshSnapshot(), 60_000);
-    const focus = () => void refreshSnapshot();
-    const visibility = () => { if (document.visibilityState === "visible") void refreshSnapshot(); };
-    window.addEventListener("focus", focus);
-    document.addEventListener("visibilitychange", visibility);
-    return () => {
-      events.close();
-      window.clearInterval(reconcile);
-      window.removeEventListener("focus", focus);
-      document.removeEventListener("visibilitychange", visibility);
-    };
+    return startDashboardLiveSync({
+      refresh: () => refreshSnapshot(),
+      onLive: () => setSyncState("live"),
+      onRetry: () => setSyncState("reconnecting"),
+    });
   }, [isDemo, refreshSnapshot]);
 
   useEffect(() => {
