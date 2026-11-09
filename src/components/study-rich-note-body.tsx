@@ -1,4 +1,10 @@
 "use client";
+/**
+ * Rich WYSIWYG Markdown writing surface shared by the Study and Personal note editors.
+ * Built on Tiptap: edits happen as a rich document, and Markdown is the stored format that goes
+ * back to the parent through `onChange`. Adds safe links/images, Mermaid/UML diagram blocks with a
+ * live preview, checklists, tables, and Tab/Shift+Tab indentation.
+ */
 
 import CodeBlock from "@tiptap/extension-code-block";
 import Image from "@tiptap/extension-image";
@@ -29,6 +35,7 @@ import { getMermaidDiagramInfo, normalizeMermaidSource, setMermaidLayout, type M
 import { MarkdownImage, MermaidDiagram } from "./study-markdown-media";
 import { StudyMermaidHelp } from "./study-mermaid-help";
 
+/** Renders a Markdown image inside the editor through MarkdownImage, which applies the remote-image consent rules. */
 function RichImageView({ node }: ReactNodeViewProps) {
   return <NodeViewWrapper className="study-rich-image" contentEditable={false}>
     <MarkdownImage src={String(node.attrs.src ?? "")} alt={String(node.attrs.alt ?? "")} />
@@ -36,6 +43,11 @@ function RichImageView({ node }: ReactNodeViewProps) {
   </NodeViewWrapper>;
 }
 
+/**
+ * Small keyboard-accessible menu that switches a Mermaid flow/class/state diagram between vertical and
+ * horizontal layout. Custom-built instead of a native select, in line with the dashboard's branded controls.
+ * Arrow/Home/End move focus, Escape and outside clicks close it, and focus returns to the trigger.
+ */
 function DiagramLayoutMenu({ layout, onSelect }: { layout: "vertical" | "horizontal"; onSelect: (choice: MermaidLayoutChoice) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -105,11 +117,17 @@ function DiagramLayoutMenu({ layout, onSelect }: { layout: "vertical" | "horizon
   </div>;
 }
 
+/**
+ * Editor view for code blocks. Plain code shows a language label; Mermaid blocks show a rendered preview
+ * with an "Edit diagram" toggle, layout menu and syntax guidance. Easy syntax previews while you type
+ * but is only rewritten to portable Mermaid on "Done", so passive autosave never changes what you typed.
+ */
 function RichCodeBlockView({ node, editor, getPos }: ReactNodeViewProps) {
   const isMermaid = node.attrs.language === "mermaid";
   const [editing, setEditing] = useState(!isMermaid || !node.textContent.trim());
   const normalized = isMermaid ? normalizeMermaidSource(node.textContent) : null;
   const diagram = isMermaid ? getMermaidDiagramInfo(normalized?.source ?? node.textContent) : null;
+  /** Replaces this block's text in one editor transaction, so it stays undoable. */
   const replaceSource = (source: string) => {
     const position = typeof getPos === "function" ? getPos() : undefined;
     if (typeof position !== "number" || source === node.textContent) return;
@@ -119,6 +137,7 @@ function RichCodeBlockView({ node, editor, getPos }: ReactNodeViewProps) {
     if (normalized?.changed) replaceSource(normalized.source);
     setEditing(false);
   };
+  /** Adds an empty paragraph after the diagram so the writer is not stuck inside the code block. */
   const continueWriting = () => {
     const position = typeof getPos === "function" ? getPos() : undefined;
     if (typeof position !== "number") return;
@@ -152,12 +171,18 @@ function RichCodeBlockView({ node, editor, getPos }: ReactNodeViewProps) {
   </NodeViewWrapper>;
 }
 
+/** Code block node that renders through RichCodeBlockView. */
 const RichCodeBlock = CodeBlock.extend({
   addNodeView() {
     return ReactNodeViewRenderer(RichCodeBlockView);
   },
 });
 
+/**
+ * Rewrites every Mermaid block's easy syntax into portable Mermaid in one transaction.
+ * Runs only on an explicit canonicalizing flush (filing or saving), never during autosave.
+ * Replacements are applied back to front so earlier positions stay valid.
+ */
 function normalizeEditorMermaidBlocks(editor: Editor): boolean {
   const replacements: Array<{ from: number; to: number; source: string }> = [];
   editor.state.doc.descendants((node, position) => {
@@ -172,6 +197,10 @@ function normalizeEditorMermaidBlocks(editor: Editor): boolean {
   return true;
 }
 
+/**
+ * Indents or outdents every selected line inside a single code block. Returns false outside
+ * code blocks so Tab falls through to the browser's normal focus movement.
+ */
 function changeCodeBlockIndentation(editor: Editor, direction: "indent" | "outdent"): boolean {
   const { selection } = editor.state;
   if (selection.$from.parent.type.name !== "codeBlock" || selection.$from.parent !== selection.$to.parent) return false;
@@ -194,6 +223,10 @@ function changeCodeBlockIndentation(editor: Editor, direction: "indent" | "outde
   return true;
 }
 
+/**
+ * Tab/Shift+Tab handling: nest or lift list and checklist items, otherwise indent code lines.
+ * High priority so it runs before Tiptap's default keymaps.
+ */
 const StudyIndentation = Extension.create({
   name: "studyIndentation",
   priority: 1_100,
@@ -213,6 +246,10 @@ const StudyIndentation = Extension.create({
   },
 });
 
+/**
+ * Link mark that drops unsafe URLs (for example `javascript:`) both when reading and when writing Markdown.
+ * Unsafe links keep their text but lose the link.
+ */
 const SafeLink = Link.extend({
   parseMarkdown(token, helpers) {
     const children = helpers.parseInline(token.tokens || []);
@@ -229,12 +266,17 @@ const SafeLink = Link.extend({
   },
 });
 
+/** Image node that renders through RichImageView. */
 const SafeImage = Image.extend({
   addNodeView() {
     return ReactNodeViewRenderer(RichImageView);
   },
 });
 
+/**
+ * The full Tiptap extension list for Study and Personal notes. Base64 images are disallowed and
+ * Markdown uses GFM, so notes stay portable as plain `.md` files.
+ */
 export const studyRichNoteExtensions = [
   StarterKit.configure({
     codeBlock: false,
@@ -261,9 +303,19 @@ type StudyRichNoteBodyProps = {
   ariaLabel?: string;
 };
 
+/**
+ * Markdown sync is coalesced: emit 140 ms after typing pauses, and at least every 900 ms while typing.
+ * Converting the whole document to Markdown on every keystroke caused typing lag and lost focus.
+ */
 const MARKDOWN_SYNC_DELAY_MS = 140;
 const MARKDOWN_SYNC_MAX_WAIT_MS = 900;
 
+/**
+ * The rich editor component. Parents pass Markdown in `value` and receive Markdown through `onChange`.
+ * It remembers the Markdown it last emitted so an autosave echo does not reset the document and the
+ * cursor; only a genuine external change (an import or a newer draft) replaces the content.
+ * `onFlushReady` gives the parent a function to force out the latest Markdown before save or close.
+ */
 export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, ariaLabel = "Study note" }: StudyRichNoteBodyProps) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState("");
@@ -287,6 +339,10 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
     maxSyncTimerRef.current = null;
   }, []);
 
+  /**
+   * Converts the editor to Markdown now and emits it if it changed. With canonicalize=true it first
+   * normalizes Mermaid easy syntax. Returns the Markdown so callers can save it straight away.
+   */
   const flushMarkdown = useCallback((canonicalize = false) => {
     const current = pendingEditorRef.current ?? editorRef.current;
     clearMarkdownSyncTimers();
@@ -304,6 +360,7 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
     return markdown;
   }, [clearMarkdownSyncTimers]);
 
+  /** Debounces Markdown emission after an edit, with a maximum wait so long typing bursts still sync. */
   const scheduleMarkdownSync = useCallback((current: Editor) => {
     pendingEditorRef.current = current;
     if (quietSyncTimerRef.current !== null) window.clearTimeout(quietSyncTimerRef.current);
@@ -354,6 +411,7 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
 
   useEffect(() => {
     if (!editor || !diagramHelpOpen) return;
+    /** Captures Escape while the diagram help is open so it closes only the help panel, not the whole note editor. */
     const closeHelp = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
@@ -367,6 +425,7 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
 
   if (!editor) return <div className="study-rich-loading">Preparing your writing space…</div>;
 
+  /** Applies, replaces or removes the link on the selection, rejecting unsafe addresses with a message. */
   const applyLink = () => {
     const href = link.trim();
     if (!href) editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -379,6 +438,7 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
     setLink("");
     setLinkError("");
   };
+  /** Inserts a Mermaid block, either a starter flowchart or a template chosen from the help panel. */
   const insertDiagram = (source = "flowchart TD\n  A[Start] --> B[Next step]") => {
     setDiagramHelpOpen(false);
     editor.chain().focus().insertContent({
@@ -426,6 +486,7 @@ export function StudyRichNoteBody({ value, onChange, onReady, onFlushReady, aria
   </div>;
 }
 
+/** Icon-only toolbar button with an accessible label and pressed/expanded state. */
 function ToolbarButton({ label, active = false, disabled = false, expanded, controls, onClick, children }: { label: string; active?: boolean; disabled?: boolean; expanded?: boolean; controls?: string; onClick: () => void; children: React.ReactNode }) {
   return <button type="button" title={label} aria-label={label} aria-pressed={active || undefined} aria-expanded={expanded} aria-controls={controls} disabled={disabled} onClick={onClick}>{children}</button>;
 }

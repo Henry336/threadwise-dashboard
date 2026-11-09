@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Group workspace screens rendered by `dashboard-app.tsx`: Overview, People, Resources, Tasks,
+ * Progress, Activity, and the task assignment sheet. Everything reads the shared dashboard
+ * snapshot; changes are reported to the parent (`onAction`, `onToggle`, ...) which calls the API.
+ */
 import { useState } from "react";
 import {
   ArrowRight,
@@ -28,7 +33,9 @@ import { StudyChoicePicker } from "@/components/study-choice-picker";
 
 type Collaboration = NonNullable<DashboardSnapshot["collaboration"]>;
 type Member = Collaboration["members"][number];
+/** Task list filter: all work, my work, unassigned work, or one member's work. */
 export type GroupTaskScope = "all" | "mine" | "unassigned" | `member:${string}`;
+/** Body of one assignment change sent by the sheet: set the audience, assign, unassign or claim. */
 export type CollaborationPayload = {
   action: "set-audience" | "assign" | "unassign" | "claim";
   audience?: "UNASSIGNED" | "EVERYONE";
@@ -37,6 +44,11 @@ export type CollaborationPayload = {
   reason?: string;
 };
 
+/**
+ * Group home: role, members, counts that need attention (unassigned, overdue), this week's
+ * numbers, the open availability poll, up to five tasks needing action, and recent activity.
+ * Overdue is measured against the snapshot's `generatedAt`, not the browser clock.
+ */
 export function GroupOverview({
   data,
   onOpenTasks,
@@ -104,6 +116,7 @@ export function GroupOverview({
   </div>;
 }
 
+/** Member cards with a workload bar scaled to the busiest member. A card opens that member's tasks. */
 export function GroupPeople({ data, onOpenTasks }: { data: DashboardSnapshot; onOpenTasks: (scope: GroupTaskScope) => void }) {
   const collaboration = data.collaboration;
   if (!collaboration) return null;
@@ -118,6 +131,7 @@ export function GroupPeople({ data, onOpenTasks }: { data: DashboardSnapshot; on
   </section>;
 }
 
+/** Counts of shared notes, ideas and images plus the eight most recently added items. */
 export function GroupResources({
   data,
   onOpen,
@@ -145,6 +159,12 @@ export function GroupResources({
   </section>;
 }
 
+/**
+ * Shared task list with scope tabs, search, confirmed meetings and per-task actions.
+ * Buttons follow the group rules: managers and the task creator can edit; assignees can also
+ * complete; only managers or the creator can reopen. The creator is read from loaded activity.
+ * These checks only decide what to show; the backend enforces the rules.
+ */
 export function GroupTasksView({
   tasks,
   meetings,
@@ -210,6 +230,7 @@ export function GroupTasksView({
   </section>;
 }
 
+/** Stand-up style view: per member, tasks completed (from activity) and the next two open tasks. */
 export function GroupProgress({ data, onManageTask }: { data: DashboardSnapshot; onManageTask: (task: DashboardTask) => void }) {
   const collaboration = data.collaboration;
   if (!collaboration) return null;
@@ -227,6 +248,7 @@ export function GroupProgress({ data, onManageTask }: { data: DashboardSnapshot;
   </section>;
 }
 
+/** Full activity feed for the workspace. */
 export function GroupActivityView({ data }: { data: DashboardSnapshot }) {
   const collaboration = data.collaboration;
   if (!collaboration) return null;
@@ -236,6 +258,7 @@ export function GroupActivityView({ data }: { data: DashboardSnapshot }) {
   </section>;
 }
 
+/** Initials of up to `limit` assignees with a "+N" overflow, or an "Unassigned" label. */
 export function AssigneeStack({ assignees, limit = 3 }: { assignees: DashboardTaskAssignee[]; limit?: number }) {
   if (!assignees.length) return <span className="tw-assignee-empty"><CircleUserRound size={14} /> Unassigned</span>;
   return <span className="tw-assignee-stack" aria-label={assignees.map((item) => `${item.displayName}: ${item.status.toLowerCase()}`).join(", ")}>
@@ -244,6 +267,11 @@ export function AssigneeStack({ assignees, limit = 3 }: { assignees: DashboardTa
   </span>;
 }
 
+/**
+ * Assignment panel for one task. Managers and the creator can set the audience (Everyone or
+ * Unassigned), remove assignees and add members; changes apply at once and sync with Telegram.
+ * Other members see who is assigned and a note on who can reassign it.
+ */
 export function TaskCollaborationSheet({
   task,
   collaboration,
@@ -283,6 +311,7 @@ export function TaskCollaborationSheet({
   </div>;
 }
 
+/** List of activity items with an icon, summary and relative time. */
 function ActivityRows({ activity, empty = false }: { activity: Collaboration["activity"]; empty?: boolean }) {
   if (!activity.length) return empty ? <div className="tw-activity-empty"><MessageSquareText size={22} /><b>No activity yet.</b></div> : null;
   return <div className="tw-activity-rows">{activity.map((item, index) => <article key={item.id} style={{ "--group-index": index } as React.CSSProperties}><span className="tw-activity-glyph">{activityIcon(item.type)}</span><div><b>{item.summary}</b><small>{relativeTime(item.createdAt)}{item.taskTitle ? ` · ${item.taskTitle}` : ""}</small></div>{item.taskPublicId && <em>{item.taskPublicId}</em>}</article>)}</div>;
@@ -296,11 +325,13 @@ function MemberAvatar({ member }: { member: Member }) {
   return <span className="tw-member-avatar" aria-hidden="true">{member.initials}</span>;
 }
 
+/** Icon showing whether a task has an owner (assigned or Everyone) or still needs one. */
 function TaskGlyph({ task }: { task: DashboardTask }) {
   const assigned = task.audience === "EVERYONE" || (task.assignees ?? []).length > 0;
   return <span className="tw-task-glyph" data-state={assigned ? "ready" : "unassigned"}>{assigned ? <ShieldCheck size={16} /> : <CircleUserRound size={16} />}</span>;
 }
 
+/** Short reason a task needs attention: Everyone, needs an owner, overdue, or assigned. */
 function taskAttention(task: DashboardTask): string {
   const assignees = task.assignees ?? [];
   if (task.audience === "EVERYONE") return "Everyone";
@@ -309,6 +340,10 @@ function taskAttention(task: DashboardTask): string {
   return "Assigned";
 }
 
+/**
+ * Label for an assignee's status. Blocked, declined and pending come from the older
+ * accept/decline assignment model and can still appear on old records.
+ */
 function statusLabel(assignee: DashboardTaskAssignee): string {
   if (assignee.status === "BLOCKED") return "Blocked";
   if (assignee.status === "DECLINED") return "Declined";
@@ -316,6 +351,7 @@ function statusLabel(assignee: DashboardTaskAssignee): string {
   return "Assigned";
 }
 
+/** Picks an activity icon by keywords in the event type. */
 function activityIcon(type: string) {
   if (type.includes("HAND")) return <ArrowRight size={15} />;
   if (type.includes("ACCEPT") || type.includes("COMPLET")) return <Check size={15} />;
@@ -327,6 +363,7 @@ function initials(name: string): string {
   return name.replace(/^@/, "").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "TW";
 }
 
+/** "just now", "5m ago", "3h ago" or "2d ago" for a timestamp. */
 function relativeTime(value: string): string {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60_000));
   if (minutes < 1) return "just now";

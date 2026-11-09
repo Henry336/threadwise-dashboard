@@ -1,4 +1,10 @@
 "use client";
+/**
+ * Study Mode dashboard: the whole owner-only Study workspace UI (shell, navigation and every Study view).
+ * `dashboard-app.tsx` lazy-loads `StudyDashboardApp` when the selected workspace is the Study group.
+ * Data and writes go through the same-origin BFF (`/api/threadwise/study/...`) via `api()`, and live
+ * sync (`startDashboardLiveSync`) refreshes the snapshot when Telegram or the backend changes it.
+ */
 /* Telegram-hosted resource previews stay on the authenticated same-origin proxy. */
 /* eslint-disable @next/next/no-img-element */
 
@@ -42,8 +48,11 @@ type Toast = {
   tone: "success" | "error" | "info";
   action?: { label: string; run: () => void };
 };
+/** A pending destructive action: the message shown and the callback run on Confirm. */
 type Confirmation = { message: string; action: () => unknown };
+/** Window event that `confirmAction` fires so any view can open the shell's branded confirm dialog without prop drilling. */
 const STUDY_CONFIRM_EVENT = "threadwise:study-confirm";
+/** Which create/edit dialog is open, if any. One editor is open at a time. */
 type Editor =
   | { kind: "item"; value?: StudyItem }
   | { kind: "resource"; value?: StudyResource; resourceKind?: "NOTE" | "LINK" | "QUESTION" }
@@ -51,6 +60,7 @@ type Editor =
   | { kind: "mistake"; item?: StudyItem }
   | null;
 
+/** Sidebar navigation grouped by intent. The `id` doubles as the `?view=` URL value. */
 const NAV_SECTIONS: Array<{ label: string; items: Array<{ id: StudyView; label: string; icon: typeof BookOpen }> }> = [
   { label: "Today", items: [
     { id: "study-overview", label: "Overview", icon: Target },
@@ -71,10 +81,16 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ id: StudyView; label: 
   ] },
 ];
 const NAV = NAV_SECTIONS.flatMap((section) => section.items);
+/** The four views that fit in the mobile bottom dock; the rest live behind "More". */
 const MOBILE_NAV = NAV.filter((item) => ["study-overview", "study-timetable", "study-work", "study-focus"].includes(item.id));
 const ITEM_TYPES: StudyItemType[] = ["LECTURE", "TUTORIAL", "LAB", "ASSIGNMENT", "PROJECT", "REVISION", "TIMED_PRACTICE", "READING", "ADMINISTRATIVE"];
 const MASTERY: StudyTrafficLight[] = ["GREEN", "AMBER", "RED", "UNASSESSED"];
 
+/**
+ * Root of Study Mode. It owns the Study snapshot, the current view, dialogs, toasts and theme, and
+ * passes data plus mutation callbacks down to each view. The snapshot is fetched through the BFF
+ * (`study/snapshot`) after mount, so the first paint shows the Ari loader instead of server data.
+ */
 export function StudyDashboardApp({ initialData, workspaces, initialView, initialItem, initialItemKind }: Props) {
   const [study, setStudy] = useState<StudySnapshot | null>(null);
   const [view, setView] = useState<StudyView>(validView(initialView));
@@ -101,16 +117,23 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
   const toastTimer = useRef<number | null>(null);
   const initialTargetOpened = useRef(false);
 
+  /** On load, remove browser drafts left by other workspaces or old formats so another workspace's text does not linger on this device. */
   useEffect(() => {
     try { clearThreadwiseDrafts(window.localStorage, initialData.workspace.id); } catch { /* Storage can be unavailable. */ }
   }, [initialData.workspace.id]);
 
+  /** Shows a toast. Errors and toasts with an Undo action stay longer (7 s) so there is time to react. */
   const announce = useCallback((message: string, tone: Toast["tone"] = "success", action?: Toast["action"]) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     setToast({ message, tone, action });
     toastTimer.current = window.setTimeout(() => setToast(null), tone === "error" || action ? 7000 : 3200);
   }, []);
 
+  /**
+   * Re-fetches the whole Study snapshot. A ref guard drops overlapping calls. Quiet refreshes (live
+   * sync, after a save) never show an error toast; before the first snapshot an error shows the boot
+   * error screen instead.
+   */
   const refresh = useCallback(async (quiet = true) => {
     if (refreshRunning.current) return;
     refreshRunning.current = true;
@@ -134,6 +157,11 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     }
   }, [announce]);
 
+  /**
+   * The single write path for Study views: calls the BFF, then refreshes the snapshot so the UI shows
+   * server truth (no optimistic update). Only one write runs at a time; a second click is refused with
+   * a toast. Returns undefined on failure so callers can tell a failed save apart.
+   */
   const mutate = useCallback(async <T,>(path: string, method: "POST" | "PATCH" | "DELETE", body?: unknown, success?: string): Promise<T | undefined> => {
     if (mutationRunning.current) {
       announce("Another change is still saving.", "info");
@@ -155,6 +183,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     }
   }, [announce, refresh]);
 
+  /** Loads one note with its full body and links (the snapshot holds only summaries) and opens the reader. */
   const openStudyNote = useCallback(async (resourceId: string) => {
     try {
       const detail = await api<{ resource: StudyResource }>(`study/resources/${resourceId}`);
@@ -164,6 +193,10 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     }
   }, [announce]);
 
+  /**
+   * Deep link support: once the snapshot is in, open the item or resource named by `?item=` exactly once.
+   * If it is not in the snapshot (for example archived or done), fetch it by id and add it locally.
+   */
   useEffect(() => {
     if (!study || initialTargetOpened.current || !initialItem || !initialItemKind) return;
     const timer = window.setTimeout(() => {
@@ -231,6 +264,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     });
   }, [refresh]);
 
+  /** Switches view, closes the mobile menu, and writes `?view=` with replaceState so reloads keep the view without adding history entries. */
   const navigate = useCallback((next: StudyView) => {
     setView(next);
     setMobileNav(false);
@@ -239,12 +273,17 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     window.history.replaceState(null, "", url);
     window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, []);
+  /** Filters to one module and also marks it selected on the backend, which is the module Telegram captures default to. */
   const openModule = (moduleId: string, destination: StudyView = "study-work") => {
     setModuleFilter(moduleId);
     navigate(destination);
     void mutate(`study/modules/${moduleId}`, "PATCH", { selected: true });
   };
 
+  /**
+   * Global keyboard shortcuts: Ctrl/Cmd+K for search, `?` for help, and `g` then a letter within 900 ms
+   * to jump to a view. Ignored inside dialogs and, except Ctrl+K and Escape, while typing.
+   */
   useEffect(() => {
     const shortcuts: Record<string, StudyView> = {
       o: "study-overview", t: "study-timetable", m: "study-modules", w: "study-work", l: "study-library",
@@ -287,6 +326,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [navigate]);
 
+  /** Completes a work item and offers Undo, which reopens it with a PATCH instead of deleting anything. */
   const completeItem = async (item: StudyItem) => {
     const completed = await mutate<{ item: StudyItem }>(`study/items/${item.id}/complete`, "POST", {});
     if (!completed) return;
@@ -317,6 +357,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
   const ownerInitial = ownerName.slice(0, 1).toUpperCase();
   const activeSession = study.sessions.find((session) => !session.endedAt) ?? null;
 
+  /** Ends the active Deep Work session and jumps to the Deep Work view to show its outcome. */
   const stopSession = async (body: unknown) => {
     const stopped = await mutate<{ session: StudySession }>("study/sessions/stop", "POST", body, "Session recorded.");
     if (stopped?.session) {
@@ -326,6 +367,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     return stopped;
   };
 
+  /** Patches a session (for example its linked resources) and keeps the outcome card in step if it shows that session. */
   const updateSession = async (sessionId: string, body: unknown) => {
     const updated = await mutate<{ session: StudySession }>(`study/sessions/${sessionId}`, "PATCH", body, "Session updated.");
     if (updated?.session && focusOutcome?.id === sessionId) setFocusOutcome(updated.session);
@@ -375,6 +417,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
   </div>;
 }
 
+/** Overview view: greeting, the Today planner, the single most urgent "next move", week counts, the module shelf and a Canvas alert. */
 function Overview({ study, ownerName, onWriteNote, onOpenModule, onNavigate, onEditItem, onComplete, onFocus, onTodayChanged }: { study: StudySnapshot; ownerName: string; onWriteNote: () => void; onOpenModule: (id: string, view?: StudyView) => void; onNavigate: (view: StudyView) => void; onEditItem: (item: StudyItem) => void; onComplete: (item: StudyItem) => void; onFocus: (item: StudyItem) => void; onTodayChanged: () => void }) {
   const attention = study.overview.attention;
   const first = attention.items[0];
@@ -391,10 +434,12 @@ function Overview({ study, ownerName, onWriteNote, onOpenModule, onNavigate, onE
   </>;
 }
 
+/** Modules view: active modules with pin, edit and archive, plus archived or not-yet-reviewed modules that can be restored. */
 function Modules({ study, onOpen, onEdit, onAdd, onPin, onArchive, onRestore }: { study: StudySnapshot; onOpen: (id: string, view?: StudyView) => void; onEdit: (module: StudyModule) => void; onAdd: () => void; onPin: (module: StudyModule) => void; onArchive: (module: StudyModule) => void; onRestore: (module: StudyModule) => void }) {
   return <section className="study-page"><PageHead kicker="Modules" title="Modules" action={<button className="study-primary" onClick={onAdd}><Plus size={16} /> Add module</button>} /><div className="study-module-grid">{study.modules.map((module, index) => <article key={module.id} className={module.pinnedAt ? "is-pinned" : undefined} style={{ "--module-color": module.color ?? "#168b83", "--module-index": index } as React.CSSProperties}><header><span>{module.code}</span><Mastery value={module.summary?.status ?? module.currentMastery} /><div className="study-module-actions"><button className="study-module-pin" aria-pressed={Boolean(module.pinnedAt)} onClick={() => onPin(module)} aria-label={module.pinnedAt ? `Unpin ${module.code}` : `Pin ${module.code}`} title={module.pinnedAt ? "Unpin module" : "Pin module"}><Pin size={17} /></button><button onClick={() => onEdit(module)} aria-label={`Edit ${module.code}`}><MoreHorizontal size={19} /></button><button className="study-module-archive" onClick={() => onArchive(module)} aria-label={`Archive ${module.code}`}><Archive size={17} /></button></div></header><h2>{module.name}</h2><p>{module.masteryReason || (module.canvasCourseId ? "Connected to Canvas" : "Module-owned work and references")}</p><div className="study-module-stats"><span><b>{module.summary?.open ?? 0}</b><small>open</small></span><span><b>{module.summary?.overdue ?? 0}</b><small>overdue</small></span><span><b>{module.summary?.actualMinutes ?? 0}</b><small>minutes</small></span></div><footer><button onClick={() => onOpen(module.id, "study-work")}>Open work</button><button onClick={() => onOpen(module.id, "study-library")}>Open library <ArrowRight size={15} /></button></footer></article>)}</div>{study.inactiveModules.length > 0 && <section className="study-inactive-modules"><header><div><span>Archived</span><h2>Archived modules</h2></div></header><div>{study.inactiveModules.map((module) => <article key={module.id}><div><b>{module.code}</b><span>{module.name}</span><small>{module.userArchivedAt ? "Archived by you" : "Waiting for review"}</small></div><button className="study-secondary" onClick={() => onRestore(module)}>{module.userArchivedAt ? "Restore" : "Activate"}</button></article>)}</div></section>}</section>;
 }
 
+/** Work view: the work items, filtered client-side by module, status and text. Filters persist in localStorage. */
 function Work({ study, moduleFilter, onModuleFilter, onEdit, onAdd, onComplete, onArchive }: { study: StudySnapshot; moduleFilter: string; onModuleFilter: (id: string) => void; onEdit: (item: StudyItem) => void; onAdd: () => void; onComplete: (item: StudyItem) => void; onArchive: (item: StudyItem) => void }) {
   const [status, setStatus] = usePersistentState<"active" | "done" | "all">("threadwise-study-work-status", "active");
   const [query, setQuery] = usePersistentState("threadwise-study-work-query", "");
@@ -418,6 +463,11 @@ function Work({ study, moduleFilter, onModuleFilter, onEdit, onAdd, onComplete, 
   </section>;
 }
 
+/**
+ * Library view: notes, images, links, files and questions, filtered client-side. Images load through
+ * the authenticated same-origin proxy. While a Deep Work session runs, resources from the same module
+ * can be linked to it.
+ */
 function LibraryView({ study, moduleFilter, activeSession, onModuleFilter, onAdd, onOpenNote, onEdit, onPin, onArchive, onToggleSessionResource }: { study: StudySnapshot; moduleFilter: string; activeSession: StudySession | null; onModuleFilter: (id: string) => void; onAdd: (kind: "NOTE" | "LINK" | "QUESTION") => void; onOpenNote: (resource: StudyResource) => void; onEdit: (resource: StudyResource) => void; onPin: (resource: StudyResource) => void; onArchive: (resource: StudyResource) => void; onToggleSessionResource: (resource: StudyResource) => void }) {
   const [kind, setKind] = usePersistentState<"ALL" | StudyResourceKind>("threadwise-study-library-kind", "ALL"); const [query, setQuery] = usePersistentState("threadwise-study-library-query", "");
   const [openImage, setOpenImage] = useState<StudyResource | null>(null);
@@ -431,6 +481,10 @@ function LibraryView({ study, moduleFilter, activeSession, onModuleFilter, onAdd
   </section>;
 }
 
+/**
+ * Read-only note dialog: rendered Markdown, outgoing links, backlinks, version history and `.md` export.
+ * "Use in editor" opens an old revision in the editor; it does not save on its own.
+ */
 function StudyNoteReader({ resource, timezone, onClose, onEdit, onOpenLinked }: { resource: StudyResource; timezone: string; onClose: () => void; onEdit: (resource: StudyResource) => void; onOpenLinked: (target: string) => void }) {
   const metadata = resource.noteMeta;
   const download = () => {
@@ -453,6 +507,11 @@ function StudyNoteReader({ resource, timezone, onClose, onEdit, onOpenLinked }: 
   }</StudyDialog>;
 }
 
+/**
+ * Lightbox for a saved image. It fetches the bytes through `loadStudyImage` and shows them as an
+ * object URL, so it can show a real error with a retry instead of a broken `<img>`. The fetch is
+ * aborted and the URL revoked on close. Escape leaves full-size view first, then closes.
+ */
 function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { resource: StudyResource; timezone: string; onEdit: () => void; onArchive: () => void; onClose: () => void }) {
   const [revision, setRevision] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -511,6 +570,7 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
   </div>;
 }
 
+/** Review view: per-module mastery signals, the week's top three priorities, the open mistake ledger, and the weekly review wizard. */
 function Review({ ownerId, study, busy, onMastery, onResolveMistake, onAddMistake, onSavePlan, onSaveReview }: { ownerId: string; study: StudySnapshot; busy: boolean; onMastery: (module: StudyModule, mastery: StudyTrafficLight, reason?: string) => void; onResolveMistake: (mistake: StudyMistake) => void; onAddMistake: () => void; onSavePlan: (body: unknown) => Promise<unknown>; onSaveReview: (body: unknown) => Promise<unknown> }) {
   const initialPriorities = study.week?.topPriorities ?? [];
   const [priorities, setPriorities] = useState<[string, string, string]>([initialPriorities[0] ?? "", initialPriorities[1] ?? "", initialPriorities[2] ?? ""]);
@@ -519,6 +579,10 @@ function Review({ ownerId, study, busy, onMastery, onResolveMistake, onAddMistak
   return <section className="study-page"><PageHead kicker="Review" title="Close the loop." copy="Mastery, mistakes, and next-week priorities." action={<button className="study-primary" onClick={() => setReviewOpen(true)}><Brain size={16} /> Weekly review</button>} /><div className="study-review-layout"><section className="study-mastery-board"><header><h2>Module mastery</h2><span>Set the current signal</span></header>{study.modules.map((module) => <article key={module.id}><div><b>{module.code}</b><span>{module.name}</span></div><div className="study-mastery-buttons" role="group" aria-label={`${module.code} mastery`}>{MASTERY.map((value) => <button key={value} aria-pressed={module.currentMastery === value} data-mastery={value} className={module.currentMastery === value ? "active" : ""} onClick={() => onMastery(module, value)}>{masteryLabel(value)}</button>)}</div></article>)}</section><aside className="study-plan"><form onSubmit={(event) => { event.preventDefault(); void onSavePlan({ priorities: priorities.map((value) => value.trim()).filter(Boolean) }); }}><header><h2>Top three</h2><p>Three explicit outcomes. Nothing is silently discarded.</p></header><div className="study-priority-fields">{priorities.map((priority, index) => <label key={index}>Priority {index + 1}<input value={priority} onChange={(event) => updatePriority(index, event.target.value)} maxLength={500} placeholder={index === 0 ? "The outcome that matters most" : "Optional"} /></label>)}</div><footer><button type="submit" className="study-primary" disabled={busy || priorities.every((value) => !value.trim())}>Save week plan</button></footer></form></aside></div><section className="study-mistake-ledger"><header><div><span>Mistake ledger</span><h2>Patterns worth revisiting</h2></div><button className="study-secondary" onClick={onAddMistake}><Plus size={15} /> Record mistake</button></header><div>{study.mistakes.filter((mistake) => mistake.status !== "RESOLVED").map((mistake) => <article key={mistake.id}><span>{mistake.module.code}</span><div><h3>{mistake.source}</h3><p>{mistake.cause}</p><small>Prevent it: {mistake.prevention}</small></div><button onClick={() => onResolveMistake(mistake)}><Check size={15} /> Resolve</button></article>)}{!study.mistakes.some((mistake) => mistake.status !== "RESOLVED") && <Empty title="No open mistake patterns." copy="Record one when a wrong answer reveals something reusable." />}</div></section>{reviewOpen && <WeeklyReviewSheet ownerId={ownerId} study={study} busy={busy} onClose={() => setReviewOpen(false)} onSave={async (body) => { const saved = await onSaveReview(body); if (saved) setReviewOpen(false); }} />}</section>;
 }
 
+/**
+ * Server-side search across the semester (`study/search`), debounced by 180 ms. A revision counter
+ * ignores responses that arrive after the query changed, so stale results never overwrite newer ones.
+ */
 function StudySearch({ study, onNavigate, onEditItem, onEditResource }: { study: StudySnapshot; onNavigate: (view: StudyView) => void; onEditItem: (item: StudyItem) => void; onEditResource: (resource: StudyResource) => void }) {
   const [query, setQuery] = usePersistentState("threadwise-study-search-query", "");
   const [kind, setKind] = usePersistentState("threadwise-study-search-kind", "all");
@@ -565,6 +629,10 @@ function StudySearch({ study, onNavigate, onEditItem, onEditResource }: { study:
   return <section className="study-page study-search-page"><PageHead kicker="Study search" title="Recall across the semester." copy="Titles, note text, image OCR, files, questions, and mistakes." /><div className="study-search-box"><Search size={23} /><label className="sr-only" htmlFor="study-search-input">Search the semester</label><input id="study-search-input" autoFocus value={query} onChange={(event) => changeQuery(event.target.value)} placeholder="Search while you type" />{loading && <LoaderCircle className="spin" size={19} aria-label="Searching" />}</div><div className="study-search-tabs" role="group" aria-label="Search content type">{[["all", "Everything"], ["work", "Work"], ["notes", "Notes"], ["images", "Images"], ["files", "Files"], ["mistakes", "Mistakes"]].map(([value, label]) => <button key={value} aria-pressed={kind === value} className={kind === value ? "active" : ""} onClick={() => setKind(value)}>{label}</button>)}</div><div className="study-search-results">{results.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => open(result)}><span>{result.module.code}</span><div><b>{result.title}</b><p>{result.excerpt || humanize(result.kind)}</p></div><em>{result.publicId}</em><ChevronRight size={17} /></button>)}{query.length < 2 ? <Empty title="Find something you captured." copy="Type at least two characters. Results update immediately." /> : searchError ? <Empty title="Search paused." copy="Threadwise could not search just now. Keep the phrase here and try again." /> : !loading && !results.length ? <Empty title="Nothing matched." copy="Try a module code, filename, phrase, or OCR text." /> : null}</div></section>;
 }
 
+/**
+ * Branded confirm dialog for destructive Study actions, used instead of the native `confirm()`.
+ * Focus starts on "Keep it" so pressing Enter does not confirm by accident.
+ */
 function StudyConfirmationDialog({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -581,6 +649,7 @@ function StudyConfirmationDialog({ message, onCancel, onConfirm }: { message: st
   </div>;
 }
 
+/** Floating bar shown on every other view while a Deep Work session runs, so the timer and End stay reachable. */
 function StudySessionCompanion({ session, timezone, busy, onOpen, onStop }: { session: StudySession; timezone: string; busy: boolean; onOpen: () => void; onStop: (body: unknown) => Promise<unknown> }) {
   const elapsed = useSessionElapsed(session.startedAt);
   return <aside className="study-session-companion" aria-label="Active Deep Work session" style={{ "--module-color": session.module.color ?? "#168b83" } as React.CSSProperties}>
@@ -590,6 +659,7 @@ function StudySessionCompanion({ session, timezone, busy, onOpen, onStop }: { se
   </aside>;
 }
 
+/** Re-renders once a second while a session runs and returns its elapsed seconds, computed from the start time rather than counted. */
 function useSessionElapsed(startedAt?: string) {
   const [, setTick] = useState(() => Date.now());
   useEffect(() => {
@@ -600,6 +670,7 @@ function useSessionElapsed(startedAt?: string) {
   return startedAt ? sessionElapsedSeconds(startedAt) : 0;
 }
 
+/** Settings view with four panels: Canvas sync and review, weekly rhythm and reminders, travel origins, and recurring schedule blocks. */
 function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigin, onOrigin, onDeleteOrigin, onAddBlock, onUpdateBlock, onDeleteBlock }: { study: StudySnapshot; busy: boolean; onSave: (body: unknown) => Promise<unknown>; onSync: () => Promise<unknown>; onCanvasReview: (id: string, action: "keep" | "archive") => Promise<unknown>; onAddOrigin: (body: unknown) => Promise<unknown>; onOrigin: (id: string, body: unknown) => Promise<unknown>; onDeleteOrigin: (id: string) => Promise<unknown>; onAddBlock: (body: unknown) => Promise<unknown>; onUpdateBlock: (id: string, body: unknown) => Promise<unknown>; onDeleteBlock: (id: string) => Promise<unknown> }) {
   const [settings, setSettings] = useState(study.workspace);
   const [panel, setPanel] = usePersistentState<"canvas" | "rhythm" | "travel" | "schedule">("threadwise-study-settings-panel", "canvas");
@@ -660,6 +731,7 @@ function StudySettings({ study, busy, onSave, onSync, onCanvasReview, onAddOrigi
   </section>;
 }
 
+/** Lists recurring schedule blocks and adds new ones. A destination enables the leave-time reminder for that block. */
 function ScheduleSettings({ study, busy, onAdd, onUpdate, onDelete }: { study: StudySnapshot; busy: boolean; onAdd: (body: unknown) => Promise<unknown>; onUpdate: (id: string, body: unknown) => Promise<unknown>; onDelete: (id: string) => Promise<unknown> }) {
   const [moduleId, setModuleId] = useState("");
   const [day, setDay] = useState(1);
@@ -688,6 +760,7 @@ function ScheduleSettings({ study, busy, onAdd, onUpdate, onDelete }: { study: S
   </section>;
 }
 
+/** Inline editor for one block's destination, usual origin and travel buffer (0 to 90 minutes). */
 function ScheduleTravelEditor({ block, origins, busy, onCancel, onSave }: { block: StudySnapshot["scheduleBlocks"][number]; origins: StudySnapshot["origins"]; busy: boolean; onCancel: () => void; onSave: (body: unknown) => Promise<void> }) {
   const [destination, setDestination] = useState(block.venueName ?? "");
   const [destinationPlaceId, setDestinationPlaceId] = useState<string | null>(scheduleBlockPlaceId(block));
@@ -701,6 +774,11 @@ function ScheduleTravelEditor({ block, origins, busy, onCancel, onSave }: { bloc
   </form>;
 }
 
+/**
+ * Create/edit dialog for modules, work items, non-note resources and mistakes, built on plain form
+ * fields read with FormData. Notes go to the full-screen `StudyNoteEditor` instead. On edit, cleared
+ * optional fields are sent as null so they are removed; on create they are left out.
+ */
 function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<Editor, null>; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (path: string, method: "POST" | "PATCH", body: unknown, message: string) => Promise<boolean> }) {
   const [dirty, setDirty] = useState(false);
   if (state.kind === "resource" && (state.value?.kind ?? state.resourceKind ?? "NOTE") === "NOTE") {
@@ -747,6 +825,7 @@ function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<E
 }
 
 type ReviewModuleDraft = { status: StudyTrafficLight; unclear: string; nextAction: string };
+/** Everything the weekly review wizard collects, saved as a browser draft so a closed tab does not lose it. */
 type WeeklyReviewDraft = {
   modules: Record<string, ReviewModuleDraft>;
   wins: string;
@@ -756,6 +835,10 @@ type WeeklyReviewDraft = {
   compatible: boolean;
 };
 
+/**
+ * Four-step weekly review wizard. The draft is stored in localStorage under a key scoped to owner,
+ * workspace and week number, restored on reopen, and cleared only after the backend confirms the save.
+ */
 function WeeklyReviewSheet({ ownerId: draftOwner, study, busy, onClose, onSave }: { ownerId: string; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (body: unknown) => Promise<unknown> }) {
   const storageKey = browserDraftKey("study-review", draftOwner, study.workspace.id, String(study.weekNumber));
   const freshDraft = (): WeeklyReviewDraft => ({
@@ -822,22 +905,27 @@ function WeeklyReviewSheet({ ownerId: draftOwner, study, busy, onClose, onSave }
   }</StudyDialog>;
 }
 
+/** Keyboard shortcut guide, opened with `?` or the help button. */
 function StudyGuideSheet({ onClose }: { onClose: () => void }) {
   return <StudyDialog kicker="Keyboard guide" title="Move quickly" onClose={onClose}>{(requestClose) =>
     <div className="study-guide"><p>Study Mode keeps common actions one or two keys away whenever you are not typing.</p><dl><div><dt><kbd>⌘/Ctrl</kbd><kbd>K</kbd></dt><dd>Search Study Mode</dd></div><div><dt><kbd>G</kbd><kbd>O</kbd></dt><dd>Overview</dd></div><div><dt><kbd>G</kbd><kbd>T</kbd></dt><dd>Timetable</dd></div><div><dt><kbd>G</kbd><kbd>W</kbd></dt><dd>Work</dd></div><div><dt><kbd>G</kbd><kbd>F</kbd></dt><dd>Deep Work</dd></div><div><dt><kbd>G</kbd><kbd>M</kbd></dt><dd>Modules</dd></div><div><dt><kbd>?</kbd></dt><dd>Open this guide</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Close the current layer</dd></div></dl><button type="button" className="study-primary" onClick={requestClose}>Got it</button></div>
   }</StudyDialog>;
 }
+/** Workspace menu in the sidebar. Switching goes through `/api/workspace/select`, which sets the workspace cookie and reloads the dashboard. */
 function StudyWorkspaceSwitcher({ current, workspaces, open, setOpen }: { current: DashboardWorkspace; workspaces: DashboardWorkspace[]; open: boolean; setOpen: (value: boolean) => void }) {
   return <div className="study-workspace-switcher"><span>Study group</span><button aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}><BookOpen size={16} /><span><b>{current.name}</b><small>Private workspace</small></span><ChevronDown size={16} /></button>{open && <div role="listbox">{workspaces.map((workspace) => <button role="option" aria-selected={workspace.id === current.id} key={workspace.id} onClick={() => { setOpen(false); if (workspace.id !== current.id) window.location.assign(`/api/workspace/select?workspace=${encodeURIComponent(workspace.id)}&next=/dashboard`); }}><span>{workspace.kind === "PERSONAL" ? "Personal" : workspace.mode === "STUDY" ? "Study" : "Group"}</span><b>{workspace.name}</b>{workspace.id === current.id && <Check size={15} />}</button>)}</div>}</div>;
 }
 
 function PageHead({ kicker, title, copy, action }: { kicker?: string; title: string; copy?: string; action?: React.ReactNode }) { return <header className="study-page-head"><div>{kicker && <span>{kicker}</span>}<h1>{title}</h1>{copy && <p>{copy}</p>}</div>{action}</header>; }
+/** Module filter picker for toolbars (empty means all modules). */
 function ModuleSelect({ modules, value, onChange }: { modules: StudyModule[]; value: string; onChange: (value: string) => void }) { return <StudyChoicePicker label="Module" value={value} placeholder="All modules" options={modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} searchable onChange={onChange} />; }
+/** Required module picker inside a form; posts its value under `name`. */
 function ModuleField({ modules, name, value }: { modules: StudyModule[]; name: string; value?: string | null }) { return <StudyFormChoicePicker label="Module" name={name} required defaultValue={value ?? modules[0]?.id} options={modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} allowEmpty={false} searchable />; }
 function Mastery({ value }: { value: StudyTrafficLight }) { return <span className="study-mastery" data-mastery={value}>{masteryLabel(value)}</span>; }
 function Empty({ title, copy }: { title: string; copy: string }) { return <div className="study-empty"><span className="study-empty-mark" aria-hidden="true"><BookOpen size={28} /></span><b>{title}</b><p>{copy}</p></div>; }
 function resourceIcon(kind: StudyResourceKind) { if (kind === "IMAGE") return <ImageIcon size={15} />; if (kind === "LINK") return <LinkIcon size={15} />; if (kind === "FILE") return <File size={15} />; if (kind === "QUESTION") return <CircleHelp size={15} />; return <FileText size={15} />; }
 
+/** `useState` that is also saved to localStorage under `key`, used for filters and panel choices. Falls back to memory when storage is blocked. */
 function usePersistentState<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return initialValue;
@@ -853,11 +941,14 @@ function usePersistentState<T>(key: string, initialValue: T) {
   return [value, setValue] as const;
 }
 
+/** Maps an untrusted `?view=` value to a known view, defaulting to Overview. */
 function validView(value?: string): StudyView { return NAV.some((item) => item.id === value) ? value as StudyView : "study-overview"; }
+/** Asks the shell to show the confirm dialog; `action` runs only if the user confirms. */
 function confirmAction(message: string, action: () => unknown) {
   window.dispatchEvent(new CustomEvent<Confirmation>(STUDY_CONFIRM_EVENT, { detail: { message, action } }));
 }
 function formText(form: FormData, name: string) { return String(form.get(name) ?? "").trim(); }
+/** Saves a string as a file by clicking a temporary object-URL link, then frees the URL. */
 function downloadTextFile(fileName: string, contents: string, type: string) {
   const url = URL.createObjectURL(new Blob([contents], { type }));
   const link = document.createElement("a");
@@ -866,6 +957,7 @@ function downloadTextFile(fileName: string, contents: string, type: string) {
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+/** Builds the settings PATCH body: copies the editable fields, clamps the numeric ones, and omits an empty semester start date. */
 function studySettingsPayload(settings: StudySnapshot["workspace"]) {
   return {
     semesterName: settings.semesterName,
@@ -886,15 +978,19 @@ function studySettingsPayload(settings: StudySnapshot["workspace"]) {
 function masteryLabel(value: StudyTrafficLight) { return value === "GREEN" ? "Strong" : value === "AMBER" ? "Developing" : value === "RED" ? "Needs work" : "Not assessed"; }
 function humanize(value: string) { return value.toLowerCase().replace(/_/g, " ").replace(/(^|\s)\w/g, (letter) => letter.toUpperCase()); }
 function greeting() { const hour = new Date().getHours(); return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"; }
+/** ISO time to a `datetime-local` input value. It uses the browser's timezone, not the workspace timezone. */
 function localInput(value?: string | null) { if (!value) return ""; const date = new Date(value); const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000); return local.toISOString().slice(0, 16); }
 function formatDate(value: string, timezone: string) { return new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", weekday: "short", timeZone: timezone }).format(new Date(value)); }
 function formatTime(value: string, timezone: string) { return new Intl.DateTimeFormat("en-SG", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(value)); }
 function formatDateTime(value: string, timezone: string) { return `${formatDate(value, timezone)}, ${formatTime(value, timezone)}`; }
 function formatDuration(seconds: number) { return `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`; }
+/** Caption to show for an image: its caption, else its title, unless the title is a generic placeholder like "Image capture". */
 function imageCaption(resource: StudyResource) {
   const title = resource.title.trim();
   const generic = /^(?:image(?:\s+capture)?|saved image|untitled image)$/i.test(title);
   return resource.caption?.trim() || (generic ? "" : title);
 }
+/** Fallback one-line description of a work item when it has no notes. */
 function attentionCopy(item: StudyItem) { if (item.priority === "CRITICAL") return "Critical priority."; if (!item.dueAt) return "No due date yet."; return `${humanize(item.type)} from ${item.source === "CANVAS" ? "Canvas" : "Threadwise"}.`; }
+/** ISO weekday number (1 = Monday) to its name. */
 function weekday(value: number) { return ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][value] ?? "Day"; }

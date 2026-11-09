@@ -2,6 +2,12 @@
 /* Authenticated image responses stay behind the dashboard's same-origin proxy. */
 /* eslint-disable @next/next/no-img-element */
 
+/**
+ * Card views for the Notes, Ideas and Images collections in `dashboard-app.tsx`, plus the image
+ * lightbox and the AI Idea Brief dialog. "Phase two" is the name of the redesign that added them
+ * (commit bdaaafb). These views only render and report user intent; the parent does the API calls.
+ * Images load through the same-origin proxy (`imageSrc`), so auth never leaves the dashboard.
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent, ReactNode } from "react";
 import {
@@ -21,13 +27,16 @@ import type {
 } from "@/lib/types";
 import { buildMarkdownExport, markdownExcerpt, safeMarkdownFileName } from "@/lib/study-markdown";
 
+/** Server paging state for a collection: which page is loaded and whether more exist. */
 type Pagination = { page: number; hasMore: boolean; loading: boolean };
+/** What the Idea Brief dialog shows: the idea, its brief once loaded, and loading or error state. */
 export type IdeaBriefDialogState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
 
 
 
 
+/** Downloads a note as a `.md` file, built in the browser from a Blob (no server round trip). */
 function downloadPersonalNote(note: DashboardNote): void {
   const source = buildMarkdownExport({ title: note.title, body: note.body || note.summary, publicId: note.publicId });
   const url = URL.createObjectURL(new Blob([source], { type: "text/markdown;charset=utf-8" }));
@@ -39,10 +48,12 @@ function downloadPersonalNote(note: DashboardNote): void {
 }
 
 
+/** Sorts pinned items first, then newest first. Returns a copy; the input is not changed. */
 function newestPinned<T extends { pinned?: boolean; createdAt: string }>(items: T[]) {
   return [...items].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+/** "Load more" button for the next server page. Hidden when there are no more items. */
 function LoadMore({ state, onLoadMore }: { state: Pagination; onLoadMore: () => void }) {
   if (!state.hasMore) return null;
   return <button className="tw-phase-load-more" disabled={state.loading} onClick={onLoadMore}>
@@ -55,6 +66,10 @@ function CollectionEmpty({ icon, title, copy }: { icon: ReactNode; title: string
   return <div className="tw-phase-empty"><span>{icon}</span><h3>{title}</h3><p>{copy}</p></div>;
 }
 
+/**
+ * Searchable note grid. Each card opens the editor on click and has an action menu (right-click
+ * or the "more" button). Select mode allows batch delete; on touch, a 460 ms long press enters it.
+ */
 export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, onBatchDelete, pagination, onLoadMore }: {
   notes: DashboardNote[];
   timezone: string;
@@ -73,12 +88,14 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
   const visible = useMemo(() => newestPinned(notes).filter((note) => `${note.title} ${note.summary} ${note.body ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())), [notes, query]);
   const toggleSelect = (id: string) => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const leaveSelection = () => { setSelecting(false); setSelected(new Set()); };
+  /** Starts the touch long-press timer. Mouse input and taps on real buttons do not start it. */
   const beginLongPress = (event: PointerEvent<HTMLElement>, note: DashboardNote) => {
     const button = (event.target as HTMLElement).closest("button");
     if (event.pointerType === "mouse" || (button && !button.classList.contains("tw-phase-card-copy"))) return;
     longPress.current = setTimeout(() => { setSelecting(true); setSelected(new Set([note.id])); }, 460);
   };
   const cancelLongPress = () => { if (longPress.current) clearTimeout(longPress.current); longPress.current = null; };
+  /** Asks the parent to delete all selected notes; leaves select mode only if that succeeded. */
   const deleteSelection = async () => {
     const chosen = notes.filter((note) => selected.has(note.id));
     if (await onBatchDelete(chosen)) leaveSelection();
@@ -119,6 +136,10 @@ export function PhaseTwoNotesView({ notes, timezone, onEdit, onPin, onDelete, on
   </section>;
 }
 
+/**
+ * Idea grid with a stage filter (raw, prototyping, built). Each idea can open its AI Idea Brief,
+ * be edited, pinned, turned into a task, or archived.
+ */
 export function PhaseTwoIdeasView({ ideas, timezone, onEdit, onPin, onArchive, onAnalyze, onConvert, pagination, onLoadMore }: {
   ideas: DashboardIdea[];
   timezone: string;
@@ -160,6 +181,10 @@ export function PhaseTwoIdeasView({ ideas, timezone, onEdit, onPin, onArchive, o
   </section>;
 }
 
+/**
+ * Image gallery. Favourites (pinned images) come first, then images grouped by day in the
+ * workspace timezone. Search covers captions, filenames and OCR text; a filter shows documents only.
+ */
 export function PhaseTwoImagesView({ images, timezone, isDemo, onEdit, onPin, onDelete, onBatchDelete, onCreateNote, pagination, onLoadMore }: {
   images: DashboardImage[];
   timezone: string;
@@ -191,6 +216,7 @@ export function PhaseTwoImagesView({ images, timezone, isDemo, onEdit, onPin, on
     { label: "separator", icon: null, onSelect: () => undefined },
     { label: "Delete image", icon: <Trash2 size={16} />, danger: true, onSelect: () => void onDelete(image) },
   ];
+  /** Renders one grid of image tiles with open, favourite, select and menu buttons. */
   const photoGrid = (items: DashboardImage[]) => <div className="tw-phase-photo-grid">{items.map((image) => <article key={image.id} className={selected.has(image.id) ? "selected" : ""} onContextMenu={(event) => cardMenu.open(event, image)}>
     <button className="tw-phase-photo" onClick={() => setActive(image)}><img loading="lazy" src={imageSrc(image, isDemo, images.indexOf(image))} alt={image.caption ?? image.fileName ?? "Saved image"} /><span><b>{image.caption || image.fileName || "Untitled image"}</b><small>{image.ocrText ? "Searchable text found" : formatDate(image.createdAt, timezone)}</small></span></button>
     <button className={`tw-phase-star ${image.pinned ? "active" : ""}`} onClick={() => onPin(image)} aria-label={image.pinned ? "Remove from favourites" : "Add to favourites"}><Star size={17} fill={image.pinned ? "currentColor" : "none"} /></button>
@@ -208,6 +234,10 @@ export function PhaseTwoImagesView({ images, timezone, isDemo, onEdit, onPin, on
   </section>;
 }
 
+/**
+ * Full-screen image viewer. Arrow keys, the side buttons, or a horizontal swipe of more than
+ * 55 px move between images. Focus and Escape are handled by `useModal`.
+ */
 function PhaseTwoImageLightbox({ image, images, isDemo, onClose, onMove, onEdit, onPin, onDelete, onCreateNote }: {
   image: DashboardImage;
   images: DashboardImage[];
@@ -238,6 +268,11 @@ function PhaseTwoImageLightbox({ image, images, isDemo, onClose, onMove, onEdit,
   </div>;
 }
 
+/**
+ * Shows the stored AI feasibility brief for an idea: an overall signal score, per-metric bars,
+ * and do/don't lists. The signal averages the metrics with difficulty and risk inverted.
+ * "Re-analyze" asks the parent to request a fresh brief.
+ */
 export function PhaseTwoIdeaBriefDialog({ state, onClose, onRefresh }: { state: IdeaBriefDialogState; onClose: () => void; onRefresh: () => void }) {
   const dialog = useRef<HTMLElement | null>(null);
   useModal(dialog, onClose);

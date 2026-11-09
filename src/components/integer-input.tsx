@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Text box for whole numbers in a min/max range, used for settings such as reminder minutes
+ * and timetable durations. It replaced native `type="number"` inputs (commit e07a1db), which
+ * made partial or empty values awkward to type.
+ */
 import { useState, type InputHTMLAttributes } from "react";
 import { clampInteger, normalizeIntegerDraft } from "@/lib/numeric-input";
 
@@ -10,10 +15,16 @@ type IntegerInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "defaultVal
   onValueChange: (value: number) => void;
 };
 
+/**
+ * Integer field that keeps a local text draft while focused. Typing strips non-digits and
+ * reports each valid number at once; an empty box is allowed mid-edit.
+ * On blur the value is clamped into range, or restored if left empty.
+ */
 export function IntegerInput({ value, min, max, onValueChange, onBlur, ...props }: IntegerInputProps) {
   const [draft, setDraft] = useState(String(clampInteger(value, min, max)));
   const [editing, setEditing] = useState(false);
 
+  /** Ends editing: clamp the draft, show it, and report it only if it changed. */
   const commit = () => {
     const next = draft === "" ? clampInteger(value, min, max) : clampInteger(Number(draft), min, max);
     setDraft(String(next));

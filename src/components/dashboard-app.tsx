@@ -1,4 +1,10 @@
 "use client";
+/**
+ * The Personal and Group dashboard, rendered by `src/app/dashboard/page.tsx`. It owns the snapshot
+ * state, sidebar and mobile navigation, live sync, and every create, edit, pin, archive and Calendar
+ * action, all sent to the backend through the BFF proxy (`api()` from `client-api.ts`).
+ * Study workspaces are handed to the lazily loaded `StudyDashboardApp` instead.
+ */
 
 import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
 import { api, ClientApiError } from "@/lib/client-api";
@@ -68,6 +74,7 @@ type IdeaBriefState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean
 
 const ACCENTS = { iris: "#168b83", coral: "#dc6a52", mint: "#2aa889" } as const;
 const OVERVIEW_QUOTE_LIMIT = 40;
+// Sidebar entries per workspace kind. Group reuses the same view ids with group wording.
 const PERSONAL_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "today", label: "Today", icon: Inbox },
   { id: "tasks", label: "Tasks", icon: ListChecks },
@@ -100,17 +107,22 @@ const REMINDER_MODE_OPTIONS = [
   { value: "DIGEST", label: "Compact digest" },
 ];
 
+/** True when an ISO time falls on today's date in the user's timezone. */
 function isToday(value: string | undefined, timezone: string) {
   return Boolean(value && calendarKey(value, timezone) === calendarKey(new Date(), timezone));
 }
+/** An open task whose deadline has passed. It compares absolute instants, so the
+ * timezone argument is currently unused. */
 function isOverdue(task: DashboardTask, timezone: string) {
   void timezone;
   return task.status === "OPEN" && Boolean(task.dueAt && new Date(task.dueAt).getTime() < Date.now());
 }
+/** Short local clock time for a task, or "Any time" when it has no deadline. */
 function formatTime(value: string | undefined, timezone: string) {
   if (!value) return "Any time";
   return new Intl.DateTimeFormat("en-SG", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(value));
 }
+/** Compact "last checked" label (just now, 12s ago, 5m ago) for the sidebar sync button. */
 function formatRelativeSync(value: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1_000));
   if (seconds < 10) return "just now";
@@ -118,18 +130,24 @@ function formatRelativeSync(value: string) {
   const minutes = Math.floor(seconds / 60);
   return minutes < 60 ? `${minutes}m ago` : `${Math.floor(minutes / 60)}h ago`;
 }
+/** Dedupes items by id (the later copy wins), so merged pages and fetched items never render twice. */
 function uniq<T extends { id: string }>(items: T[]) {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
+/** Unwraps a `{ [key]: value }` response, falling back to the raw body when the key is missing. */
 function asPayload<T>(body: unknown, key: string): T {
   const value = body as Record<string, unknown>;
   return (value[key] ?? body) as T;
 }
+/** Which views a workspace may open. Personal gets its nav plus Library. Group gets its nav
+ * plus the shared collections, and plain members cannot open group settings. */
 function viewAllowed(value: DashboardView, workspace: DashboardWorkspace): boolean {
   if (workspace.kind === "PERSONAL") return PERSONAL_NAV.some((item) => item.id === value) || value === "library";
   if (value === "settings" && workspace.role === "MEMBER") return false;
   return GROUP_NAV.some((item) => item.id === value) || ["notes", "ideas", "images"].includes(value);
 }
+/** Resolves the `?view=` query to a view this workspace may open. Accepts the `standup` and
+ * `work` aliases and falls back to Today. */
 function initialView(value: string | undefined, workspace: DashboardWorkspace): DashboardView {
   const candidate = value === "standup" ? "progress" : value === "work" ? "tasks" : value as DashboardView | undefined;
   return candidate && viewAllowed(candidate, workspace) ? candidate : "today";
@@ -139,10 +157,14 @@ function initialView(value: string | undefined, workspace: DashboardWorkspace): 
 
 type DashboardAppProps = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; initialItem?: string; initialItemKind?: string; openScheduleCreate?: boolean };
 
+/** Entry component used by `src/app/dashboard/page.tsx`. Wraps the app in the shared
+ * confirmation-dialog provider so any view can call `confirm()`. */
 export function DashboardApp(props: DashboardAppProps) {
   return <ConfirmationProvider><DashboardAppContent {...props} /></ConfirmationProvider>;
 }
 
+/** Sends Study workspaces to the separate, lazily loaded Study app; Personal and Group
+ * use the standard shell below. */
 function DashboardAppContent(props: DashboardAppProps) {
   if (props.initialData.workspace.mode === "STUDY") {
     return <StudyDashboardApp initialData={props.initialData} workspaces={props.workspaces} initialView={props.initialView} initialItem={props.initialItem} initialItemKind={props.initialItemKind} />;
@@ -150,6 +172,10 @@ function DashboardAppContent(props: DashboardAppProps) {
   return <StandardDashboardApp {...props} />;
 }
 
+/** The Personal/Group shell. It keeps the whole dashboard snapshot in state and updates it
+ * after each backend call through the BFF (some toggles update first and roll back on failure).
+ * `initialItem`/`initialItemKind` come from exact Telegram deep links and open that item on
+ * load; Group tasks open the collaboration sheet instead of the editor. */
 function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: requestedView, initialPoll, initialTaskImport, initialItem, initialItemKind, openScheduleCreate }: DashboardAppProps) {
   const confirm = useConfirmation();
   const initialTarget = initialItem && initialItemKind
@@ -187,6 +213,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     images: { page: 1, hasMore: initialData.images.length >= 50, loading: false },
   });
 
+  // Remove browser drafts that belong to other workspaces or older formats, keeping this workspace's.
   useEffect(() => {
     try { clearThreadwiseDrafts(window.localStorage, initialData.workspace.id); } catch { /* Storage can be unavailable. */ }
   }, [initialData.workspace.id]);
@@ -196,11 +223,14 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   const refreshSequence = useRef(0);
   const initialEntityOpened = useRef(Boolean(initialTarget));
 
+  /** Shows a toast for 2.8 seconds; a new message replaces the current one. */
   const announce = (message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     setToast(message);
     toastTimer.current = window.setTimeout(() => setToast(null), 2800);
   };
+  /** Switches view and mirrors it into `?view=` with replaceState, so a reload keeps the
+   * view without adding browser history entries. */
   const navigate = (view: DashboardView) => {
     if (!viewAllowed(view, data.workspace)) view = "today";
     setActiveView(view);
@@ -210,6 +240,9 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     window.history.replaceState(null, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  /** Opens a search hit or deep-link target. If the item is not in the loaded page of its
+   * collection, it is fetched by id through the BFF and merged in first. Group tasks open the
+   * collaboration sheet; everything else opens the editor. */
   const openSearchResult = async (result: SearchResult) => {
     const view: DashboardView = result.kind === "task" ? "tasks" : `${result.kind}s` as DashboardView;
     const collection = result.kind === "task" ? data.tasks
@@ -260,6 +293,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     // This is a one-shot hydration of the URL target; later collection refreshes must not reopen it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialItem, initialItemKind]);
+  /** Closes the Group task-import review and removes `?import=` so a reload does not reopen it. */
   const closeTaskImport = useCallback(() => {
     setTaskImportId(undefined);
     const url = new URL(window.location.href);
@@ -296,6 +330,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
+  // After an OAuth return, show one connected/failed toast and strip the query flags.
   useEffect(() => {
     const url = new URL(window.location.href);
     const provider = url.searchParams.get("integration");
@@ -308,6 +343,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     const timer = window.setTimeout(() => announce(message), 0);
     return () => window.clearTimeout(timer);
   }, []);
+  // Global shortcuts: Cmd/Ctrl+K or / opens the palette and N opens quick capture. Plain keys are
+  // ignored while typing, including in the rich editor (contenteditable), which they once interrupted.
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
@@ -321,6 +358,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     return () => window.removeEventListener("keydown", keydown);
   }, []);
 
+  // Live sync refreshes the snapshot when the backend reports a change, and pauses while the tab is
+  // hidden (see `dashboard-live-sync.ts`). Demo mode has no backend, so it stays off.
   useEffect(() => {
     if (isDemo) return;
     return startDashboardLiveSync({
@@ -330,6 +369,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     });
   }, [isDemo, refreshSnapshot]);
 
+  // The first visit to Tasks, Notes, Ideas or Images replaces the snapshot's preview with page 1 of
+  // the full collection. Each loads once per snapshot; a failure allows a retry on the next visit.
   useEffect(() => {
     const key = ({ tasks: "tasks", notes: "notes", ideas: "ideas", images: "images" } as Partial<Record<DashboardView, keyof PaginationState>>)[activeView];
     if (!key || isDemo || hydratedCollections.current.has(key)) return;
@@ -350,6 +391,10 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   // `announce` intentionally stays out so a transient toast does not refetch a collection.
   }, [activeView, isDemo]);
 
+  /** Creates or updates a task, note, idea or image, then writes the saved record into the snapshot.
+   * Edits send `expectedUpdatedAt`; if the item changed in Telegram or another tab the backend
+   * answers `revision_conflict` and we refresh instead of overwriting. Demo mode builds the record
+   * locally. Returns true when saved so callers can close their dialog. */
   const saveEntity = async (kind: EditableKind, values: Record<string, unknown>, item?: EditorState["item"]) => {
     setBusy(true);
     const plural = `${kind}s` as "tasks" | "notes" | "ideas" | "images";
@@ -387,6 +432,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     }
     finally { setBusy(false); }
   };
+  /** Confirms, then removes one item. Tasks, notes and ideas are archived and can be restored;
+   * images are deleted. The item leaves the local list only after the request succeeds. */
   const removeEntity = async (kind: EditableKind, item: NonNullable<EditorState["item"]>) => {
     const archives = kind === "task" || kind === "note" || kind === "idea";
     const action = kind === "note" ? "Delete" : archives ? "Archive" : "Delete";
@@ -405,6 +452,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     } catch (error) { announce(error instanceof Error ? error.message : `Could not ${action.toLowerCase()} that.`); return false; }
     finally { setBusy(false); }
   };
+  /** Confirms, then deletes the selected images with one DELETE per image in parallel. */
   const removeImages = async (images: DashboardImage[]) => {
     if (!images.length || !await confirm({ title: "Delete selected images?", message: `Delete ${images.length} selected ${images.length === 1 ? "image" : "images"}?`, confirmLabel: "Delete", tone: "danger" })) return false;
     setBusy(true);
@@ -417,6 +465,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     } catch (error) { announce(error instanceof Error ? error.message : "Could not delete the selected images."); return false; }
     finally { setBusy(false); }
   };
+  /** Confirms, then archives the selected notes with one DELETE per note in parallel. */
   const removeNotes = async (notes: DashboardNote[]) => {
     if (!notes.length || !await confirm({ title: "Archive selected notes?", message: `Delete ${notes.length} selected ${notes.length === 1 ? "note" : "notes"}? They will move to Archive and can be restored later.`, confirmLabel: "Archive", tone: "danger" })) return false;
     setBusy(true);
@@ -430,6 +479,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     } catch (error) { announce(error instanceof Error ? error.message : "Could not delete the selected notes."); return false; }
     finally { setBusy(false); }
   };
+  /** Optimistic task update: the patch shows at once, then is saved with `expectedUpdatedAt`.
+   * On failure the original task is put back; on a revision conflict the snapshot is also refreshed. */
   const patchTask = async (task: DashboardTask, patch: Partial<DashboardTask>, message?: string) => {
     setData((current) => ({ ...current, tasks: current.tasks.map((entry) => entry.id === task.id ? { ...entry, ...patch } : entry) }));
     if (isDemo) { if (message) announce(message); return; }
@@ -452,6 +503,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     const snoozedUntil = new Date(Date.now() + 60 * 60_000).toISOString();
     return patchTask(task, { snoozedUntil }, "Task snoozed for one hour.");
   };
+  /** Optimistic pin/unpin for a note, idea or image, with the same rollback and conflict
+   * handling as `patchTask`. */
   const toggleCollectionPin = async (kind: "note" | "idea" | "image", item: DashboardNote | DashboardIdea | DashboardImage) => {
     const plural = `${kind}s` as "notes" | "ideas" | "images";
     const pinned = !item.pinned;
@@ -486,6 +539,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       } else announce(error instanceof Error ? error.message : "Could not update that item.");
     }
   };
+  /** Opens the idea brief dialog. A saved brief is reused unless `refresh` is set; otherwise the
+   * backend analyzes the idea. Demo mode shows a fixed sample brief after a short delay. */
   const analyzeIdea = async (idea: DashboardIdea, refresh = false) => {
     if (idea.brief && !refresh) {
       setIdeaBrief({ idea, brief: idea.brief, loading: false });
@@ -519,6 +574,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       announce(message);
     }
   };
+  /** Turns an idea into a new task through the backend, then switches to Tasks. */
   const convertIdea = async (idea: DashboardIdea) => {
     setBusy(true);
     try {
@@ -530,6 +586,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     } catch (error) { announce(error instanceof Error ? error.message : "Could not convert that idea."); }
     finally { setBusy(false); }
   };
+  /** Fetches the next 50-item page of a collection and appends it, deduped by id. */
   const loadMore = async (kind: keyof PaginationState) => {
     if (isDemo || pagination[kind].loading || !pagination[kind].hasMore) return;
     const nextPage = pagination[kind].page + 1;
@@ -547,6 +604,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       announce(error instanceof Error ? error.message : "Could not load more.");
     }
   };
+  /** Starts the Google Calendar or Excel OAuth flow: the backend returns the provider URL and the
+   * browser navigates there. `taskId` is sent when the connect was started from one task. */
   const connectIntegration = async (provider: "calendar" | "excel", taskId?: string) => {
     if (isDemo) { announce(`${provider === "calendar" ? "Calendar" : "Excel"} connection is simulated in the demo.`); return; }
     try {
@@ -556,12 +615,14 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       announce(error instanceof Error ? error.message : `Could not connect ${provider}.`);
     }
   };
+  /** Pushes all dated tasks to Google Calendar, refreshes, and reports how many synced or failed. */
   const syncCalendarTasks = async () => {
     if (isDemo) { announce("Demo dated tasks marked as synced."); return; }
     const result = await api<{ synced: number; failed: number }>("integrations/calendar/sync", "POST", {});
     await refreshSnapshot();
     announce(result.failed > 0 ? `${result.synced} synced; ${result.failed} need another try.` : `${result.synced} dated ${result.synced === 1 ? "task" : "tasks"} synced.`);
   };
+  /** Turns automatic Calendar or Excel sync on or off in the user's settings. */
   const setIntegrationAutoSync = async (provider: "calendar" | "excel", enabled: boolean) => {
     const key = provider === "calendar" ? "calendarAutoSync" : "excelAutoSync";
     const next = { ...data.settings, [key]: enabled };
@@ -571,6 +632,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     } else setData((current) => ({ ...current, settings: next }));
     announce(`Automatic ${provider === "calendar" ? "Calendar" : "Excel"} sync ${enabled ? "on" : "off"}.`);
   };
+  /** Adds one task to Google Calendar or removes its event. Without a Calendar connection it starts
+   * the connect flow instead. Removing the event never changes the Threadwise task. */
   const updateTaskCalendar = async (task: DashboardTask, action: "sync" | "remove") => {
     const calendar = data.integrations.find((item) => item.provider === "calendar");
     if (action === "sync" && calendar?.state !== "connected") {
@@ -593,10 +656,12 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     }
   };
 
+  /** Opens Group Work with a preset filter scope. */
   const openGroupTasks = (scope: GroupTaskScope) => {
     setGroupTaskScope(scope);
     navigate("tasks");
   };
+  /** Sends a Group claim or assignment change, then reloads the full snapshot. */
   const updateCollaboration = async (task: DashboardTask, payload: CollaborationPayload) => {
     if (isDemo || data.workspace.kind !== "GROUP") return false;
     setBusy(true);
@@ -614,6 +679,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     }
   };
 
+  // Derived counts for Today. A task's planned day (`plannedFor`) wins over its deadline when
+  // deciding whether it is today's work, because planning and deadlines are separate facts.
   const openTasks = data.tasks.filter((task) => task.status === "OPEN");
   const todayKey = calendarKey(new Date(), data.user.timezone);
   const todayTasks = openTasks.filter((task) => task.plannedFor ? task.plannedFor === todayKey : isToday(task.dueAt, data.user.timezone));
@@ -721,6 +788,9 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
   );
 }
 
+/** Custom listbox for switching between Personal and Group workspaces (the app avoids native
+ * selects). Supports arrows, Home/End, Escape and typeahead. Choosing one goes through
+ * `/api/workspace/select`, which sets the workspace cookie and reloads the dashboard. */
 function WorkspaceSwitcher({ current, workspaces, disabled }: { current: DashboardWorkspace; workspaces: DashboardWorkspace[]; disabled?: boolean }) {
   const choices = workspaces.some((workspace) => workspace.id === current.id) ? workspaces : [current, ...workspaces];
   const [open, setOpen] = useState(false);
@@ -838,6 +908,8 @@ function WorkspaceSwitcher({ current, workspaces, disabled }: { current: Dashboa
   </div>;
 }
 
+/** Title row for each view: the date, a time-of-day greeting with the daily overview line on
+ * Personal Today, and an Add button on views that can create items. */
 function PageHeading({ view, workspace, name, timezone, generatedAt, overviewQuotes, onAdd }: { view: DashboardView; workspace: DashboardWorkspace; name: string; timezone: string; generatedAt: string; overviewQuotes: readonly DashboardOverviewQuote[]; onAdd: () => void }) {
   const now = new Date(generatedAt);
   const hour = Number(new Intl.DateTimeFormat("en-SG", { hour: "2-digit", hour12: false, timeZone: timezone }).format(now));
@@ -859,6 +931,8 @@ function PageHeading({ view, workspace, name, timezone, generatedAt, overviewQuo
   return <div className={`tw-heading ${view === "search" ? "tw-heading-search" : ""}`}><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(now)}</p><h1>{copy[view][0]}</h1>{copy[view][1] && <span>{copy[view][1]}</span>}</div>{canAdd && <button className={`tw-primary tw-heading-add${keepMobileLabel ? " tw-heading-add-explicit" : ""}`} aria-label={addLabel} onClick={onAdd}><Plus size={17} /> {addLabel}</button>}</div>;
 }
 
+/** Personal Today: the cross-mode planner, the most urgent task (overdue, then today, then any
+ * open task), quick counts, the Threadline, and recent captures and images. */
 function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEdit, onTodayChanged, isDemo }: { data: DashboardSnapshot; focusTask?: DashboardTask; overdue: number; today: number; onToggle: (task: DashboardTask) => void; onNavigate: (view: DashboardView) => void; onEdit: (task: DashboardTask) => void; onTodayChanged: () => void; isDemo: boolean }) {
   const open = data.tasks.filter((task) => task.status === "OPEN");
   const groups = threadlineBuckets(open, data.user.timezone);
@@ -866,6 +940,7 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
   const month = calendarKey(new Date(), data.user.timezone).slice(0, 7);
   const thisMonth = open.filter((task) => task.dueAt && calendarKey(task.dueAt, data.user.timezone).startsWith(month)).length;
   const normalizeCopy = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+  // Hide the focus task's description when it only repeats the title.
   const focusDescription = focusTask?.description && !(
     normalizeCopy(focusTask.description) === normalizeCopy(focusTask.title)
     || normalizeCopy(focusTask.description).startsWith(normalizeCopy(focusTask.title))
@@ -888,8 +963,12 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
   </div>;
 }
 
+/** One Threadline bucket (Overdue, Today, Next 7 days, ...) and its tasks. */
 type ThreadlineGroup = { id: string; label: string; description: string; tasks: DashboardTask[] };
 
+/** Sorts open tasks into Overdue, Today, Next 7 days, Later this month, Later and Someday.
+ * Day gaps are counted between calendar dates in the user's timezone, not raw hours, so a
+ * task due early tomorrow is one day away. Each bucket is sorted by deadline. */
 function threadlineBuckets(tasks: DashboardTask[], timezone: string): ThreadlineGroup[] {
   const todayKey = calendarKey(new Date(), timezone);
   const month = todayKey.slice(0, 7);
@@ -917,11 +996,15 @@ function threadlineBuckets(tasks: DashboardTask[], timezone: string): Threadline
   return groups;
 }
 
+/** Shows the non-empty Threadline buckets with up to four tasks each, linking to Tasks for the rest. */
 function Threadline({ groups, timezone, onToggle, onEdit, onOpenTasks }: { groups: ThreadlineGroup[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onOpenTasks: () => void }) {
   const visible = groups.filter((group) => group.tasks.length);
   return <section className="tw-threadline"><div className="tw-section-head"><div><span>Plan</span><h3>Threadline</h3></div><button onClick={onOpenTasks}>All tasks <ArrowRight size={16} /></button></div>{visible.length ? <div className="tw-threadline-groups">{visible.map((group) => <section key={group.id} data-group={group.id}><header><div><h4>{group.label}</h4><small>{group.description}</small></div><em>{group.tasks.length}</em></header><div>{group.tasks.slice(0, 4).map((task) => <article key={task.id}><button className="tw-thread-check" onClick={() => onToggle(task)} aria-label={`Complete ${task.title}`}><Check size={14} /></button><button onClick={() => onEdit(task)}><b>{task.title}</b><small>{task.dueAt ? `${formatDate(task.dueAt, timezone, { weekday: "short" })} · ${formatTime(task.dueAt, timezone)}` : "No due date"}</small></button></article>)}</div>{group.tasks.length > 4 && <button className="tw-thread-more" onClick={onOpenTasks}>+{group.tasks.length - 4} more</button>}</section>)}</div> : <Empty icon={CalendarDays} title="Your threadline is clear." copy="Add a task and it will land in the right place." />}</section>;
 }
 
+/** Personal task list. Filters (Today, Upcoming, All, Completed), text filter and sort run locally
+ * over the loaded tasks, and pinned tasks always sort first. Right-click or the ... button opens
+ * the task action menu. */
 function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onCalendar, onArchive, onAdd, pagination, onLoadMore }: { tasks: DashboardTask[]; timezone: string; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onCalendar: (task: DashboardTask, action: "sync" | "remove") => Promise<void>; onArchive: (task: DashboardTask) => Promise<boolean>; onAdd: () => void; pagination: PaginationState["tasks"]; onLoadMore: () => void }) {
   const [filter, setFilter] = useState<"today" | "upcoming" | "all" | "done">("all");
   const [sort, setSort] = useState<"newest" | "due" | "oldest">("newest");
@@ -945,6 +1028,8 @@ function TasksView({ tasks, timezone, onToggle, onEdit, onPin, onSnooze, onCalen
   return <section className="tw-task-board"><div className="tw-task-toolbar"><div className="tw-segmented">{(["today", "upcoming", "all", "done"] as const).map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item === "done" ? "Completed" : item[0].toUpperCase() + item.slice(1)}</button>)}</div><label className="tw-task-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter tasks as you type" /></label><StudyChoicePicker className="tw-task-sort" label="Sort" value={sort} allowEmpty={false} options={[{ value: "newest", label: "Newest first" }, { value: "due", label: "Due date" }, { value: "oldest", label: "Oldest first" }]} onChange={(value) => setSort(value as typeof sort)} /></div><div className="tw-task-card-list">{visible.map((task, index) => <article className={`tw-task-card ${task.status === "DONE" ? "done" : ""}`} style={{ "--task-index": index } as React.CSSProperties} key={task.id} onContextMenu={(event) => menu.open(event, task)}><button className="tw-task-check" onClick={() => onToggle(task)} aria-label={task.status === "DONE" ? `Restore ${task.title}` : `Complete ${task.title}`}><Check size={17} /></button><button className="tw-task-copy" onClick={() => onEdit(task)}><span><em>{task.publicId}</em>{task.pinned && <i><Pin size={13} /> Pinned</i>}{task.snoozedUntil && <i><Clock3 size={13} /> Snoozed</i>}{task.calendarEventId && <i><CalendarDays size={13} /> Calendar</i>}</span><h3>{task.title}</h3><p>{task.description ?? (task.nextReminderAt ? "A reminder is active for this task." : "No extra details yet.")}</p></button><div className={`tw-task-date ${isOverdue(task, timezone) ? "overdue" : ""}`}><CalendarDays size={16} /><span><b>{task.dueAt ? formatDate(task.dueAt, timezone, { weekday: "short", year: "numeric" }) : "No due date"}</b><small>{task.dueAt ? formatTime(task.dueAt, timezone) : "Keep it flexible"}</small></span></div><button className="tw-task-menu" onClick={(event) => menu.open(event, task)} aria-label={`Actions for ${task.title}`} aria-haspopup="menu"><MoreHorizontal size={20} /></button></article>)}{!visible.length && <Empty icon={ListChecks} title="Nothing in this view." copy={filter === "done" ? "Completed tasks will collect here." : "Change the view or add a new task."} action="Add task" onAction={onAdd} />}</div><LoadMore state={pagination} onLoadMore={onLoadMore} />{menu.menu && <TaskContextMenu state={menu.menu} onClose={menu.close} onToggle={onToggle} onEdit={onEdit} onPin={onPin} onSnooze={onSnooze} onCalendar={onCalendar} onArchive={onArchive} />}</section>;
 }
 
+/** Builds the per-task action menu. Snooze shows only for open tasks and Calendar actions only
+ * for tasks with a deadline. */
 function TaskContextMenu({ state, onClose, onToggle, onEdit, onPin, onSnooze, onCalendar, onArchive }: { state: ActionMenuState<DashboardTask>; onClose: () => void; onToggle: (task: DashboardTask) => void; onEdit: (task: DashboardTask) => void; onPin: (task: DashboardTask) => void; onSnooze: (task: DashboardTask) => void; onCalendar: (task: DashboardTask, action: "sync" | "remove") => Promise<void>; onArchive: (task: DashboardTask) => Promise<boolean> }) {
   const task = state.item;
   const actions: ActionMenuAction[] = [
@@ -960,10 +1045,14 @@ function TaskContextMenu({ state, onClose, onToggle, onEdit, onPin, onSnooze, on
   return <ActionMenu state={state} label={task.publicId} actions={actions} onClose={onClose} />;
 }
 
+/** Personal Library overview: tabs with a short preview of notes, ideas or images, each linking
+ * to the full view. */
 function LibraryView({ data, tab, onTab, onNavigate, isDemo }: { data: DashboardSnapshot; tab: "notes" | "ideas" | "images"; onTab: (tab: "notes" | "ideas" | "images") => void; onNavigate: (view: DashboardView) => void; isDemo: boolean }) {
   return <section className="tw-library"><div className="tw-library-tabs">{(["notes", "ideas", "images"] as const).map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => onTab(item)}>{item === "notes" ? <FileText size={16} /> : item === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}{item}<span>{data[item].length}</span></button>)}</div>{tab === "images" ? <div className="tw-library-photo-strip">{data.images.slice(0, 8).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={imageSrc(image, isDemo, index)} alt={image.caption ?? "Saved image"} /><span>{image.caption ?? image.fileName}</span></button>)}</div> : <div className="tw-library-rows">{(tab === "notes" ? data.notes : data.ideas).slice(0, 20).map((item) => <button key={item.id} onClick={() => onNavigate(tab)}><span>{tab === "notes" ? <FileText size={16} /> : <Lightbulb size={16} />}</span><div><b>{item.title}</b><small>{"summary" in item ? item.summary : item.concept}</small></div><time>{formatDate(item.createdAt, data.user.timezone)}</time><ChevronRight size={16} /></button>)}</div>}<button className="tw-library-all" onClick={() => onNavigate(tab)}>Open all {tab}<ArrowRight size={15} /></button></section>;
 }
 
+/** Full search page. It calls the backend search 220 ms after typing stops, and a request counter
+ * drops answers from older queries. Demo mode searches the loaded snapshot instead. */
 function SearchView({ data, isDemo, onOpen, announce }: { data: DashboardSnapshot; isDemo: boolean; onOpen: (result: SearchResult) => void; announce: (message: string) => void }) {
   const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]); const [loading, setLoading] = useState(false); const [kind, setKind] = useState<"all" | SearchResult["kind"]>("all"); const searchRequest = useRef(0);
   const local = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
@@ -1000,10 +1089,14 @@ function SearchView({ data, isDemo, onOpen, announce }: { data: DashboardSnapsho
   </section>;
 }
 
+/** Shared reminder defaults for a Group workspace. Only group owners and admins can edit; members
+ * see it read-only. The morning/evening briefing fields are removed before saving, because
+ * briefings are private per person and not set per group. */
 function GroupSettingsView({ data, workspace, onSave, announce }: { data: DashboardSnapshot; workspace: DashboardWorkspace; onSave: (value: DashboardSettings) => void; announce: (message: string) => void }) {
   const [settings, setSettings] = useState(data.settings);
   const [saving, setSaving] = useState(false);
   const canManage = workspace.role === "OWNER" || workspace.role === "ADMIN";
+  /** Saves the shared defaults. Empty quiet hours are sent as null to clear them. */
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canManage) return;
@@ -1045,6 +1138,9 @@ function GroupSettingsView({ data, workspace, onSave, announce }: { data: Dashbo
   </section>;
 }
 
+/** Personal settings in four tabs: General (timezone, OCR languages, accent, overview quotes),
+ * Reminders, Connections (Google Calendar) and Privacy (export, account deletion, sign out).
+ * `?tab=` opens a specific tab. Changes stay local until Save changes. */
 function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyncCalendar, onAutoSync, onRefresh, announce }: { data: DashboardSnapshot; isDemo: boolean; accent: keyof typeof ACCENTS; onAccent: (value: keyof typeof ACCENTS) => void; onSave: (value: DashboardSettings) => void; onConnect: (provider: "calendar" | "excel") => Promise<void>; onSyncCalendar: () => Promise<void>; onAutoSync: (provider: "calendar" | "excel", enabled: boolean) => Promise<void>; onRefresh: () => Promise<void>; announce: (message: string) => void }) {
   const confirm = useConfirmation();
   type SettingsTab = "general" | "reminders" | "connections" | "privacy";
@@ -1063,6 +1159,8 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
     return () => window.clearTimeout(timer);
   }, []);
 
+  /** Saves personal settings. The Group-only `directNudgesEnabled` is left out, empty quiet hours
+   * are sent as null, and numeric fields are clamped to their allowed ranges. */
   const save = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
     try {
@@ -1079,12 +1177,14 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
     } catch (error) { announce(error instanceof Error ? error.message : "Could not save settings."); }
     finally { setSaving(false); }
   };
+  /** Runs one Connections action with a per-provider busy flag and an error toast. */
   const runIntegration = async (provider: "calendar" | "excel", action: () => Promise<void>) => {
     setIntegrationAction(provider);
     try { await action(); }
     catch (error) { announce(error instanceof Error ? error.message : "That connection could not be updated."); }
     finally { setIntegrationAction(null); }
   };
+  /** Confirms, then disconnects a provider. Existing calendar events or workbook data stay in place. */
   const disconnect = async (provider: "calendar" | "excel") => {
     const label = provider === "calendar" ? "Google Calendar" : "Excel";
     if (!await confirm({ title: `Disconnect ${label}?`, message: `Your Threadwise data and existing ${provider === "calendar" ? "calendar events" : "workbook"} will stay intact.`, confirmLabel: "Disconnect", tone: "danger" })) return;
@@ -1100,6 +1200,8 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
       setSettings((current) => ({ ...current, [provider === "calendar" ? "calendarAutoSync" : "excelAutoSync"]: enabled }));
     });
   };
+  /** Adds a quote to the local list (kept only after Save changes). It normalizes whitespace, caps
+   * the list at 40, and rejects case-insensitive duplicates, matching the backend rules. */
   const addOverviewQuote = () => {
     const text = quoteText.replace(/\s+/g, " ").trim();
     const author = quoteAuthor.replace(/\s+/g, " ").trim();
@@ -1116,6 +1218,8 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
   const removeOverviewQuote = (index: number) => {
     setSettings((current) => ({ ...current, overviewQuotes: current.overviewQuotes.filter((_, quoteIndex) => quoteIndex !== index) }));
   };
+  /** Downloads the privacy export through the BFF. It uses fetch directly so the response can be
+   * read as a file blob; demo mode exports the in-memory snapshot. */
   const exportData = async () => {
     try {
       let blob: Blob;
@@ -1124,6 +1228,8 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
       const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = isDemo ? "threadwise-demo-export.json" : "threadwise-export.json"; link.click(); URL.revokeObjectURL(url); announce("Your export is ready.");
     } catch (error) { announce(error instanceof Error ? error.message : "Could not export data."); }
   };
+  /** Permanent account deletion. It needs the exact typed phrase plus a second confirmation, and
+   * sends the phrase to the backend too. On success the browser goes to the home page. */
   const deleteAccount = async () => {
     if (confirmation !== "DELETE MY THREADWISE DATA" || !await confirm({ title: "Permanently delete your account?", message: "This permanently deletes your Threadwise account and saved content. This cannot be undone.", confirmLabel: "Delete permanently", tone: "danger" })) return;
     try { if (!isDemo) await api("privacy/account", "DELETE", { confirmation }); if (isDemo) announce("Account deletion is disabled in the demo."); else window.location.assign("/"); }
@@ -1205,6 +1311,9 @@ function SettingsView({ data, isDemo, accent, onAccent, onSave, onConnect, onSyn
   </section>;
 }
 
+/** Quick capture dialog (N shortcut). Step one sends the text to the backend capture preview, which
+ * guesses task, note or idea and fills in fields. Step two lets the user edit them and saves
+ * through `saveEntity`. Nothing is saved before the user confirms. */
 function CaptureComposer({ isDemo, timezone, groupName, onClose, onSave, announce }: {
   isDemo: boolean;
   timezone: string;
@@ -1275,6 +1384,7 @@ function CaptureComposer({ isDemo, timezone, groupName, onClose, onSave, announc
   </section></div>;
 }
 
+/** Keyword-based stand-in for the backend capture classifier, used only in demo mode. */
 function demoCapturePreview(text: string, preferred: "auto" | CaptureKind): CapturePreview {
   const kind: CaptureKind = preferred !== "auto"
     ? preferred
@@ -1287,6 +1397,9 @@ function demoCapturePreview(text: string, preferred: "auto" | CaptureKind): Capt
   return { kind, confidence: .92, reason: "Demo classification based on the words you used.", sourceText: text, payload };
 }
 
+/** Generic add/edit sheet for tasks, notes, ideas and images (Personal notes use the rich editor
+ * instead). Values are read from the form on submit, and local date-time inputs are converted
+ * to ISO in the user's timezone. */
 function EntityEditor({ state, busy, timezone, onClose, onSave, onDelete, onConvert }: { state: EditorState; busy: boolean; timezone: string; onClose: () => void; onSave: (kind: EditableKind, values: Record<string, unknown>, item?: EditorState["item"]) => void; onDelete: (kind: EditableKind, item: NonNullable<EditorState["item"]>) => void; onConvert: (idea: DashboardIdea) => void }) {
   const item = state.item; const title = `${item ? "Edit" : "Add"} ${state.kind}`;
   const dialogRef = useRef<HTMLElement | null>(null);
@@ -1313,6 +1426,8 @@ function EntityEditor({ state, busy, timezone, onClose, onSave, onDelete, onConv
   </form></section></div>;
 }
 
+/** Up to 20 exact reminder times for a task. Every input is named `reminderTimes`, so the
+ * parent form collects them with `FormData.getAll`. */
 function TaskReminderFields({ initial, timezone }: { initial: string[]; timezone: string }) {
   const [rows, setRows] = useState(() => initial.map((value, index) => ({ id: `initial-${index}`, value: zonedInputDate(value, timezone) })));
   const add = () => setRows((current) => current.length >= 20 ? current : [...current, { id: `new-${Date.now()}-${current.length}`, value: "" }]);
@@ -1327,6 +1442,8 @@ function TaskReminderFields({ initial, timezone }: { initial: string[]; timezone
   </section>;
 }
 
+/** Cmd/Ctrl+K palette: quick navigation, plus a local search over loaded items (up to 8 hits) that
+ * jumps to the item's view. */
 function CommandPalette({ data, items, onClose, onNavigate }: { data: DashboardSnapshot; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) {
   const [query, setQuery] = useState(""); const input = useRef<HTMLInputElement>(null); const dialogRef = useRef<HTMLElement | null>(null); useModal(dialogRef, onClose, { initialFocus: input });
   const results = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
@@ -1338,6 +1455,8 @@ function CommandPalette({ data, items, onClose, onNavigate }: { data: DashboardS
   return <div className="tw-command-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Find anything" onMouseDown={(event) => event.stopPropagation()}><header><Search size={20} /><input ref={input} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find anything…" /><kbd>ESC</kbd></header><div>{!query && <><p>Go somewhere</p>{items.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)}><span><Icon size={17} /></span><b>{label}</b><ArrowRight size={15} /></button>)}</>}{query && results.map(({ title, detail, view, icon: Icon }, index) => <button key={`${title}-${index}`} onClick={() => onNavigate(view)}><span><Icon size={17} /></span><div><b>{title}</b><small>{detail}</small></div><ArrowRight size={15} /></button>)}{query && !results.length && <Empty icon={Search} title="No threads found." copy="Open full search for deeper results." action="Open search" onAction={() => onNavigate("search")} />}</div><footer><span><kbd>⌘ K</kbd> anywhere</span><button onClick={onClose}>Close</button></footer></section></div>;
 }
 
+/** Mobile sheet with the full navigation list, opened from the bottom bar's More button. */
 function MobileMore({ activeView, items, onClose, onNavigate }: { activeView: DashboardView; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) { const dialogRef = useRef<HTMLElement | null>(null); const closeRef = useRef<HTMLButtonElement | null>(null); useModal(dialogRef, onClose, { initialFocus: closeRef }); return <div className="tw-mobile-sheet-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="More navigation" onMouseDown={(event) => event.stopPropagation()}><header><span>Threadwise</span><button ref={closeRef} onClick={onClose} aria-label="Close navigation"><X size={20} /></button></header>{items.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => onNavigate(id)}><Icon size={19} /><span>{label}</span><ChevronRight size={16} /></button>)}</section></div>; }
 function LoadMore({ state, onLoadMore }: { state: { hasMore: boolean; loading: boolean }; onLoadMore: () => void }) { return state.hasMore ? <button className="tw-load-more" onClick={onLoadMore} disabled={state.loading}>{state.loading ? <LoaderCircle className="spin" size={17} /> : <ChevronDown size={17} />} Load more</button> : null; }
+/** Shared empty-state block, optionally with the Ari mascot and an action button. */
 function Empty({ icon: Icon, mascot = false, title, copy, action, onAction }: { icon: typeof Inbox; mascot?: boolean; title: string; copy: string; action?: string; onAction?: () => void }) { return <div className="tw-empty">{mascot ? <Ari variant="full" className="tw-empty-ari" decorative /> : <Icon size={27} />}<b>{title}</b><span>{copy}</span>{action && <button onClick={onAction}>{action}</button>}</div>; }

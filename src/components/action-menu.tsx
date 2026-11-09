@@ -1,9 +1,14 @@
 "use client";
 
+/**
+ * Shared right-click / "more" menu for list items (tasks, notes, ideas and so on).
+ * `useActionMenu` holds which item the menu is open for; `ActionMenu` draws it in a portal on `document.body`.
+ */
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 
+/** One menu entry. A label of "separator" draws a divider instead of a button. */
 export type ActionMenuAction = {
   label: string;
   icon: ReactNode;
@@ -18,6 +23,12 @@ export type ActionMenuState<T> = {
   placement: "pointer" | "trigger";
 };
 
+/**
+ * Menu state hook. `open` is used as both an `onContextMenu` and an `onClick` handler: a right-click
+ * anchors the menu at the pointer, a button click anchors it below the trigger.
+ * The menu closes on Escape, PageUp/PageDown, resize, wheel or touch move. It listens for
+ * scroll intent, not the `scroll` event, because a delayed programmatic scroll used to close a newly opened menu (commit 5715840).
+ */
 export function useActionMenu<T>() {
   const [menu, setMenu] = useState<ActionMenuState<T> | null>(null);
 
@@ -55,6 +66,11 @@ export function useActionMenu<T>() {
   return { menu, open, close: () => setMenu(null) };
 }
 
+/**
+ * Draws the open menu, keeps it inside the viewport (12 px margin), and focuses the first item
+ * without scrolling the page. On narrow screens CSS places it, so only focus is set.
+ * Choosing an item closes the menu before running the action.
+ */
 export function ActionMenu<T>({ state, label, actions, onClose }: {
   state: ActionMenuState<T>;
   label: string;

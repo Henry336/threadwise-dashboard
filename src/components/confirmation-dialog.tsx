@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Branded replacement for `window.confirm()`. `ConfirmationProvider` wraps the app and
+ * `useConfirmation()` returns an async `confirm(request)` that resolves true or false.
+ * Native confirm dialogs are banned in this project for look and consistency.
+ */
 import { AlertTriangle } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -16,6 +21,10 @@ export type ConfirmationRequest = {
 type PendingConfirmation = ConfirmationRequest & { resolve: (confirmed: boolean) => void };
 const ConfirmationContext = createContext<((request: ConfirmationRequest) => Promise<boolean>) | null>(null);
 
+/**
+ * Holds at most one pending confirmation. A new request cancels (resolves false) the one before,
+ * so callers never wait forever.
+ */
 export function ConfirmationProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<PendingConfirmation | null>(null);
   const confirm = useCallback((request: ConfirmationRequest) => new Promise<boolean>((resolve) => {
@@ -36,12 +45,18 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
   </ConfirmationContext.Provider>;
 }
 
+/** Returns the `confirm` function. Throws if used outside `ConfirmationProvider`. */
 export function useConfirmation() {
   const context = useContext(ConfirmationContext);
   if (!context) throw new Error("useConfirmation must be used inside ConfirmationProvider.");
   return context;
 }
 
+/**
+ * The dialog itself. While open it locks body scroll, makes every other top-level element `inert`
+ * so the page behind cannot be clicked or focused, traps Tab, and maps Escape to Cancel.
+ * Focus starts on Cancel (the safe choice) and returns to the previous element on close.
+ */
 function ThreadwiseConfirmationDialog({ request, onSettle }: { request: PendingConfirmation; onSettle: (confirmed: boolean) => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);

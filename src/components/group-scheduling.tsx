@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * "Find a time" view for Group workspaces: availability polls where members mark free slots
+ * and an organizer confirms the meeting time. Rendered by `dashboard-app.tsx`.
+ * All changes go through the BFF (`scheduling/polls/...`) via `api()`, then the dashboard reloads.
+ */
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -34,6 +39,7 @@ type Props = {
   announce: (message: string) => void;
 };
 
+/** Form state for a new poll. Day start/end are minutes after midnight in the organizer's zone. */
 type CreateDraft = {
   title: string;
   startDate: string;
@@ -44,6 +50,10 @@ type CreateDraft = {
   dayEndMinutes: number;
 };
 
+/**
+ * Poll list plus the selected poll. `initialPoll` (from a deep link) picks the first poll shown,
+ * falling back to the first open poll. Only managers (owners/admins) can create polls.
+ */
 export function GroupSchedulingView({ polls, timezone, generatedAt, manager, isDemo, initialPoll, openCreate, onChanged, announce }: Props) {
   const openPolls = polls.filter((poll) => poll.status === "OPEN");
   const [selectedId, setSelectedId] = useState(() => polls.find((poll) => poll.publicId === initialPoll || poll.id === initialPoll)?.id ?? openPolls[0]?.id ?? polls[0]?.id);
@@ -54,6 +64,10 @@ export function GroupSchedulingView({ polls, timezone, generatedAt, manager, isD
     ?? openPolls[0]
     ?? polls[0];
 
+  /**
+   * Runs one poll change: blocked in demo mode, shows a busy state, selects the returned poll,
+   * refreshes the dashboard and announces the result or the error message.
+   */
   const mutate = async (work: () => Promise<AvailabilityPoll>, success: string) => {
     if (isDemo) { announce("Scheduling controls are read-only in the demo."); return; }
     setBusy(true);
@@ -95,6 +109,12 @@ export function GroupSchedulingView({ polls, timezone, generatedAt, manager, isD
   </section>;
 }
 
+/**
+ * One poll. Members tick slot buttons in a day-by-time grid (shown in a timezone they choose)
+ * and save their availability. Organizers can confirm one of the best-overlap slots, remind
+ * members who have not answered, or close the poll. Confirm and close send `expectedRevision`,
+ * so the backend can reject them if the poll changed in the meantime.
+ */
 function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, announce }: {
   poll: AvailabilityPoll;
   viewerTimezone: string;
@@ -112,6 +132,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
   const rows = Math.max(0, ...days.map((day) => day.slots.length));
   const canEdit = poll.status === "OPEN";
 
+  /** Selects or clears one slot (by its ISO start time). Ignored once the poll is not open. */
   const toggle = (value: string) => {
     if (!canEdit) return;
     setSelected((current) => {
@@ -121,6 +142,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
     });
   };
 
+  /** Saves the viewer's chosen slots, timezone and "add to my Calendar" choice. */
   const save = () => mutate(async () => {
     const result = await api<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/availability`, "PATCH", { timezone, availableStarts: [...selected], wantsCalendar });
     return result.poll;
@@ -185,6 +207,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
   </article>;
 }
 
+/** One time row of the grid across all days. Each cell shows how many members are free then. */
 function GridRow({ row, days, timezone, selected, onToggle, disabled, poll }: {
   row: number;
   days: ReturnType<typeof groupSlotsByDay>;
@@ -205,6 +228,10 @@ function GridRow({ row, days, timezone, selected, onToggle, disabled, poll }: {
   </>;
 }
 
+/**
+ * Shown after the poll is confirmed: the final time and buttons to add or remove it from the
+ * viewer's Google Calendar (needs a connected Personal workspace).
+ */
 function FinalMeeting({ poll, busy, isDemo, mutate, announce }: { poll: AvailabilityPoll; busy: boolean; isDemo: boolean; mutate: (work: () => Promise<AvailabilityPoll>, success: string) => Promise<void>; announce: (message: string) => void }) {
   const calendar = poll.viewerCalendar;
   const updateCalendar = (action: "sync" | "remove") => mutate(async () => {
@@ -218,6 +245,10 @@ function FinalMeeting({ poll, busy, isDemo, mutate, announce }: { poll: Availabi
   </section>;
 }
 
+/**
+ * Form for a new poll. Starts tomorrow (in the workspace zone) for one week, and keeps the
+ * end date within 14 days of the start.
+ */
 function CreatePollPanel({ timezone, anchorDate, busy, onClose, onCreate }: { timezone: string; anchorDate: string; busy: boolean; onClose: () => void; onCreate: (input: CreateDraft) => Promise<void> }) {
   const tomorrow = calendarDateInZone(anchorDate, timezone, 1);
   const [draft, setDraft] = useState<CreateDraft>({ title: "", startDate: tomorrow, endDate: addCalendarDays(tomorrow, 6), timezone, durationMinutes: 60, dayStartMinutes: 8 * 60, dayEndMinutes: 22 * 60 });
@@ -243,6 +274,7 @@ function PollStatus({ status }: { status: AvailabilityPoll["status"] }) {
   return <span className="tw-poll-status" data-status={status}><i />{status === "OPEN" ? "Collecting times" : status === "FINALIZED" ? "Confirmed" : "Closed"}</span>;
 }
 
+/** Timezone options: the current, organizer and browser zones first, then a few common ones. */
 function timezoneChoices(current: string, organizer: string) {
   const browser = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const zones = [...new Set([current, organizer, browser, "Asia/Singapore", "Asia/Kuala_Lumpur", "Asia/Yangon", "Europe/London", "America/New_York", "America/Los_Angeles"])];
@@ -250,6 +282,7 @@ function timezoneChoices(current: string, organizer: string) {
 }
 
 
+/** Groups slot start times into columns by calendar day in the given timezone. */
 function groupSlotsByDay(slots: string[], timezone: string) {
   const map = new Map<string, { key: string; label: string; date: string; slots: string[] }>();
   for (const slot of slots) {
@@ -262,12 +295,14 @@ function groupSlotsByDay(slots: string[], timezone: string) {
   return [...map.values()];
 }
 
+/** Returns `YYYY-MM-DD` for a moment as seen in the given timezone. */
 function dateParts(date: Date, timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: timezone }).formatToParts(date);
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+/** Poll date range label. Dates are read at noon UTC so no timezone can shift them by a day. */
 function formatRange(poll: AvailabilityPoll) {
   const start = new Date(`${poll.startDate}T12:00:00Z`);
   const end = new Date(`${poll.endDate}T12:00:00Z`);
@@ -281,11 +316,13 @@ function formatDuration(minutes: number) { return minutes < 60 ? `${minutes} min
 function initials(value: string) { return value.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); }
 function minutesToClock(value: number) { return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`; }
 function clockToMinutes(value: string) { const [hours, minutes] = value.split(":").map(Number); return hours * 60 + minutes; }
+/** The calendar date `offsetDays` after `anchor`, as seen in `timezone`, as `YYYY-MM-DD`. */
 function calendarDateInZone(anchor: string, timezone: string, offsetDays: number) {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: timezone }).formatToParts(new Date(anchor));
   const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
   return new Date(Date.UTC(value("year"), value("month") - 1, value("day") + offsetDays, 12)).toISOString().slice(0, 10);
 }
+/** Adds days to a `YYYY-MM-DD` date (computed at noon UTC to avoid DST and zone shifts). */
 function addCalendarDays(value: string, days: number) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + days, 12)).toISOString().slice(0, 10);

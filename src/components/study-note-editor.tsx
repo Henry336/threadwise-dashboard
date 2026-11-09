@@ -1,4 +1,10 @@
 "use client";
+/**
+ * Full-screen Study note editor, opened from the Study dashboard (study-dashboard.tsx).
+ * Autosaves an encrypted cross-device draft through the BFF (`study/note-drafts`) while you write,
+ * then "files" the note into a canonical Study resource with a title and module.
+ * The writing surface itself is StudyRichNoteBody; personal-note-editor.tsx is the Personal-mode twin.
+ */
 
 import { Check, Cloud, FileText, FileUp, LoaderCircle, Save, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +20,12 @@ type NoteDraft = { moduleId: string; title: string; body: string };
 type RemoteDraft = NoteDraft & { id: string; revision: number; resourceUpdatedAt?: string | null; updatedAt: string; expiresAt: string };
 type SaveState = "loading" | "idle" | "saving" | "saved" | "error" | "conflict";
 
+/**
+ * Full-screen writer for a new or existing Study note.
+ * Draft saves are queued one at a time and carry `expectedRevision`, so a newer copy saved on another
+ * device shows as a conflict instead of being overwritten. Closing waits for the last draft save, and
+ * Escape closes the nested filing sheet before the editor (see useModal).
+ */
 export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value?: StudyResource; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (path: string, method: "POST" | "PATCH", body: unknown, message: string) => Promise<boolean> }) {
   const resourceId = value?.id;
   const resourceUpdatedAt = value?.updatedAt;
@@ -45,6 +57,10 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   const closingRef = useRef(false);
   const filingRef = useRef(false);
 
+  /**
+   * Fetches the saved cross-device draft for this note (or for a new note) and loads it into the editor.
+   * Falls back to the original note text when no draft exists. Also used by "Load newer copy" after a conflict.
+   */
   const loadDraft = useCallback(async () => {
     setSaveState("loading");
     setMessage("");
@@ -81,6 +97,10 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
     return () => { window.clearTimeout(timer); activeRef.current = false; };
   }, [loadDraft]);
 
+  /**
+   * Applies a change to the local draft and marks it dirty. The generation counter lets a finished save
+   * tell whether newer typing arrived while it was in flight.
+   */
   const update = useCallback((change: Partial<NoteDraft>) => {
     generationRef.current += 1;
     dirtyRef.current = true;
@@ -91,6 +111,11 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   }, []);
   const updateBody = useCallback((body: string) => update({ body }), [update]);
 
+  /**
+   * Saves the draft to the backend, chained after any save already running so requests never race.
+   * Sends the current revision for optimistic concurrency; a revision or study conflict sets the "conflict" state.
+   * `keepalive` lets the request finish while the page is being hidden or closed.
+   */
   const persistDraft = useCallback((snapshot = draftRef.current, keepalive = false) => {
     if (!loaded) return Promise.resolve(false);
     const generation = generationRef.current;
@@ -132,6 +157,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   }, [loaded, resourceId]);
 
   useEffect(() => {
+    /** Best-effort save on pagehide, so text typed just before closing the tab or switching apps is not lost. */
     const preserveLatestDraft = () => {
       bodyFlushRef.current(false);
       if (dirtyRef.current) void persistDraft(draftRef.current, true);
@@ -146,10 +172,12 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
     return () => window.clearTimeout(timer);
   }, [dirty, draft, loaded, persistDraft, saveState]);
 
+  /** StudyRichNoteBody hands us its flush function so we can pull the latest Markdown before saving or closing. */
   const registerBodyFlush = useCallback((flush: ((canonicalize?: boolean) => string) | null) => {
     bodyFlushRef.current = flush ?? (() => draftRef.current.body);
   }, []);
 
+  /** Closes only after any unsaved draft has been stored, so the owner never loses text by closing early. */
   const requestClose = useCallback(async () => {
     if (closingRef.current) return;
     bodyFlushRef.current(false);
@@ -169,11 +197,16 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
     trapRoot: () => filingModalRef.current ?? modalRef.current,
   });
 
+  /**
+   * Opens the "File note" sheet. Flushes with canonicalize=true so Mermaid easy syntax becomes portable
+   * Mermaid first, and suggests a title from the first line when none was typed.
+   */
   const openFiling = () => {
     const body = bodyFlushRef.current(true);
     if (!draftRef.current.title.trim()) update({ title: suggestedTitle(body) });
     setFiling(true);
   };
+  /** Replaces the draft with an imported `.md` file. Limited to `.md` files up to 1 MB, with friendly errors. */
   const importMarkdown = async (file: File | undefined) => {
     if (!file) return;
     if (!/\.md$/iu.test(file.name)) { setMessage("Choose a Markdown file ending in .md."); return; }
@@ -186,6 +219,11 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
       setMessage("Threadwise could not read that Markdown file. Check that it is plain UTF-8 text and try again.");
     }
   };
+  /**
+   * Files the note: saves the draft first, then creates or updates the Study resource through `onSave`.
+   * Updates send `expectedUpdatedAt` so a note changed elsewhere is not silently overwritten.
+   * On success the now-unneeded draft is deleted; if that fails it simply expires on the server.
+   */
   const fileNote = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     bodyFlushRef.current(true);
@@ -243,6 +281,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
   </div>, document.body);
 }
 
+/** Suggests a title from the first non-empty line, with any Markdown heading marks removed. */
 function suggestedTitle(body: string): string {
   const line = body.split("\n").map((entry) => entry.replace(/^\s{0,3}#{1,6}\s+/u, "").trim()).find(Boolean);
   return (line || "Untitled note").slice(0, 120);

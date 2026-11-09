@@ -1,4 +1,10 @@
 "use client";
+/**
+ * Study "Deep Work" page: start, run, end and edit focused study sessions, plus the AI module review.
+ * Rendered by study-dashboard.tsx, which owns the session mutations and passes them in as callbacks.
+ * The module review panel talks to the backend directly through the BFF (`study/modules/:id/analysis`).
+ * Split out of the Study shell in the 2026-08-31 maintainability refactor.
+ */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -24,6 +30,7 @@ import {
 } from "@/lib/study-session";
 import { api } from "@/lib/client-api";
 
+/** Window event that asks the Study shell (study-dashboard.tsx) to show its branded confirmation dialog. */
 const STUDY_CONFIRM_EVENT = "threadwise:study-confirm";
 type Confirmation = { message: string; action: () => unknown };
 
@@ -43,6 +50,11 @@ type DeepWorkPhaseOneProps = {
   onOpenLibrary: (moduleId: string) => void;
 };
 
+/**
+ * The Deep Work page. Shows the live session card (timer, result, End) while a session runs,
+ * otherwise the "New session" builder. Below it: the outcome receipt, the last 12 recorded
+ * sessions, and the module review panel. Choosing a target item locks the module to that item's module.
+ */
 export function StudyDeepWork({ study, busy, initialItemId, activeSession, outcome, onDismissOutcome, onStart, onStop, onUpdate, onArchive, onComplete, onRecordMistake, onOpenLibrary }: DeepWorkPhaseOneProps) {
   const initialItem = study.items.find((item) => item.id === initialItemId && isUsefulFocusTarget(item));
   const [moduleId, setModuleId] = useState(initialItem?.moduleId || study.workspace.activeModuleId || study.modules[0]?.id || "");
@@ -61,6 +73,7 @@ export function StudyDeepWork({ study, busy, initialItemId, activeSession, outco
   const completedSessions = study.sessions.filter((session) => session.endedAt && !session.archivedAt);
   const outcomeItem = outcome?.itemId ? study.items.find((item) => item.id === outcome.itemId) : undefined;
 
+  /** Starts a session with the chosen module, optional target, method summary and linked resources. */
   const start = async (event: React.FormEvent) => {
     event.preventDefault();
     const method = sessionMethodSummary(focusStructure, techniques, customMethod);
@@ -121,6 +134,11 @@ export function StudyDeepWork({ study, busy, initialItemId, activeSession, outco
   </section>;
 }
 
+/**
+ * Opt-in, evidence-backed AI review of one module (Connections, Quiz or Both).
+ * Loads the saved result first, only runs a new analysis on request, and polls every 3.5 s while a
+ * job is queued or running. A request counter drops responses that arrive after the module or mode changed.
+ */
 function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
   const modules = useMemo(() => studyAnalysisModules(study.modules, study.sessions, study.resources), [study.modules, study.resources, study.sessions]);
   const initialModuleId = useMemo(() => studyAnalysisInitialModuleId(study.modules, study.sessions, study.resources, study.workspace.activeModuleId), [study.modules, study.resources, study.sessions, study.workspace.activeModuleId]);
@@ -135,6 +153,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
   const requestSequence = useRef(0);
   const response = loadedResponse?.moduleId === moduleId && loadedResponse.mode === mode ? loadedResponse.value : null;
 
+  /** Loads the saved analysis for the current module and mode. `quiet` skips the spinner for background polls. */
   const loadCached = useCallback(async (quiet = false) => {
     if (!moduleId) return;
     const sequence = ++requestSequence.current;
@@ -165,6 +184,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
     return () => window.clearInterval(interval);
   }, [analysisStatus, loadCached]);
 
+  /** Asks the backend to queue a fresh analysis. Only offered when the backend says one is available. */
   const requestAnalysis = async () => {
     if (!moduleId || !response?.available || requesting) return;
     setRequesting(true);
@@ -235,21 +255,28 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
   </section>;
 }
 
+/** Renders numbered [n] links from a finding to the evidence list entries it cites. */
 function StudyCitationLinks({ ids, numbers }: { ids: string[]; numbers: Map<string, number> }) {
   const citations = ids.map((id) => numbers.get(id)).filter((value): value is number => value !== undefined);
   return citations.length ? <span className="study-analysis-citations" aria-label="Evidence citations">{citations.map((number) => <a key={number} href={`#study-analysis-evidence-${number}`} aria-label={`Evidence ${number}`}>[{number}]</a>)}</span> : null;
 }
 
+/** One titled list of analysis findings (Connections or Next steps) with their citations. */
 function StudyAnalysisFindingGroup({ title, items, evidenceNumbers }: { title: string; items: StudyAnalysisFinding[]; evidenceNumbers: Map<string, number> }) {
   return <section><h3>{title}</h3><ul>{items.map((finding, index) => {
     return <li key={`${finding.title}-${index}`}><b>{finding.title}</b><p>{finding.detail}<StudyCitationLinks ids={finding.evidenceIds} numbers={evidenceNumbers} /></p></li>;
   })}</ul></section>;
 }
 
+/** Challenge quiz from the analysis. Each question is a collapsible details element so the answer stays hidden until opened. */
 function StudyAnalysisQuiz({ items, evidenceNumbers }: { items: StudyAnalysisQuizItem[]; evidenceNumbers: Map<string, number> }) {
   return <section className="study-analysis-quiz"><h3>Challenge quiz</h3><div>{items.map((item, index) => <details key={`${item.question}-${index}`}><summary><span>{index + 1}</span><div><b>{item.question}</b><small>{item.difficulty.toLowerCase()} · {item.type.toLowerCase()}</small></div></summary>{item.options.length > 0 && <ol>{item.options.map((option) => <li key={option}>{option}</li>)}</ol>}<div className="study-quiz-answer"><b>Answer</b><p>{item.answer}</p><p>{item.explanation}<StudyCitationLinks ids={item.evidenceIds} numbers={evidenceNumbers} /></p></div></details>)}</div></section>;
 }
 
+/**
+ * An AI-proposed note edit. Nothing changes until the owner applies it, and they can edit the wording first.
+ * Apply or Dismiss is sent to `study/analysis-suggestions/:id`, then the analysis is reloaded.
+ */
 function StudyNoteSuggestionCard({ suggestion, evidenceNumbers, onReviewed }: { suggestion: StudyNoteEditSuggestion; evidenceNumbers: Map<string, number>; onReviewed: () => void }) {
   const [draft, setDraft] = useState(suggestion.suggestedBody);
   const [busy, setBusy] = useState(false);
@@ -265,17 +292,20 @@ function StudyNoteSuggestionCard({ suggestion, evidenceNumbers, onReviewed }: { 
   return <article className={`study-note-suggestion status-${suggestion.status.toLowerCase()}`}><header><b>{suggestion.status === "PENDING" ? "Review proposed wording" : suggestion.status.toLowerCase()}</b><StudyCitationLinks ids={suggestion.evidenceIds} numbers={evidenceNumbers} /></header><p>{suggestion.rationale}</p><label><span>Proposed note</span><textarea value={draft} disabled={busy || suggestion.status !== "PENDING"} onChange={(event) => setDraft(event.target.value)} rows={6} /></label>{error && <small role="alert">{error}</small>}{suggestion.status === "PENDING" && <div><button className="study-quiet" disabled={busy} onClick={() => void review("DISMISS")}>Dismiss</button><button className="study-primary" disabled={busy || !draft.trim()} onClick={() => void review("APPLY")}>{busy ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}Apply edit</button></div>}</article>;
 }
 
+/** Numbered list of the sessions, notes and Canvas material the analysis relied on; citation links jump here. */
 function StudyAnalysisEvidenceList({ evidence, timezone }: { evidence: StudyAnalysisEvidence[]; timezone: string }) {
   return <details className="study-analysis-evidence"><summary>Evidence <span>{evidence.length}</span></summary><ol>{evidence.map((entry, index) => <li key={entry.id} id={`study-analysis-evidence-${index + 1}`}>
     <span>{index + 1}</span><div><b>{entry.title}</b><small>{studyEvidenceLabel(entry)}{entry.occurredAt ? ` · ${formatDateTime(entry.occurredAt, timezone)}` : ""}</small>{entry.detail && <p>{entry.detail}</p>}</div>
   </li>)}</ol></details>;
 }
 
+/** Human label for an evidence entry: its kind plus how authoritative the source is. */
 function studyEvidenceLabel(entry: StudyAnalysisEvidence) {
   const kind = entry.kind === "CANVAS_MATERIAL" ? "Canvas material" : entry.kind === "CANVAS_ASSIGNMENT" ? "Canvas assignment" : entry.kind === "WORK_ITEM" ? "Work item" : entry.kind.toLowerCase();
   return `${kind} · ${entry.authority.toLowerCase().replaceAll("_", " ")}`;
 }
 
+/** Picks the session's focus structure (one), study techniques (any) and an optional custom method. */
 function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusStructure, onTechniques, onCustomMethod }: { focusStructure: FocusStructureId; techniques: string[]; customMethod: string; onFocusStructure: (value: FocusStructureId) => void; onTechniques: (value: string[]) => void; onCustomMethod: (value: string) => void }) {
   return <div className="study-method-picker">
     <fieldset><legend>Focus structure</legend><div className="study-method-options">{FOCUS_STRUCTURES.map((option) => <label key={option.id} className={focusStructure === option.id ? "selected" : ""}><input type="radio" name="focus-structure" value={option.id} checked={focusStructure === option.id} onChange={() => onFocusStructure(option.id)} /><span><b>{option.label}</b><small>{option.note}</small></span></label>)}</div></fieldset>
@@ -284,6 +314,10 @@ function StudyMethodPicker({ focusStructure, techniques, customMethod, onFocusSt
   </div>;
 }
 
+/**
+ * Links Library resources from the session's module. Collapsed by default with a search box,
+ * so long resource lists do not crowd the session form.
+ */
 function StudyResourcePicker({ resources, resourceIds, onChange, optional = false }: { resources: StudyResource[]; resourceIds: string[]; onChange: (ids: string[]) => void; optional?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
@@ -304,6 +338,10 @@ function StudyResourcePicker({ resources, resourceIds, onChange, optional = fals
   </fieldset>;
 }
 
+/**
+ * Dialog for correcting a session record: times, topic, method, resources and result.
+ * The end time is only editable once the session has ended.
+ */
 function StudySessionEditor({ session, study, busy, onClose, onSave }: { session: StudySession; study: StudySnapshot; busy: boolean; onClose: () => void; onSave: (body: unknown) => Promise<void> }) {
   const knownStructure = FOCUS_STRUCTURES.find((entry) => entry.id === session.focusStructure)?.id ?? "custom";
   const [focusStructure, setFocusStructure] = useState<FocusStructureId>(knownStructure);
@@ -347,6 +385,7 @@ function Empty({ title, copy }: { title: string; copy: string }) {
   return <div className="study-empty"><span className="study-empty-mark" aria-hidden="true"><BookOpen size={28} /></span><b>{title}</b><p>{copy}</p></div>;
 }
 
+/** Icon for each Study resource kind. */
 function resourceIcon(kind: StudyResourceKind) {
   if (kind === "IMAGE") return <ImageIcon size={15} />;
   if (kind === "LINK") return <LinkIcon size={15} />;
@@ -355,10 +394,12 @@ function resourceIcon(kind: StudyResourceKind) {
   return <FileText size={15} />;
 }
 
+/** Hides items titled "Image capture" or "Image received" from the target list, since those titles say nothing about the work. */
 function isUsefulFocusTarget(item: StudyItem) {
   return !/^(?:image capture|image received)(?:\b|\s*[-:])/i.test(item.title.trim());
 }
 
+/** Asks the Study shell to confirm before running a destructive action (see STUDY_CONFIRM_EVENT). */
 function confirmAction(message: string, action: () => unknown) {
   window.dispatchEvent(new CustomEvent<Confirmation>(STUDY_CONFIRM_EVENT, { detail: { message, action } }));
 }
@@ -367,6 +408,7 @@ function humanize(value: string) {
   return value.toLowerCase().replace(/_/g, " ").replace(/(^|\s)\w/g, (letter) => letter.toUpperCase());
 }
 
+/** Converts an ISO time into the browser-local "YYYY-MM-DDTHH:mm" format a datetime-local input expects. */
 function localInput(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
@@ -386,10 +428,12 @@ function formatDateTime(value: string, timezone: string) {
   return `${formatDate(value, timezone)}, ${formatTime(value, timezone)}`;
 }
 
+/** Formats seconds as HH:MM:SS for the live session timer. */
 function formatDuration(seconds: number) {
   return `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+/** Re-renders every second while a session runs and returns the elapsed seconds since it started. */
 function useSessionElapsed(startedAt?: string) {
   const [, setTick] = useState(() => Date.now());
   useEffect(() => {

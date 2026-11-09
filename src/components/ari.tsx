@@ -1,6 +1,10 @@
 /* Brand artwork is a static same-origin PNG and does not need Next image optimization. */
 /* eslint-disable @next/next/no-img-element */
 
+/**
+ * Ari, the Threadwise mascot: static artwork variants and the "untangling" loading indicator.
+ * Images live under `public/brand/`. Used by the landing, dashboard, offline and loading pages.
+ */
 export type AriVariant =
   | "avatar-light"
   | "avatar-dark"
@@ -16,6 +20,7 @@ const ARI_SOURCES: Record<AriVariant, string> = {
   mark: "/brand/threadwise-mark-sheet.png",
 };
 
+/** One Ari image. Set `decorative` when nearby text already says it, so screen readers skip it. */
 export function Ari({
   variant = "full",
   className,
@@ -35,6 +40,10 @@ export function Ari({
   );
 }
 
+/**
+ * Animated Ari loader with a text label. It is a polite live region, so screen readers
+ * announce the label. The motion itself is CSS on `.ari-untangle-loader-frame`.
+ */
 export function AriUntangleLoader({
   label = "Untangling your threads…",
   compact = false,
@@ -52,6 +61,7 @@ export function AriUntangleLoader({
   );
 }
 
+/** Full-page loader shown while a workspace route loads (`app/dashboard/loading.tsx`, Study). */
 export function AriWorkspaceLoader() {
   return (
     <main className="tw-route-loading">

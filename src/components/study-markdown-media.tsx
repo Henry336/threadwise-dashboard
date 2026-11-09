@@ -1,19 +1,31 @@
 "use client";
 
+/**
+ * Heavier note media split out of `study-markdown.tsx`: Mermaid diagrams and Markdown images.
+ * Both are guarded: diagrams are size-checked, rendered locally and sanitized, and remote
+ * images need one click of consent before the browser contacts another host.
+ */
 import DOMPurify from "dompurify";
 import { AlertCircle, ImageOff, LoaderCircle, ShieldCheck } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { mermaidRenderConfiguration, validateMermaidSource, withTimeout } from "@/lib/study-mermaid";
 import { markdownImagePolicy } from "@/lib/study-markdown-security";
 
+/** Mermaid uses one global configuration, so renders run one at a time through this promise chain. */
 let mermaidQueue: Promise<void> = Promise.resolve();
 
+/** Runs `work` after every earlier render settles (pass or fail) and returns its result. */
 function enqueueMermaid<T>(work: () => Promise<T>): Promise<T> {
   const result = mermaidQueue.then(work, work);
   mermaidQueue = result.then(() => undefined, () => undefined);
   return result;
 }
 
+/**
+ * Renders a Mermaid diagram from source. It checks the source against the size budget first,
+ * waits until the figure is near the viewport, lazy-loads Mermaid, renders with a timeout
+ * and sanitizes the SVG with DOMPurify before injecting it. Results for stale source are ignored.
+ */
 export function MermaidDiagram({ source }: { source: string }) {
   const reactId = useId();
   const rootRef = useRef<HTMLElement>(null);
@@ -62,6 +74,11 @@ export function MermaidDiagram({ source }: { source: string }) {
   return <figure ref={rootRef} className="study-mermaid" dangerouslySetInnerHTML={{ __html: state.svg }} />;
 }
 
+/**
+ * Image renderer for notes. Same-origin images show directly; other HTTPS images stay hidden
+ * until the user clicks "Load this image", because loading them reveals the user's IP address.
+ * Anything else is blocked. The policy is `markdownImagePolicy` in `src/lib/study-markdown-security.ts`.
+ */
 export function MarkdownImage({ src, alt }: { src?: string | Blob; alt?: string }) {
   const value = typeof src === "string" ? src : "";
   const policy = markdownImagePolicy(value, typeof window === "undefined" ? undefined : window.location.origin);
