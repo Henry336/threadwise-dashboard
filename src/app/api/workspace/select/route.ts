@@ -1,8 +1,13 @@
+/**
+ * Workspace switcher endpoint. Stores the chosen workspace (personal or a group UUID) in an httpOnly cookie
+ * and redirects to `next`. The BFF and dashboard page read the cookie; the backend still checks membership.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { WORKSPACE_COOKIE } from "@/lib/auth";
 
 const WORKSPACE = /^(?:personal|[0-9a-f-]{36})$/i;
 
+/** `next` must stay inside `/dashboard`, so this cannot be used as an open redirect to another site. */
 export function GET(request: NextRequest) {
   const workspace = request.nextUrl.searchParams.get("workspace") ?? "personal";
   const requestedNext = request.nextUrl.searchParams.get("next") ?? "/dashboard";

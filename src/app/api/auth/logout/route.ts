@@ -1,7 +1,13 @@
+/**
+ * Signs the browser out. The backend session is revoked first; the cookie is only deleted once that works.
+ * If revocation fails the user gets a 503 and keeps the cookie, so they can retry instead of believing they
+ * are signed out while the session is still live.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "../../../../lib/auth";
 import { revokeBrowserSession } from "../../../../lib/browser-session-registry";
 
+/** Same-origin POST only, so another site cannot sign the user out. */
 export async function POST(request: NextRequest) {
   const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
   const expectedOrigin = configuredOrigin ?? (process.env.NODE_ENV === "development" ? request.nextUrl.origin : null);

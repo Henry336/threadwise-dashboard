@@ -1,3 +1,8 @@
+/**
+ * Login from inside Telegram (the Mini App). The browser posts Telegram's signed `initData`; this route
+ * verifies it, registers a browser session, sets the cookie, and says where to go next (for example a
+ * group scheduling poll named in the start parameter). Called by `telegram-mini-app-auth.tsx`.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { registerBrowserSession } from "@/lib/browser-session-registry";
@@ -9,6 +14,7 @@ import { miniAppRedirect } from "@/lib/telegram-start-param";
 
 const MAX_REQUEST_BYTES = 20_000;
 
+/** A JSON reply that is never cached. */
 function json(body: Record<string, unknown>, status: number) {
   return NextResponse.json(body, {
     status,
@@ -16,6 +22,7 @@ function json(body: Record<string, unknown>, status: number) {
   });
 }
 
+/** Rejects cross-origin and oversized requests before reading the body. Bad Telegram data gives 401; anything else malformed gives 400. */
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) {

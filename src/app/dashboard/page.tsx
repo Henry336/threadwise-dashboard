@@ -1,3 +1,8 @@
+/**
+ * The `/dashboard` page (server component). Loads the snapshot and workspace list on the server, then hands
+ * them to `DashboardApp`. Without a session it redirects home, except in demo mode (`?demo=1` or `?demo=group`).
+ * Query params such as `view`, `poll`, `import` and `item` are deep links passed through to the client.
+ */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DashboardApp } from "@/components/dashboard-app";
@@ -9,6 +14,10 @@ import type { DashboardWorkspace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Load failures are sorted into three cases (bad data, rejected auth, service down) so the error card can
+ * say what happened and what to try. Study views outside the Study workspace return 404.
+ */
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string; view?: string; poll?: string; import?: string; new?: string; item?: string; kind?: string }> }) {
   const params = await searchParams;
   const session = await getSessionUser();

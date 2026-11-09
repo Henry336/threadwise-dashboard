@@ -1,3 +1,7 @@
+/**
+ * The landing page at `/`. Shows sign-in (or "Continue as ..." when already signed in), a static product
+ * preview, and privacy notes. Inside Telegram, `TelegramMiniAppAuth` signs the user in automatically.
+ */
 import Link from "next/link";
 import { ArrowUpRight, Check, Command, Layers3, LockKeyhole, Sparkles } from "lucide-react";
 import { TelegramMiniAppAuth } from "@/components/telegram-mini-app-auth";
@@ -5,6 +9,7 @@ import { Ari } from "@/components/ari";
 import { TelegramGlyph, ThreadwiseMark } from "@/components/threadwise-mark";
 import { getSessionUser, isTelegramAuthConfigured } from "@/lib/auth";
 
+/** The main button depends on state: signed in goes to the dashboard, login configured starts Telegram login, otherwise it opens the demo. */
 export default async function Home({ searchParams }: { searchParams: Promise<{ authError?: string }> }) {
   const session = await getSessionUser();
   const { authError } = await searchParams;

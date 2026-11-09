@@ -1,3 +1,4 @@
+/** The PWA manifest (`/manifest.webmanifest`). Lets the dashboard be installed and open standalone on `/dashboard`. */
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
