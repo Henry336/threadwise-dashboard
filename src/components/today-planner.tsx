@@ -14,7 +14,7 @@ import { AlertCircle, Check, ChevronLeft, ChevronRight, Clock3, GripVertical, Lo
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { StudyModule } from "@/lib/study-types";
 import type { TaskCaptureDraft, TaskCaptureDraftItem, TodayAgenda, TodayAgendaEntry } from "@/lib/types";
-import { api } from "@/lib/client-api";
+import { api, ClientApiError } from "@/lib/client-api";
 import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
 
 type Props = {
@@ -30,6 +30,8 @@ type Props = {
 export function TodayPlanner({ variant = "standard", modules = [], onChanged, disabled = false, refreshKey }: Props) {
   const [agenda, setAgenda] = useState<TodayAgenda | null>(null);
   const [draft, setDraft] = useState<TaskCaptureDraft | null>(null);
+  // null until the first load; false hides the panel (the backend answers 404 when Today is not enabled for this user).
+  const [supported, setSupported] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -44,8 +46,10 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     try {
       const response = await api<{ agenda: TodayAgenda }>("today");
       setAgenda(response.agenda);
+      setSupported(true);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Today could not refresh.");
+      if (error instanceof ClientApiError && error.status === 404) setSupported(false);
+      else setMessage(error instanceof Error ? error.message : "Today could not refresh.");
     } finally {
       setLoading(false);
     }
@@ -61,9 +65,16 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     const draftId = new URLSearchParams(window.location.search).get("draft");
     if (!draftId) return;
     void api<{ draft: TaskCaptureDraft }>(`task-drafts/${encodeURIComponent(draftId)}`)
-      .then((response) => setDraft(response.draft))
+      .then((response) => { setDraft(response.draft); setSupported(true); })
       .catch(() => undefined);
   }, [disabled]);
+
+  /** After a change: the parent refresh reloads Today through `refreshKey`; without one, reload here. */
+  const afterChange = async () => {
+    if (onChanged && refreshKey !== undefined) return onChanged();
+    await loadAgenda();
+    onChanged?.();
+  };
 
   const included = useMemo(() => draft?.items.filter((item) => item.included) ?? [], [draft]);
   const unresolved = included.some((item) => item.status === "NEEDS_REVIEW" || item.warnings.length > 0);
@@ -117,8 +128,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
       setDraft(null);
       removeDraftQuery();
       setMessage(`Saved ${included.length} task${included.length === 1 ? "" : "s"}. No reminders were created.`);
-      await loadAgenda();
-      onChanged?.();
+      await afterChange();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The list could not be saved.");
     } finally { setSaving(false); }
@@ -144,8 +154,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     setAgenda({ ...agenda, today: remove(agenda.today), carryover: remove(agenda.carryover) });
     try {
       await api(`today/${entry.id}/plan`, "PATCH", { plannedFor });
-      await loadAgenda();
-      onChanged?.();
+      await afterChange();
     } catch (error) {
       setAgenda(previous);
       setMessage(error instanceof Error ? error.message : "That plan could not be changed.");
@@ -216,8 +225,8 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     void reorderToday(arrayMove(agenda.today, from, to), entryId);
   };
 
-  if (disabled) return null;
-  if (loading && !agenda) return <section className={`today-planner ${variant}`} aria-label="Loading Today"><LoaderCircle className="spin" size={20} /> Loading Today…</section>;
+  if (disabled || supported === false) return null;
+  if (loading && supported === null) return <section className={`today-planner ${variant}`} aria-label="Loading Today"><LoaderCircle className="spin" size={20} /> Loading Today…</section>;
 
   return <section className={`today-planner ${variant}`} aria-labelledby={`today-planner-title-${variant}`}>
     <header className="today-planner-head">
