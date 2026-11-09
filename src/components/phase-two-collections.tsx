@@ -11,6 +11,7 @@ import {
   Sparkles, Star, Trash2, X, Zap,
 } from "lucide-react";
 import { ActionMenu, useActionMenu } from "./action-menu";
+import { useModal } from "@/lib/use-modal";
 import type { ActionMenuAction } from "./action-menu";
 import type {
   DashboardIdea, DashboardImage, DashboardNote, IdeaBrief,
@@ -232,18 +233,15 @@ function PhaseTwoImageLightbox({ image, images, isDemo, onClose, onMove, onEdit,
 }) {
   const dialog = useRef<HTMLDivElement | null>(null);
   const pointerStart = useRef<number | null>(null);
+  useModal(dialog, onClose);
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
       if (event.key === "ArrowLeft") onMove(-1);
       if (event.key === "ArrowRight") onMove(1);
     };
     window.addEventListener("keydown", keydown);
-    dialog.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    return () => { window.removeEventListener("keydown", keydown); document.body.style.overflow = previousOverflow; };
-  }, [onClose, onMove]);
+    return () => window.removeEventListener("keydown", keydown);
+  }, [onMove]);
   return <div ref={dialog} className="tw-phase-lightbox" role="dialog" aria-modal="true" aria-label={image.caption ?? "Image preview"}>
     <header><span>{images.findIndex((item) => item.id === image.id) + 1} / {images.length}</span><div><button className={image.pinned ? "active" : ""} onClick={onPin}><Star size={17} fill={image.pinned ? "currentColor" : "none"} /> {image.pinned ? "Favourite" : "Favourite"}</button><button onClick={onEdit}><Pencil size={17} /> Caption</button><button onClick={onCreateNote}><FileText size={17} /> Make note</button><button className="danger" onClick={() => void onDelete()} aria-label={`Delete ${image.caption ?? image.fileName ?? "image"}`}><Trash2 size={17} /></button><button onClick={onClose} aria-label="Close preview"><X size={21} /></button></div></header>
     <button className="tw-phase-lightbox-arrow left" onClick={() => onMove(-1)} aria-label="Previous image"><ChevronLeft size={30} /></button>
@@ -254,14 +252,7 @@ function PhaseTwoImageLightbox({ image, images, isDemo, onClose, onMove, onEdit,
 
 export function PhaseTwoIdeaBriefDialog({ state, onClose, onRefresh }: { state: IdeaBriefDialogState; onClose: () => void; onRefresh: () => void }) {
   const dialog = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    window.addEventListener("keydown", keydown);
-    dialog.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    return () => { window.removeEventListener("keydown", keydown); document.body.style.overflow = previousOverflow; };
-  }, [onClose]);
+  useModal(dialog, onClose);
   const metrics = state.brief ? [
     ["Buildability", state.brief.buildability], ["Usefulness", state.brief.usefulness],
     ["Novelty", state.brief.novelty], ["Portfolio value", state.brief.portfolioValue],

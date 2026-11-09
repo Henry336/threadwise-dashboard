@@ -2,6 +2,7 @@
 
 import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
 import { api, ClientApiError } from "@/lib/client-api";
+import { useModal } from "@/lib/use-modal";
 /* Authenticated image responses must stay on the browser's same-origin cookie path. */
 /* eslint-disable @next/next/no-img-element */
 
@@ -177,38 +178,6 @@ function viewAllowed(value: DashboardView, workspace: DashboardWorkspace): boole
 function initialView(value: string | undefined, workspace: DashboardWorkspace): DashboardView {
   const candidate = value === "standup" ? "progress" : value === "work" ? "tasks" : value as DashboardView | undefined;
   return candidate && viewAllowed(candidate, workspace) ? candidate : "today";
-}
-function useModalFocus<T extends HTMLElement, U extends HTMLElement>(
-  container: React.RefObject<T | null>,
-  initial: React.RefObject<U | null> | undefined,
-  onClose: () => void,
-) {
-  useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const frame = window.requestAnimationFrame(() => {
-      const fallback = container.current?.querySelector<HTMLElement>("[autofocus], button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
-      (initial?.current ?? fallback)?.focus();
-    });
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
-      if (event.key !== "Tab" || !container.current) return;
-      const focusable = Array.from(container.current.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"));
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", keydown);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("keydown", keydown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
-  }, [container, initial, onClose]);
 }
 
 
@@ -1297,7 +1266,7 @@ function CaptureComposer({ isDemo, timezone, groupName, onClose, onSave, announc
   const [loading, setLoading] = useState(false);
   const dialogRef = useRef<HTMLElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  useModalFocus(dialogRef, inputRef, onClose);
+  useModal(dialogRef, onClose, { initialFocus: inputRef });
 
   const understand = async () => {
     if (!text.trim()) return;
@@ -1367,7 +1336,7 @@ function demoCapturePreview(text: string, preferred: "auto" | CaptureKind): Capt
 function EntityEditor({ state, busy, timezone, onClose, onSave, onDelete, onConvert }: { state: EditorState; busy: boolean; timezone: string; onClose: () => void; onSave: (kind: EditableKind, values: Record<string, unknown>, item?: EditorState["item"]) => void; onDelete: (kind: EditableKind, item: NonNullable<EditorState["item"]>) => void; onConvert: (idea: DashboardIdea) => void }) {
   const item = state.item; const title = `${item ? "Edit" : "Add"} ${state.kind}`;
   const dialogRef = useRef<HTMLElement | null>(null);
-  useModalFocus(dialogRef, undefined, onClose);
+  useModal(dialogRef, onClose);
   const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); let values: Record<string, unknown> = {};
     if (state.kind === "task") values = {
       title: form.get("title"),
@@ -1405,7 +1374,7 @@ function TaskReminderFields({ initial, timezone }: { initial: string[]; timezone
 }
 
 function CommandPalette({ data, items, onClose, onNavigate }: { data: DashboardSnapshot; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) {
-  const [query, setQuery] = useState(""); const input = useRef<HTMLInputElement>(null); const dialogRef = useRef<HTMLElement | null>(null); useModalFocus(dialogRef, input, onClose);
+  const [query, setQuery] = useState(""); const input = useRef<HTMLInputElement>(null); const dialogRef = useRef<HTMLElement | null>(null); useModal(dialogRef, onClose, { initialFocus: input });
   const results = useMemo(() => { const q = query.toLowerCase().trim(); if (!q) return []; return [
     ...data.tasks.map((item) => ({ title: item.title, detail: item.description, view: "tasks" as DashboardView, icon: ListChecks })),
     ...data.notes.map((item) => ({ title: item.title, detail: item.summary, view: "notes" as DashboardView, icon: FileText })),
@@ -1415,6 +1384,6 @@ function CommandPalette({ data, items, onClose, onNavigate }: { data: DashboardS
   return <div className="tw-command-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Find anything" onMouseDown={(event) => event.stopPropagation()}><header><Search size={20} /><input ref={input} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find anything…" /><kbd>ESC</kbd></header><div>{!query && <><p>Go somewhere</p>{items.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)}><span><Icon size={17} /></span><b>{label}</b><ArrowRight size={15} /></button>)}</>}{query && results.map(({ title, detail, view, icon: Icon }, index) => <button key={`${title}-${index}`} onClick={() => onNavigate(view)}><span><Icon size={17} /></span><div><b>{title}</b><small>{detail}</small></div><ArrowRight size={15} /></button>)}{query && !results.length && <Empty icon={Search} title="No threads found." copy="Open full search for deeper results." action="Open search" onAction={() => onNavigate("search")} />}</div><footer><span><kbd>⌘ K</kbd> anywhere</span><button onClick={onClose}>Close</button></footer></section></div>;
 }
 
-function MobileMore({ activeView, items, onClose, onNavigate }: { activeView: DashboardView; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) { const dialogRef = useRef<HTMLElement | null>(null); const closeRef = useRef<HTMLButtonElement | null>(null); useModalFocus(dialogRef, closeRef, onClose); return <div className="tw-mobile-sheet-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="More navigation" onMouseDown={(event) => event.stopPropagation()}><header><span>Threadwise</span><button ref={closeRef} onClick={onClose} aria-label="Close navigation"><X size={20} /></button></header>{items.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => onNavigate(id)}><Icon size={19} /><span>{label}</span><ChevronRight size={16} /></button>)}</section></div>; }
+function MobileMore({ activeView, items, onClose, onNavigate }: { activeView: DashboardView; items: typeof PERSONAL_NAV; onClose: () => void; onNavigate: (view: DashboardView) => void }) { const dialogRef = useRef<HTMLElement | null>(null); const closeRef = useRef<HTMLButtonElement | null>(null); useModal(dialogRef, onClose, { initialFocus: closeRef }); return <div className="tw-mobile-sheet-overlay" onMouseDown={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="More navigation" onMouseDown={(event) => event.stopPropagation()}><header><span>Threadwise</span><button ref={closeRef} onClick={onClose} aria-label="Close navigation"><X size={20} /></button></header>{items.map(({ id, label, icon: Icon }) => <button key={id} className={activeView === id ? "active" : ""} onClick={() => onNavigate(id)}><Icon size={19} /><span>{label}</span><ChevronRight size={16} /></button>)}</section></div>; }
 function LoadMore({ state, onLoadMore }: { state: { hasMore: boolean; loading: boolean }; onLoadMore: () => void }) { return state.hasMore ? <button className="tw-load-more" onClick={onLoadMore} disabled={state.loading}>{state.loading ? <LoaderCircle className="spin" size={17} /> : <ChevronDown size={17} />} Load more</button> : null; }
 function Empty({ icon: Icon, mascot = false, title, copy, action, onAction }: { icon: typeof Inbox; mascot?: boolean; title: string; copy: string; action?: string; onAction?: () => void }) { return <div className="tw-empty">{mascot ? <Ari variant="full" className="tw-empty-ari" decorative /> : <Icon size={27} />}<b>{title}</b><span>{copy}</span>{action && <button onClick={onAction}>{action}</button>}</div>; }

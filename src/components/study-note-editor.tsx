@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import type { StudyResource, StudySnapshot } from "@/lib/study-types";
 import { parseMarkdownFile } from "@/lib/study-markdown";
 import { api, ClientApiError } from "@/lib/client-api";
+import { useModal } from "@/lib/use-modal";
 import { StudyChoicePicker } from "./study-choice-picker";
 import { StudyRichNoteBody } from "./study-rich-note-body";
 
@@ -162,33 +163,11 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
 
   useEffect(() => { filingRef.current = filing; }, [filing]);
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (filingRef.current) setFiling(false);
-        else void requestClose();
-        return;
-      }
-      if (event.key !== "Tab" || !modalRef.current) return;
-      const activeModal = filingModalRef.current ?? modalRef.current;
-      const focusable = [...activeModal.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), [contenteditable='true'], [tabindex]:not([tabindex='-1'])")];
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-      returnFocus?.focus();
-    };
-  }, [requestClose]);
+  // Escape first closes the nested filing sheet, then safely closes the editor; Tab stays in whichever is on top.
+  useModal(modalRef, () => { if (filingRef.current) setFiling(false); else void requestClose(); }, {
+    initialFocus: false,
+    trapRoot: () => filingModalRef.current ?? modalRef.current,
+  });
 
   const openFiling = () => {
     const body = bodyFlushRef.current(true);

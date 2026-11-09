@@ -33,9 +33,31 @@ test("command palette owns focus, dismisses by keyboard, and restores its trigge
   await trigger.click();
   await expect(page.getByRole("dialog", { name: /find anything/i })).toBeVisible();
   await expect(page.getByRole("textbox", { name: /find anything/i })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: /find anything/i })).toHaveCount(0);
   await expect(trigger).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
+});
+
+test("Escape closes only the top dialog when the palette opens over the note editor", async ({ page }) => {
+  await page.goto("/dashboard?demo=1", { waitUntil: "load" });
+  await page.getByRole("button", { name: "Write note" }).click();
+  const editor = page.locator(".study-note-fullscreen");
+  await expect(editor).toBeVisible();
+  await editor.getByRole("button", { name: "Close note editor" }).focus();
+  await page.keyboard.press("/");
+  const palette = page.getByRole("dialog", { name: /find anything/i });
+  await expect(palette).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(palette).toHaveCount(0);
+  await expect(editor).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+
+  await page.keyboard.press("Escape");
+  await expect(editor).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
 });
 
 test("demo remains scrollable without viewport-wide horizontal overflow", async ({ page }) => {

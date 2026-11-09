@@ -18,6 +18,7 @@ import {
 import type { DashboardSnapshot, TaskImportAssignee, TaskImportItem, TaskImportReview } from "@/lib/types";
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import { api } from "@/lib/client-api";
+import { useModal } from "@/lib/use-modal";
 
 type Member = NonNullable<DashboardSnapshot["collaboration"]>["members"][number];
 
@@ -68,30 +69,7 @@ export function TaskImportReviewSheet({
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const frame = window.requestAnimationFrame(() => panelRef.current?.focus());
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !panelRef.current) return;
-      const focusable = [...panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable.at(-1)!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previous;
-    };
-  }, [onClose]);
+  useModal(panelRef, onClose, { initialFocus: panelRef });
 
   const selected = review?.items.filter((item) => item.included && item.status !== "SKIPPED") ?? [];
   const ready = selected.filter((item) => item.status !== "IMPORTED");
