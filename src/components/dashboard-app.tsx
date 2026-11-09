@@ -292,7 +292,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
 
   const toastTimer = useRef<number | null>(null);
   const hydratedCollections = useRef(new Set<string>());
-  const refreshInFlight = useRef(false);
+  const refreshSequence = useRef(0);
   const initialEntityOpened = useRef(Boolean(initialTarget));
 
   const announce = (message: string) => {
@@ -367,11 +367,15 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
     window.history.replaceState(null, "", url);
   }, []);
 
+  /** Reloads the whole snapshot. Live sync already coalesces its own calls, so explicit
+   * refreshes are never dropped; only the newest request may write, so an older
+   * response that lands late cannot overwrite fresher data. */
   const refreshSnapshot = useCallback(async (showError = false) => {
-    if (isDemo || refreshInFlight.current) return;
-    refreshInFlight.current = true;
+    if (isDemo) return;
+    const sequence = ++refreshSequence.current;
     try {
       const snapshot = await api<DashboardSnapshot>("snapshot");
+      if (sequence !== refreshSequence.current) return;
       setData(snapshot);
       setCollaborationTask((current) => current ? snapshot.tasks.find((task) => task.id === current.id) ?? null : null);
       setLastSyncedAt(snapshot.generatedAt);
@@ -385,10 +389,9 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         images: { page: 1, hasMore: snapshot.images.length >= 50, loading: false },
       });
     } catch {
+      if (sequence !== refreshSequence.current) return;
       setSyncState("offline");
       if (showError) announce("Live sync is retrying. Your last loaded data is still here.");
-    } finally {
-      refreshInFlight.current = false;
     }
   }, [isDemo]);
 
@@ -787,8 +790,8 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
         <div className="tw-content" key={activeView}>
           {!groupOwnHeading && <PageHeading view={activeView} workspace={data.workspace} name={data.user.firstName} timezone={data.user.timezone} generatedAt={data.generatedAt} overviewQuotes={data.settings.overviewQuotes} onAdd={() => setEditor({ kind: activeView === "notes" || (activeView === "today" && data.workspace.kind === "PERSONAL") ? "note" : activeView === "ideas" ? "idea" : activeView === "expenses" ? "expense" : "task" })} />}
           {activeView === "today" && (data.workspace.kind === "GROUP"
-            ? <><TodayPlanner disabled={isDemo} onChanged={() => void refreshSnapshot()} /><GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} /></>
-            : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} isDemo={isDemo} />)}
+            ? <><TodayPlanner disabled={isDemo} refreshKey={data.generatedAt} onChanged={() => void refreshSnapshot()} /><GroupOverview data={data} onOpenTasks={openGroupTasks} onOpenPeople={() => navigate("people")} onOpenActivity={() => navigate("activity")} onOpenSchedule={() => navigate("schedule")} onManageTask={setCollaborationTask} /></>
+            : <TodayView data={data} focusTask={focusTask} overdue={overdueTasks.length} today={todayTasks.length} onToggle={toggleTask} onNavigate={navigate} onEdit={(task) => setEditor({ kind: "task", item: task })} onTodayChanged={() => void refreshSnapshot()} isDemo={isDemo} />)}
           {activeView === "tasks" && (data.workspace.kind === "GROUP" && data.collaboration
             ? <GroupTasksView tasks={data.tasks} meetings={(data.scheduling?.polls ?? []).filter((poll) => poll.status === "FINALIZED")} collaboration={data.collaboration} scope={groupTaskScope} onScope={setGroupTaskScope} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onManage={setCollaborationTask} onOpenSchedule={() => navigate("schedule")} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} manager={groupManager} />
             : <TasksView tasks={data.tasks} timezone={data.user.timezone} onToggle={toggleTask} onEdit={(task) => setEditor({ kind: "task", item: task })} onPin={pinTask} onSnooze={snoozeTask} onCalendar={updateTaskCalendar} onArchive={(task) => removeEntity("task", task)} onAdd={() => setEditor({ kind: "task" })} pagination={pagination.tasks} onLoadMore={() => loadMore("tasks")} />)}
@@ -981,7 +984,7 @@ function PageHeading({ view, workspace, name, timezone, generatedAt, overviewQuo
   return <div className={`tw-heading ${view === "search" ? "tw-heading-search" : ""}`}><div><p>{new Intl.DateTimeFormat("en-SG", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(now)}</p><h1>{copy[view][0]}</h1>{copy[view][1] && <span>{copy[view][1]}</span>}</div>{canAdd && <button className={`tw-primary tw-heading-add${keepMobileLabel ? " tw-heading-add-explicit" : ""}`} aria-label={addLabel} onClick={onAdd}><Plus size={17} /> {addLabel}</button>}</div>;
 }
 
-function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEdit, isDemo }: { data: DashboardSnapshot; focusTask?: DashboardTask; overdue: number; today: number; onToggle: (task: DashboardTask) => void; onNavigate: (view: DashboardView) => void; onEdit: (task: DashboardTask) => void; isDemo: boolean }) {
+function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEdit, onTodayChanged, isDemo }: { data: DashboardSnapshot; focusTask?: DashboardTask; overdue: number; today: number; onToggle: (task: DashboardTask) => void; onNavigate: (view: DashboardView) => void; onEdit: (task: DashboardTask) => void; onTodayChanged: () => void; isDemo: boolean }) {
   const open = data.tasks.filter((task) => task.status === "OPEN");
   const groups = threadlineBuckets(open, data.user.timezone);
   const recent = [...data.notes.map((item) => ({ ...item, kind: "note" as const })), ...data.ideas.map((item) => ({ ...item, kind: "idea" as const }))].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 4);
@@ -994,7 +997,7 @@ function TodayView({ data, focusTask, overdue, today, onToggle, onNavigate, onEd
     || normalizeCopy(focusTask.title).startsWith(normalizeCopy(focusTask.description))
   ) ? focusTask.description : undefined;
   return <div className="tw-today-grid">
-    <TodayPlanner disabled={isDemo} onChanged={() => undefined} />
+    <TodayPlanner disabled={isDemo} refreshKey={data.generatedAt} onChanged={onTodayChanged} />
     <section className="tw-card tw-focus-card">
       <div className="tw-card-head"><span>Now</span><button onClick={() => onNavigate("tasks")}>All tasks <ArrowRight size={15} /></button></div>
       {focusTask ? <div className="tw-focus-body"><div><div className="tw-focus-kicker"><span className={isOverdue(focusTask, data.user.timezone) ? "tw-overdue-chip" : "tw-soft-chip"}>{isOverdue(focusTask, data.user.timezone) ? "Overdue" : isToday(focusTask.dueAt, data.user.timezone) ? "Today" : "Next"}</span><small>{focusTask.publicId}</small></div><h2>{focusTask.title}</h2>{focusDescription && <p>{focusDescription}</p>}<div className="tw-meta">{focusTask.dueAt && <span><Clock3 size={15} />{formatDate(focusTask.dueAt, data.user.timezone, { weekday: "short" })}, {formatTime(focusTask.dueAt, data.user.timezone)}</span>}{focusTask.nextReminderAt && <span><Bell size={15} />Reminder active</span>}</div></div><div><button className="tw-primary" onClick={() => onToggle(focusTask)}><Check size={18} /> Complete</button><button className="tw-quiet" onClick={() => onEdit(focusTask)}><Pencil size={16} /> Details</button></div></div> : <Empty icon={CheckCircle2} mascot title="You are all clear." copy="Nothing needs your attention right now." />}

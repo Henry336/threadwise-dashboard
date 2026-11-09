@@ -14,14 +14,16 @@ type Props = {
   modules?: StudyModule[];
   onChanged?: () => void;
   disabled?: boolean;
+  /** Changes whenever the surrounding dashboard refreshes, so Today reloads with it. */
+  refreshKey?: string;
 };
 
 type ApiError = Error & { status?: number };
 
-export function TodayPlanner({ variant = "standard", modules = [], onChanged, disabled = false }: Props) {
+/** Today's planned, carried-over and due-soon work, plus the review-before-save task capture. */
+export function TodayPlanner({ variant = "standard", modules = [], onChanged, disabled = false, refreshKey }: Props) {
   const [agenda, setAgenda] = useState<TodayAgenda | null>(null);
   const [draft, setDraft] = useState<TaskCaptureDraft | null>(null);
-  const [supported, setSupported] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -35,10 +37,8 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     try {
       const response = await todayApi<{ agenda: TodayAgenda }>("today");
       setAgenda(response.agenda);
-      setSupported(true);
     } catch (error) {
-      if ((error as ApiError).status === 404) setSupported(false);
-      else setMessage(error instanceof Error ? error.message : "Today could not refresh.");
+      setMessage(error instanceof Error ? error.message : "Today could not refresh.");
     } finally {
       setLoading(false);
     }
@@ -48,13 +48,13 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     if (disabled) return;
     const timer = window.setTimeout(() => void loadAgenda(), 0);
     return () => window.clearTimeout(timer);
-  }, [disabled, loadAgenda]);
+  }, [disabled, loadAgenda, refreshKey]);
   useEffect(() => {
     if (disabled) return;
     const draftId = new URLSearchParams(window.location.search).get("draft");
     if (!draftId) return;
     void todayApi<{ draft: TaskCaptureDraft }>(`task-drafts/${encodeURIComponent(draftId)}`)
-      .then((response) => { setDraft(response.draft); setSupported(true); })
+      .then((response) => setDraft(response.draft))
       .catch(() => undefined);
   }, [disabled]);
 
@@ -72,7 +72,6 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
       setDraft(response.draft);
       setText("");
       setAdding(false);
-      setSupported(true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "That list could not be prepared.");
     } finally { setSaving(false); }
@@ -184,8 +183,8 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     void reorderToday(arrayMove(agenda.today, from, to), entryId);
   };
 
-  if (disabled || supported === false) return null;
-  if (loading && supported === null) return <section className={`today-planner ${variant}`} aria-label="Loading Today"><LoaderCircle className="spin" size={20} /> Loading Today…</section>;
+  if (disabled) return null;
+  if (loading && !agenda) return <section className={`today-planner ${variant}`} aria-label="Loading Today"><LoaderCircle className="spin" size={20} /> Loading Today…</section>;
 
   return <section className={`today-planner ${variant}`} aria-labelledby={`today-planner-title-${variant}`}>
     <header className="today-planner-head">
