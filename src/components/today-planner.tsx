@@ -32,6 +32,8 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
   const [draft, setDraft] = useState<TaskCaptureDraft | null>(null);
   // null until the first load; false hides the panel (the backend answers 404 when Today is not enabled for this user).
   const [supported, setSupported] = useState<boolean | null>(null);
+  // Mirrors a 404 for the refresh effect, so it can skip later loads without re-running on every state change.
+  const unsupported = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -48,7 +50,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
       setAgenda(response.agenda);
       setSupported(true);
     } catch (error) {
-      if (error instanceof ClientApiError && error.status === 404) setSupported(false);
+      if (error instanceof ClientApiError && error.status === 404) { unsupported.current = true; setSupported(false); }
       else setMessage(error instanceof Error ? error.message : "Today could not refresh.");
     } finally {
       setLoading(false);
@@ -57,10 +59,10 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
 
   useEffect(() => {
     // Once the backend has said Today is not enabled, later dashboard refreshes need not ask again.
-    if (disabled || supported === false) return;
+    if (disabled || unsupported.current) return;
     const timer = window.setTimeout(() => void loadAgenda(), 0);
     return () => window.clearTimeout(timer);
-  }, [disabled, loadAgenda, refreshKey, supported]);
+  }, [disabled, loadAgenda, refreshKey]);
   useEffect(() => {
     if (disabled) return;
     const draftId = new URLSearchParams(window.location.search).get("draft");
