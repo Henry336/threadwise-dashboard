@@ -1,3 +1,4 @@
+/** Image URL helper shared by the image grids and lightboxes. */
 import type { DashboardImage } from "./types";
 
 /** Bundled pictures the credential-free demo shows in place of real Telegram images. */

@@ -1,3 +1,7 @@
+/**
+ * Verifies the `initData` that Telegram gives a Mini App, for the `/api/auth/telegram-mini-app` login route.
+ * It uses Telegram's Ed25519 third-party signature, so the bot token is not needed to check it.
+ */
 import "server-only";
 
 import { createPublicKey, verify as verifySignature } from "node:crypto";
@@ -17,6 +21,7 @@ export type TelegramMiniAppUser = {
   startParam?: string;
 };
 
+/** Thrown for any verification failure. The message is the same for every cause, so callers cannot leak which check failed. */
 export class TelegramMiniAppAuthenticationError extends Error {
   constructor() {
     super("Invalid Telegram Mini App authentication data.");
@@ -24,6 +29,10 @@ export class TelegramMiniAppAuthenticationError extends Error {
   }
 }
 
+/**
+ * Checks the signature against Telegram's public key, rejects data older than 15 minutes, and returns a
+ * cleaned user profile. `options` lets tests pass a fixed clock and a test key.
+ */
 export function verifyTelegramMiniAppInitData(
   initData: string,
   botId: string,
@@ -83,23 +92,27 @@ export function verifyTelegramMiniAppInitData(
   };
 }
 
+/** A parameter's value only if it appears exactly once; duplicates are treated as tampering. */
 function singleValue(params: URLSearchParams, key: string): string | undefined {
   const values = params.getAll(key);
   return values.length === 1 ? values[0] : undefined;
 }
 
+/** A Telegram user id as a positive integer string, or undefined. */
 function telegramUserId(value: unknown): string | undefined {
   if (typeof value !== "number" && typeof value !== "string") return undefined;
   const normalized = String(value);
   return /^[1-9]\d{0,19}$/.test(normalized) ? normalized : undefined;
 }
 
+/** Trimmed text within a length limit, or undefined. */
 function cleanText(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim();
   return normalized && normalized.length <= max ? normalized : undefined;
 }
 
+/** The avatar URL only if it is https. */
 function safeHttpsUrl(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 2_000) return undefined;
   try {

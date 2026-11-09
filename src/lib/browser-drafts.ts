@@ -1,3 +1,8 @@
+/**
+ * Unsaved form drafts kept in localStorage (for example a Study weekly review in progress).
+ * Each draft is wrapped with its owner, workspace and save time, so a draft never shows up for another
+ * account or workspace on a shared browser, and old drafts expire after seven days.
+ */
 const DRAFT_PREFIX = "threadwise:draft:v2:";
 const LEGACY_DRAFT_PREFIXES = ["threadwise-study-note-draft-", "threadwise-study-review-"];
 export const DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -12,10 +17,15 @@ type DraftEnvelope<T> = {
   value: T;
 };
 
+/** The storage key for one draft. Every part is URL-encoded so ids cannot collide. */
 export function browserDraftKey(kind: string, ownerId: string, workspaceId: string, resourceId: string): string {
   return `${DRAFT_PREFIX}${encodeURIComponent(kind)}:${encodeURIComponent(ownerId)}:${encodeURIComponent(workspaceId)}:${encodeURIComponent(resourceId)}`;
 }
 
+/**
+ * Returns the saved value, or null. A draft from another owner or workspace, one that is too old,
+ * or one that is unreadable is deleted on the spot.
+ */
 export function readBrowserDraft<T>(storage: StorageLike, key: string, ownerId: string, workspaceId: string, now = Date.now()): T | null {
   try {
     const raw = storage.getItem(key);
@@ -40,6 +50,7 @@ export function readBrowserDraft<T>(storage: StorageLike, key: string, ownerId: 
   }
 }
 
+/** Saves a value with the owner, workspace and current time. Can throw when storage is full or blocked. */
 export function writeBrowserDraft<T>(storage: StorageLike, key: string, ownerId: string, workspaceId: string, value: T, now = Date.now()): void {
   const envelope: DraftEnvelope<T> = { version: 2, ownerId, workspaceId, savedAt: now, value };
   storage.setItem(key, JSON.stringify(envelope));
@@ -49,6 +60,10 @@ export function clearBrowserDraft(storage: StorageLike, key: string): void {
   storage.removeItem(key);
 }
 
+/**
+ * Deletes Threadwise drafts, including keys from older formats. Logout clears all of them; a page load
+ * passes `keepWorkspaceId` to keep only the current workspace's drafts. Returns how many were removed.
+ */
 export function clearThreadwiseDrafts(storage: StorageLike, keepWorkspaceId?: string): number {
   const keys: string[] = [];
   for (let index = 0; index < storage.length; index += 1) {

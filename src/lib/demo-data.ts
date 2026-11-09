@@ -1,5 +1,10 @@
+/**
+ * Sample data for demo mode (`/dashboard?demo=1` and `?demo=group`). Lets people try the dashboard without
+ * signing in, and lets tests run without a backend. Dates are relative to now so the demo always looks current.
+ */
 import type { DashboardSnapshot } from "./types";
 
+/** A Date a number of days from today at a local time. */
 const at = (dayOffset: number, hour: number, minute = 0) => {
   const date = new Date();
   date.setHours(hour, minute, 0, 0);
@@ -7,6 +12,7 @@ const at = (dayOffset: number, hour: number, minute = 0) => {
   return date.toISOString();
 };
 
+/** A personal workspace snapshot with sample tasks, notes, ideas and images. */
 export function getDemoSnapshot(): DashboardSnapshot {
   return {
     workspace: { id: "personal", kind: "PERSONAL", name: "Demo workspace", role: "OWNER" },
@@ -189,6 +195,7 @@ export function getDemoSnapshot(): DashboardSnapshot {
   };
 }
 
+/** A group workspace snapshot with members, assignments, activity and a scheduling poll. */
 export function getGroupDemoSnapshot(): DashboardSnapshot {
   const personal = getDemoSnapshot();
   const now = new Date().toISOString();

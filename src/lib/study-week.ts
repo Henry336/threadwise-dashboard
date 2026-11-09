@@ -1,5 +1,10 @@
+/** Label for the current academic week, shown in the Study header and weekly review. */
 import type { StudySnapshot } from "./study-types";
 
+/**
+ * Uses the backend's week number when there is one. Before the semester starts it says when Week 1 begins,
+ * and without semester dates it says so, instead of showing a misleading "Week 0".
+ */
 export function studyWeekLabel(study: Pick<StudySnapshot, "weekNumber" | "generatedAt" | "workspace">): string {
   if (study.weekNumber > 0) return `Week ${study.weekNumber}`;
   const startValue = study.workspace.semesterStartDate;

@@ -1,3 +1,8 @@
+/**
+ * Server-only client for the backend's browser-session registry (`/api/v1/dashboard/browser-sessions`).
+ * Each login registers a session there, every request checks it, and logout deletes it. This is what makes
+ * dashboard sessions revocable instead of trusting a self-contained cookie for seven days.
+ */
 import "server-only";
 
 import { createServiceToken } from "./threadwise-api";
@@ -11,6 +16,7 @@ export type RegisteredBrowserSession = {
   expiresAt: number;
 };
 
+/** The registry URL, with the session id appended when one is given. */
 function endpoint(sessionId?: string) {
   const baseUrl = process.env.THREADWISE_API_URL;
   if (!baseUrl) throw new Error("THREADWISE_API_URL is not configured");
@@ -18,6 +24,7 @@ function endpoint(sessionId?: string) {
   return sessionId ? `${root}/${encodeURIComponent(sessionId)}` : root;
 }
 
+/** One call to the registry, authenticated with a short-lived service token for this Telegram user. Times out after 8 seconds. */
 async function registryFetch(telegramId: string, sessionId: string | undefined, init: RequestInit) {
   const token = await createServiceToken(telegramId);
   return fetch(endpoint(sessionId), {
@@ -32,6 +39,7 @@ async function registryFetch(telegramId: string, sessionId: string | undefined, 
   });
 }
 
+/** Reads `{ session: { id, expiresAt } }` from a reply. Caps the size and returns null for anything malformed or already expired. */
 async function parseSession(response: Response): Promise<RegisteredBrowserSession | null> {
   const declaredLength = Number(response.headers.get("content-length") ?? 0);
   if (declaredLength > MAX_RESPONSE_BYTES) return null;
@@ -49,6 +57,7 @@ async function parseSession(response: Response): Promise<RegisteredBrowserSessio
   }
 }
 
+/** Creates a seven-day session for a user who just signed in. Throws if the backend does not confirm it, so login fails closed. */
 export async function registerBrowserSession(telegramId: string): Promise<RegisteredBrowserSession> {
   const response = await registryFetch(telegramId, undefined, {
     method: "POST",
@@ -59,6 +68,7 @@ export async function registerBrowserSession(telegramId: string): Promise<Regist
   return session;
 }
 
+/** Is this session still live on the backend? Any error counts as "no", so an outage signs people out rather than letting revoked sessions through. */
 export async function browserSessionIsActive(telegramId: string, sessionId: string): Promise<boolean> {
   if (!SESSION_ID.test(sessionId)) return false;
   try {
@@ -69,6 +79,7 @@ export async function browserSessionIsActive(telegramId: string, sessionId: stri
   }
 }
 
+/** Deletes the session on the backend. Throws on failure so logout can keep the cookie and let the user retry. */
 export async function revokeBrowserSession(telegramId: string, sessionId: string): Promise<void> {
   if (!SESSION_ID.test(sessionId)) return;
   const response = await registryFetch(telegramId, sessionId, { method: "DELETE" });

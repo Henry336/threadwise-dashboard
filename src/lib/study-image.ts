@@ -1,3 +1,5 @@
+/** Loads Study images through the BFF so the lightbox can show them as blob URLs and explain failures. */
+/** An image load failure with a user-facing message. `retryable` says whether a Retry button makes sense. */
 export class StudyImageLoadError extends Error {
   constructor(message: string, public readonly retryable: boolean) {
     super(message);
@@ -5,6 +7,11 @@ export class StudyImageLoadError extends Error {
   }
 }
 
+/**
+ * Fetches a Study image's bytes. 401/403 and 404/410 become clear, non-retryable messages; network errors are retryable.
+ * If the server sends a generic content type, the type is detected from the bytes, because older Telegram
+ * images were stored without a proper image MIME type.
+ */
 export async function loadStudyImage(
   resourceId: string,
   signal?: AbortSignal,
@@ -49,6 +56,7 @@ export async function loadStudyImage(
   return new Blob([bytes], { type: contentType });
 }
 
+/** Identifies PNG, JPEG, GIF, WebP and BMP from their magic bytes. Returns undefined for anything else. */
 export function detectImageMime(bytes: Uint8Array): string | undefined {
   if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return "image/png";
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";

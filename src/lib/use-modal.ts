@@ -1,5 +1,6 @@
 "use client";
 
+/** Shared modal behaviour hook used by every Threadwise dialog and sheet. */
 import { useEffect, useRef, type RefObject } from "react";
 import { acquireBodyScrollLock } from "./body-scroll-lock";
 

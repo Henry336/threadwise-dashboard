@@ -1,3 +1,8 @@
+/**
+ * Zod schema for the dashboard snapshot the backend returns. The server parses every snapshot with it in
+ * `threadwise-api.ts`, and `types.ts` derives the TypeScript types from it so they cannot drift apart.
+ * Every string and list has a length cap so a bad or hostile reply cannot blow up the page.
+ */
 import { z } from "zod";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -188,6 +193,7 @@ export const DashboardSnapshotSchema = z.object({
   scheduling: z.object({ polls: z.array(AvailabilityPollSchema).max(100) }).optional(),
 });
 
+/** Parses and validates a raw snapshot. Throws on any contract mismatch. */
 export function parseDashboardSnapshot(input: unknown) {
   return DashboardSnapshotSchema.parse(input);
 }

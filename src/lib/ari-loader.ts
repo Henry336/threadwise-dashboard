@@ -1,3 +1,8 @@
+/**
+ * Timing and frame constants for the Ari loading animation (`ari.tsx`), kept here so tests can check them.
+ * The loop plays eight sprite frames forward and back with two in-between steps each, takes about 6.09 s,
+ * and has one deliberate blink.
+ */
 export const ARI_LOADER_ANCHOR_FRAME_COUNT = 8;
 export const ARI_LOADER_IN_BETWEEN_FRAMES = 2;
 export const ARI_LOADER_STEPS_PER_TRANSITION = ARI_LOADER_IN_BETWEEN_FRAMES + 1;

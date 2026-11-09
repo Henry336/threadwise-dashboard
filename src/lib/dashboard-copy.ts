@@ -1,5 +1,7 @@
+/** Text helpers for the Overview header line. */
 import type { DashboardOverviewQuote } from "./types";
 
+/** Quotes shown under the greeting. Users can add their own in Settings; those are mixed in with these. */
 export const BUILT_IN_OVERVIEW_QUOTES: readonly DashboardOverviewQuote[] = [
   { text: "Pick one thing. Start there." },
   { text: "Make the next move obvious." },
@@ -13,6 +15,10 @@ export const BUILT_IN_OVERVIEW_QUOTES: readonly DashboardOverviewQuote[] = [
   { text: "To exist is to change, to change is to mature, to mature is to keep creating oneself endlessly", author: "Henry Bergson" },
 ] as const;
 
+/**
+ * Picks one quote per calendar day in the user's timezone. The pick is derived from the date, not random,
+ * so the line stays the same across reloads and server/browser renders on the same day.
+ */
 export function dailyOverviewLine(now: Date | string, timezone: string, personalQuotes: readonly DashboardOverviewQuote[] = []): string {
   const date = typeof now === "string" ? new Date(now) : now;
   const parts = new Intl.DateTimeFormat("en-CA", {

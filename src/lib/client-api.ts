@@ -1,3 +1,4 @@
+/** Browser-side helper for calling the backend through the dashboard's own BFF route. */
 /** A failed BFF call: the HTTP status plus the backend's machine-readable error code
  * (for example `revision_conflict`), so callers can branch on the code instead of the text. */
 export class ClientApiError extends Error {

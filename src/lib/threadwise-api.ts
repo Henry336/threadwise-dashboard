@@ -1,3 +1,8 @@
+/**
+ * Server-only access to the Threadwise backend API (`THREADWISE_API_URL`). Used by the dashboard page to load
+ * the first snapshot and by the BFF proxy to forward browser calls. Each call carries a fresh 60-second
+ * EdDSA service token, so backend credentials never reach the browser.
+ */
 import "server-only";
 
 import { importPKCS8, SignJWT } from "jose";
@@ -6,6 +11,7 @@ import type { SessionUser } from "./auth";
 import type { DashboardSettings, DashboardSnapshot, DashboardWorkspace } from "./types";
 import { parseDashboardSnapshot } from "./dashboard-snapshot-schema";
 
+/** Settings used when an older backend snapshot omits them, so the page still renders. */
 function defaultSettings(timeZone: string): DashboardSettings {
   return {
     timezone: timeZone, reminderIntervalMinutes: 180, quietHoursStart: "22:00", quietHoursEnd: "08:00",
@@ -17,6 +23,10 @@ function defaultSettings(timeZone: string): DashboardSettings {
   };
 }
 
+/**
+ * Signs a one-minute JWT that tells the backend which Telegram user this request is for. The unique `jti`
+ * lets the backend reject a replayed token.
+ */
 export async function createServiceToken(telegramId: string) {
   const privateKey = process.env.DASHBOARD_API_PRIVATE_KEY?.replace(/\\n/g, "\n");
   if (!privateKey) throw new Error("DASHBOARD_API_PRIVATE_KEY is not configured");
@@ -38,6 +48,10 @@ function apiBaseUrl() {
   return `${baseUrl.replace(/\/$/, "")}/api/v1/dashboard`;
 }
 
+/**
+ * Fetch against the backend dashboard API as `user`. Adds the service token, and the
+ * `X-Threadwise-Workspace` header when a group or Study workspace is selected. Never cached; 12-second timeout.
+ */
 export async function threadwiseFetch(user: SessionUser, path = "", init: RequestInit = {}, workspace = "personal") {
   const token = await createServiceToken(user.telegramId);
   const suffix = path ? `/${path.replace(/^\/+/, "")}` : "";
@@ -52,6 +66,7 @@ export async function threadwiseFetch(user: SessionUser, path = "", init: Reques
   });
 }
 
+/** A non-2xx backend reply. Keeps only the status and the short error code, never the body, so upstream data stays out of logs. */
 export class ThreadwiseApiError extends Error {
   constructor(public readonly status: number, public readonly code: string) {
     super(`Threadwise API returned ${status} (${code})`);
@@ -59,6 +74,7 @@ export class ThreadwiseApiError extends Error {
   }
 }
 
+/** The backend replied, but the snapshot did not match `DashboardSnapshotSchema`. The dashboard page shows a dedicated message for this. */
 export class DashboardDataContractError extends Error {
   constructor() {
     super("Threadwise returned dashboard data in an incompatible format.");
@@ -66,6 +82,10 @@ export class DashboardDataContractError extends Error {
   }
 }
 
+/**
+ * Loads and validates the data a dashboard page renders. Demo mode returns bundled sample data without any
+ * network call. Real responses are size-capped (2 MB) and parsed with zod, then optional parts are filled with defaults.
+ */
 export async function getDashboardSnapshot(
   user: SessionUser | null,
   options: { demo?: boolean; workspace?: string } = {},
@@ -108,6 +128,7 @@ export async function getDashboardSnapshot(
   } satisfies DashboardSnapshot;
 }
 
+/** The workspaces this user can switch to. Each entry is checked field by field and the list is capped at 100. */
 export async function getDashboardWorkspaces(user: SessionUser | null): Promise<DashboardWorkspace[]> {
   if (!user) return [];
   try {
