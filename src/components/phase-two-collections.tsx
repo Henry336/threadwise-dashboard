@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { ActionMenu, useActionMenu } from "./action-menu";
 import { useModal } from "@/lib/use-modal";
+import { calendarKey, formatDate } from "@/lib/zoned-time";
+import { imageSrc } from "@/lib/dashboard-images";
 import type { ActionMenuAction } from "./action-menu";
 import type {
   DashboardIdea, DashboardImage, DashboardNote, IdeaBrief,
@@ -22,17 +24,8 @@ import { buildMarkdownExport, markdownExcerpt, safeMarkdownFileName } from "@/li
 type Pagination = { page: number; hasMore: boolean; loading: boolean };
 export type IdeaBriefDialogState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
-const DEMO_IMAGES = ["garden-light.svg", "launch-board.svg", "morning-cafe.svg", "receipt.svg", "city-rain.svg", "book-stack.svg"];
 
-function calendarKey(value: string | Date, timezone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: timezone }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
 
-function formatDate(value: string, timezone: string, options: Intl.DateTimeFormatOptions = {}) {
-  return new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", timeZone: timezone, ...options }).format(new Date(value));
-}
 
 
 function downloadPersonalNote(note: DashboardNote): void {
@@ -45,11 +38,6 @@ function downloadPersonalNote(note: DashboardNote): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function imageSrc(image: DashboardImage, isDemo: boolean, index = 0) {
-  return isDemo
-    ? `/demo/${image.fileName && DEMO_IMAGES.includes(image.fileName) ? image.fileName : DEMO_IMAGES[index % DEMO_IMAGES.length]}`
-    : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`;
-}
 
 function newestPinned<T extends { pinned?: boolean; createdAt: string }>(items: T[]) {
   return [...items].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

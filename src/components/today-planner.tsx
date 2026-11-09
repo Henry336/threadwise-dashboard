@@ -9,6 +9,7 @@ import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { StudyModule } from "@/lib/study-types";
 import type { TaskCaptureDraft, TaskCaptureDraftItem, TodayAgenda, TodayAgendaEntry } from "@/lib/types";
 import { api } from "@/lib/client-api";
+import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
 
 type Props = {
   variant?: "standard" | "study";
@@ -221,7 +222,7 @@ function DraftRow({ item, timezone, modules, study, onChange }: { item: TaskCapt
       <label><span>Task</span><input defaultValue={item.title} onBlur={(event) => { const title = event.target.value.trim(); if (title && title !== item.title) onChange({ title }); }} /></label>
       <div>
         <label><span>Plan</span><input type="date" value={dateValue(item.plannedFor)} onChange={(event) => onChange({ plannedFor: event.target.value || null })} /></label>
-        <label><span>Deadline</span><input type="datetime-local" value={localDateTimeValue(item.dueAt, timezone)} onChange={(event) => onChange({ dueAt: event.target.value ? zonedInputToIso(event.target.value, timezone) : null })} /></label>
+        <label><span>Deadline</span><input type="datetime-local" value={zonedInputDate(item.dueAt, timezone)} onChange={(event) => onChange({ dueAt: event.target.value ? zonedInputToIso(event.target.value, timezone) : null })} /></label>
         {study && <StudyChoicePicker label="Module" value={item.moduleId ?? ""} placeholder="Choose module" searchable options={modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} onChange={(moduleId) => onChange({ moduleId: moduleId || null, studyItemType: "REVISION" })} />}
       </div>
       {warning && <p><AlertCircle size={14} /> {warning}{item.warnings.includes("REMINDER_REQUIRES_CONFIRMATION") && <button type="button" onClick={() => onChange({ resolveWarnings: true })}>Keep task without reminder</button>}</p>}
@@ -336,26 +337,6 @@ function warningText(warnings: string[]): string | null {
 }
 
 function dateValue(value?: string | null): string { return value?.slice(0, 10) ?? ""; }
-function localDateTimeValue(value: string | null | undefined, timezone: string): string {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value)).replace(" ", "T");
-}
-function zonedInputToIso(value: string, timezone: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-  if (!match) throw new Error("Choose a valid date and time.");
-  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
-  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  let instant = desired;
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const parts = formatter.formatToParts(new Date(instant));
-    const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-    const represented = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
-    const correction = desired - represented;
-    if (!correction) break;
-    instant += correction;
-  }
-  return new Date(instant).toISOString();
-}
 function formatDeadline(value: string, timezone: string): string { return new Intl.DateTimeFormat("en-SG", { timeZone: timezone, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(value)); }
 function modeLabel(mode: TodayAgendaEntry["mode"]): string { return mode === "STUDY" ? "Study" : mode === "GROUP" ? "Group" : "Personal"; }
 function removeDraftQuery() { const url = new URL(window.location.href); url.searchParams.delete("draft"); window.history.replaceState(null, "", url); }

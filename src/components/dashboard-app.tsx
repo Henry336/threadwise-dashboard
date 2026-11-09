@@ -3,6 +3,8 @@
 import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
 import { api, ClientApiError } from "@/lib/client-api";
 import { useModal } from "@/lib/use-modal";
+import { calendarKey, formatDate, zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
+import { DEMO_IMAGES, imageSrc } from "@/lib/dashboard-images";
 /* Authenticated image responses must stay on the browser's same-origin cookie path. */
 /* eslint-disable @next/next/no-img-element */
 
@@ -86,7 +88,6 @@ const GROUP_NAV: { id: DashboardView; label: string; icon: typeof Inbox }[] = [
   { id: "search", label: "Search", icon: Search },
   { id: "settings", label: "Manage group", icon: Settings },
 ];
-const DEMO_IMAGES = ["garden-light.svg", "launch-board.svg", "morning-cafe.svg", "receipt.svg", "city-rain.svg", "book-stack.svg"];
 const IDEA_STATUSES: IdeaStatus[] = ["RAW", "CLARIFIED", "SELECTED", "PROTOTYPING", "BUILT", "PAUSED", "REJECTED"];
 const REMINDER_RHYTHM_OPTIONS = [
   { value: "60", label: "Every hour" },
@@ -99,20 +100,12 @@ const REMINDER_MODE_OPTIONS = [
   { value: "DIGEST", label: "Compact digest" },
 ];
 
-function calendarKey(value: string | Date, timezone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: timezone }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
 function isToday(value: string | undefined, timezone: string) {
   return Boolean(value && calendarKey(value, timezone) === calendarKey(new Date(), timezone));
 }
 function isOverdue(task: DashboardTask, timezone: string) {
   void timezone;
   return task.status === "OPEN" && Boolean(task.dueAt && new Date(task.dueAt).getTime() < Date.now());
-}
-function formatDate(value: string, timezone: string, options: Intl.DateTimeFormatOptions = {}) {
-  return new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", timeZone: timezone, ...options }).format(new Date(value));
 }
 function formatTime(value: string | undefined, timezone: string) {
   if (!value) return "Any time";
@@ -124,44 +117,6 @@ function formatRelativeSync(value: string) {
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   return minutes < 60 ? `${minutes}m ago` : `${Math.floor(minutes / 60)}h ago`;
-}
-function zonedInputDate(value: string | undefined, timezone: string) {
-  if (!value) return "";
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
-function zonedInputToIso(value: string, timezone: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-  if (!match) throw new Error("Choose a valid date and time.");
-  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  let instant = desired;
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const parts = formatter.formatToParts(new Date(instant));
-    const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-    const represented = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
-    const correction = desired - represented;
-    if (!correction) break;
-    instant += correction;
-  }
-  return new Date(instant).toISOString();
 }
 function uniq<T extends { id: string }>(items: T[]) {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
@@ -1005,7 +960,6 @@ function TaskContextMenu({ state, onClose, onToggle, onEdit, onPin, onSnooze, on
   return <ActionMenu state={state} label={task.publicId} actions={actions} onClose={onClose} />;
 }
 
-function imageSrc(image: DashboardImage, isDemo: boolean, index = 0) { return isDemo ? `/demo/${image.fileName && DEMO_IMAGES.includes(image.fileName) ? image.fileName : DEMO_IMAGES[index % DEMO_IMAGES.length]}` : `/api/threadwise/images/${encodeURIComponent(image.id)}/content`; }
 function LibraryView({ data, tab, onTab, onNavigate, isDemo }: { data: DashboardSnapshot; tab: "notes" | "ideas" | "images"; onTab: (tab: "notes" | "ideas" | "images") => void; onNavigate: (view: DashboardView) => void; isDemo: boolean }) {
   return <section className="tw-library"><div className="tw-library-tabs">{(["notes", "ideas", "images"] as const).map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => onTab(item)}>{item === "notes" ? <FileText size={16} /> : item === "ideas" ? <Lightbulb size={16} /> : <ImageIcon size={16} />}{item}<span>{data[item].length}</span></button>)}</div>{tab === "images" ? <div className="tw-library-photo-strip">{data.images.slice(0, 8).map((image, index) => <button key={image.id} onClick={() => onNavigate("images")}><img src={imageSrc(image, isDemo, index)} alt={image.caption ?? "Saved image"} /><span>{image.caption ?? image.fileName}</span></button>)}</div> : <div className="tw-library-rows">{(tab === "notes" ? data.notes : data.ideas).slice(0, 20).map((item) => <button key={item.id} onClick={() => onNavigate(tab)}><span>{tab === "notes" ? <FileText size={16} /> : <Lightbulb size={16} />}</span><div><b>{item.title}</b><small>{"summary" in item ? item.summary : item.concept}</small></div><time>{formatDate(item.createdAt, data.user.timezone)}</time><ChevronRight size={16} /></button>)}</div>}<button className="tw-library-all" onClick={() => onNavigate(tab)}>Open all {tab}<ArrowRight size={15} /></button></section>;
 }

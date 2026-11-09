@@ -19,6 +19,7 @@ import type { DashboardSnapshot, TaskImportAssignee, TaskImportItem, TaskImportR
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import { api } from "@/lib/client-api";
 import { useModal } from "@/lib/use-modal";
+import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
 
 type Member = NonNullable<DashboardSnapshot["collaboration"]>["members"][number];
 
@@ -305,25 +306,4 @@ function ownerSummary(item: TaskImportItem): string {
   return [...people, ...(item.teamOwnerLabel ? [item.teamOwnerLabel] : [])].join(" + ");
 }
 
-function zonedInputDate(value: string, timezone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
 
-function zonedInputToIso(value: string, timezone: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-  if (!match) throw new Error("Choose a valid date and time.");
-  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
-  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  let instant = desired;
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const parts = formatter.formatToParts(new Date(instant));
-    const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-    const represented = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
-    const correction = desired - represented;
-    if (!correction) break;
-    instant += correction;
-  }
-  return new Date(instant).toISOString();
-}
