@@ -5,6 +5,7 @@ import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   Archive, ArrowRight, Bell, BookOpen, CalendarDays, Check, CheckCircle2, ChevronDown,
   ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Cloud, Download, ExternalLink,
@@ -18,7 +19,6 @@ import { ThreadwiseMark } from "./threadwise-mark";
 import { Ari } from "./ari";
 import { IntegerInput } from "./integer-input";
 import { GroupSchedulingView } from "./group-scheduling";
-import { StudyDashboardApp } from "./study-dashboard";
 import { TaskImportReviewSheet } from "./task-import-review";
 import { ActionMenu, useActionMenu } from "./action-menu";
 import type { ActionMenuAction, ActionMenuState } from "./action-menu";
@@ -51,7 +51,11 @@ import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
 import { ConfirmationProvider, useConfirmation } from "./confirmation-dialog";
 import { TodayPlanner } from "./today-planner";
 import { StudyChoicePicker, StudyFormChoicePicker, StudyTimePicker } from "./study-choice-picker";
-import { PersonalNoteEditor } from "./personal-note-editor";
+
+/* Study (owner-only) and the rich editor (Tiptap/ProseMirror) are split out so Personal and Group
+ * visitors do not download them. The editor renders through a portal, so it is browser-only. */
+const StudyDashboardApp = dynamic(() => import("./study-dashboard").then((module) => module.StudyDashboardApp));
+const PersonalNoteEditor = dynamic(() => import("./personal-note-editor").then((module) => module.PersonalNoteEditor), { ssr: false });
 
 export type DashboardView = "today" | "tasks" | "schedule" | "people" | "progress" | "activity" | "library" | "notes" | "ideas" | "images" | "expenses" | "search" | "settings";
 type EditableKind = Exclude<EntityKind, never>;
