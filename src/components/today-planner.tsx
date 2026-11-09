@@ -56,10 +56,11 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
   }, []);
 
   useEffect(() => {
-    if (disabled) return;
+    // Once the backend has said Today is not enabled, later dashboard refreshes need not ask again.
+    if (disabled || supported === false) return;
     const timer = window.setTimeout(() => void loadAgenda(), 0);
     return () => window.clearTimeout(timer);
-  }, [disabled, loadAgenda, refreshKey]);
+  }, [disabled, loadAgenda, refreshKey, supported]);
   useEffect(() => {
     if (disabled) return;
     const draftId = new URLSearchParams(window.location.search).get("draft");

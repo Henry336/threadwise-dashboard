@@ -65,6 +65,9 @@ function ThreadwiseConfirmationDialog({ request, onSettle }: { request: PendingC
   useModal(dialogRef, () => onSettle(false), { initialFocus: cancelRef });
 
   useEffect(() => {
+    // Captured here and restored after `inert` is removed: useModal's own focus restore runs first,
+    // while the background is still inert, so on its own it would leave focus on the page body.
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const overlay = overlayRef.current;
     const background = overlay
       ? [...document.body.children].filter((element): element is HTMLElement => element instanceof HTMLElement && element !== overlay)
@@ -75,6 +78,7 @@ function ThreadwiseConfirmationDialog({ request, onSettle }: { request: PendingC
       for (const element of background) {
         if (!alreadyInert.get(element)) element.removeAttribute("inert");
       }
+      returnFocus?.focus();
     };
   }, []);
 
