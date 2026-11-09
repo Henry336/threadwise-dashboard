@@ -46,7 +46,7 @@ function hasSameOrigin(request: NextRequest) {
 /**
  * Handles every method. The `events` path is the server-sent-events stream used by live sync: it is piped
  * through unbuffered and closes when the browser disconnects. A successful account deletion also clears the
- * session cookie. Backend failures become a generic 502 so upstream details are not shown.
+ * session cookie. Backend responses (including 4xx/5xx) pass through; a thrown or network error becomes a generic 502 so its details are not shown.
  */
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> }) {
   const method = request.method.toUpperCase();
