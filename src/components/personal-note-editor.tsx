@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { DashboardNote } from "@/lib/types";
 import { parseMarkdownFile } from "@/lib/study-markdown";
-import { NoteDraftApiError, noteDraftRequest } from "@/lib/note-draft-api";
+import { api, ClientApiError } from "@/lib/client-api";
 import { StudyRichNoteBody } from "./study-rich-note-body";
 
 type NoteDraft = { title: string; body: string };
@@ -59,7 +59,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     }
     try {
       const query = noteId ? `?noteId=${encodeURIComponent(noteId)}` : "";
-      const response = await noteDraftRequest<{ draft: RemoteDraft | null }>(`note-drafts${query}`);
+      const response = await api<{ draft: RemoteDraft | null }>(`note-drafts${query}`);
       if (!activeRef.current) return;
       const next = response.draft ? { title: response.draft.title, body: response.draft.body } : base.current;
       draftIdRef.current = response.draft?.id;
@@ -110,13 +110,13 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
       setSaveState("saving");
       setMessage("");
       try {
-        const response = await noteDraftRequest<{ draft: RemoteDraft }>("note-drafts", "PATCH", {
+        const response = await api<{ draft: RemoteDraft }>("note-drafts", "PATCH", {
           ...(noteId ? { noteId } : {}),
           ...(noteId && noteVersionRef.current ? { noteUpdatedAt: noteVersionRef.current } : {}),
           title: snapshot.title,
           body: snapshot.body,
           expectedRevision: revisionRef.current,
-        }, keepalive);
+        }, { keepalive });
         draftIdRef.current = response.draft.id;
         revisionRef.current = response.draft.revision;
         if (activeRef.current) {
@@ -130,7 +130,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
       } catch (error) {
         if (activeRef.current) {
           const text = error instanceof Error ? error.message : "Your draft could not be saved.";
-          const conflict = error instanceof NoteDraftApiError && ["revision_conflict", "study_conflict"].includes(error.code ?? "");
+          const conflict = error instanceof ClientApiError && ["revision_conflict", "study_conflict"].includes(error.code ?? "");
           setSaveState(conflict ? "conflict" : "error");
           setMessage(text);
         }
@@ -225,7 +225,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     if (dirtyRef.current && !await persistDraft(snapshot)) return;
     const saved = await onSave({ title: snapshot.title.trim(), body: snapshot.body }, value);
     if (!saved || isDemo || !draftIdRef.current) return;
-    try { await noteDraftRequest(`note-drafts/${draftIdRef.current}`, "DELETE", {}); } catch { /* Stale drafts expire automatically. */ }
+    try { await api(`note-drafts/${draftIdRef.current}`, "DELETE", {}); } catch { /* Stale drafts expire automatically. */ }
   };
 
   const status = saveState === "loading" ? "Loading draft…"

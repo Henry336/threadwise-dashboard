@@ -20,6 +20,7 @@ import { Ari } from "@/components/ari";
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { AvailabilityPoll } from "@/lib/types";
 import { useConfirmation } from "./confirmation-dialog";
+import { api } from "@/lib/client-api";
 
 type Props = {
   polls: AvailabilityPoll[];
@@ -75,7 +76,7 @@ export function GroupSchedulingView({ polls, timezone, generatedAt, manager, isD
     </header>
 
     {creating && <CreatePollPanel timezone={timezone} anchorDate={generatedAt} busy={busy} onClose={() => setCreating(false)} onCreate={(input) => mutate(async () => {
-      const result = await scheduleApi<{ poll: AvailabilityPoll }>("scheduling/polls", "POST", input);
+      const result = await api<{ poll: AvailabilityPoll }>("scheduling/polls", "POST", input);
       setCreating(false);
       return result.poll;
     }, "Availability poll shared with the group.")} />}
@@ -121,7 +122,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
   };
 
   const save = () => mutate(async () => {
-    const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/availability`, "PATCH", { timezone, availableStarts: [...selected], wantsCalendar });
+    const result = await api<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/availability`, "PATCH", { timezone, availableStarts: [...selected], wantsCalendar });
     return result.poll;
   }, "Your availability is in sync.");
 
@@ -141,7 +142,7 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
       {poll.bestSlots.some((slot) => slot.availableCount > 0) && <section className="tw-overlap-section">
         <header><span><Sparkles size={16} /> Best overlap</span><small>Updates live</small></header>
         <div>{poll.bestSlots.filter((slot) => slot.availableCount > 0).slice(0, 3).map((slot) => <button key={slot.startAt} disabled={!manager || busy} onClick={() => mutate(async () => {
-          const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/finalize`, "POST", { startAt: slot.startAt, expectedRevision: poll.revision });
+          const result = await api<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/finalize`, "POST", { startAt: slot.startAt, expectedRevision: poll.revision });
           return result.poll;
         }, "Meeting time confirmed.")}>
           <span><b>{formatDay(slot.startAt, poll.timezone)}</b><small>{formatClock(slot.startAt, poll.timezone)}–{formatClock(slot.endAt, poll.timezone)}</small></span>
@@ -171,12 +172,12 @@ function PollWorkspace({ poll, viewerTimezone, manager, busy, isDemo, mutate, an
       </section>
 
       {manager && <section className="tw-organizer-bar"><div><b>Organizer controls</b><small>Only group owners and admins can use these.</small></div><button disabled={busy || !poll.pendingMembers.length} onClick={() => mutate(async () => {
-        const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/remind`, "POST", {});
+        const result = await api<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/remind`, "POST", {});
         return result.poll;
       }, poll.pendingMembers.length ? "Reminder posted in Telegram." : "Everyone has responded.")}><Send size={16} /> Remind pending</button><button className="danger" disabled={busy} onClick={() => void (async () => {
         if (!await confirm({ title: "Close this poll?", message: "Responses will remain visible, but members will no longer be able to submit availability.", confirmLabel: "Close poll", tone: "danger" })) return;
         void mutate(async () => {
-          const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/cancel`, "POST", { expectedRevision: poll.revision });
+          const result = await api<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/cancel`, "POST", { expectedRevision: poll.revision });
           return result.poll;
         }, "Poll closed.");
       })()}><X size={16} /> Close poll</button></section>}
@@ -207,7 +208,7 @@ function GridRow({ row, days, timezone, selected, onToggle, disabled, poll }: {
 function FinalMeeting({ poll, busy, isDemo, mutate, announce }: { poll: AvailabilityPoll; busy: boolean; isDemo: boolean; mutate: (work: () => Promise<AvailabilityPoll>, success: string) => Promise<void>; announce: (message: string) => void }) {
   const calendar = poll.viewerCalendar;
   const updateCalendar = (action: "sync" | "remove") => mutate(async () => {
-    const result = await scheduleApi<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/calendar`, "POST", { action });
+    const result = await api<{ poll: AvailabilityPoll }>(`scheduling/polls/${poll.id}/calendar`, "POST", { action });
     return result.poll;
   }, action === "sync" ? "Meeting added to Google Calendar." : "Meeting removed from Google Calendar.");
   return <section className="tw-final-meeting">
@@ -248,12 +249,6 @@ function timezoneChoices(current: string, organizer: string) {
   return zones.map((zone) => ({ value: zone, label: zone.replace(/_/g, " ") }));
 }
 
-async function scheduleApi<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, { method, credentials: "same-origin", headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store" });
-  const payload = await response.json() as { message?: string; error?: string } & T;
-  if (!response.ok) throw new Error(payload.message ?? "That scheduling action could not be completed.");
-  return payload;
-}
 
 function groupSlotsByDay(slots: string[], timezone: string) {
   const map = new Map<string, { key: string; label: string; date: string; slots: string[] }>();

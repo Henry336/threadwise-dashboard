@@ -22,6 +22,7 @@ import {
   FOCUS_STRUCTURES, STUDY_TECHNIQUES, type FocusStructureId, sessionCustomMethod,
   sessionElapsedSeconds, sessionMethodSummary, sessionResourceIds,
 } from "@/lib/study-session";
+import { api } from "@/lib/client-api";
 
 const STUDY_CONFIRM_EVENT = "threadwise:study-confirm";
 type Confirmation = { message: string; action: () => unknown };
@@ -139,7 +140,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
     const sequence = ++requestSequence.current;
     if (!quiet) setLoading(true);
     try {
-      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis?mode=${mode}`);
+      const next = await api<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis?mode=${mode}`);
       if (sequence === requestSequence.current) {
         setLoadedResponse({ moduleId, mode, value: next });
         setLoadError("");
@@ -169,7 +170,7 @@ function StudyModuleAnalysisPanel({ study }: { study: StudySnapshot }) {
     setRequesting(true);
     setRequestError("");
     try {
-      const next = await studyApi<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`, "POST", { mode });
+      const next = await api<StudyModuleAnalysisResponse>(`study/modules/${moduleId}/analysis`, "POST", { mode });
       setLoadedResponse({ moduleId, mode, value: next });
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : "The analysis could not be started.");
@@ -256,7 +257,7 @@ function StudyNoteSuggestionCard({ suggestion, evidenceNumbers, onReviewed }: { 
   const review = async (action: "APPLY" | "DISMISS") => {
     setBusy(true); setError("");
     try {
-      await studyApi(`study/analysis-suggestions/${suggestion.id}`, "PATCH", action === "APPLY" ? { action, replacementText: draft } : { action });
+      await api(`study/analysis-suggestions/${suggestion.id}`, "PATCH", action === "APPLY" ? { action, replacementText: draft } : { action });
       onReviewed();
     } catch (value) { setError(value instanceof Error ? value.message : "The suggestion could not be reviewed."); }
     finally { setBusy(false); }
@@ -399,22 +400,3 @@ function useSessionElapsed(startedAt?: string) {
   return startedAt ? sessionElapsedSeconds(startedAt) : 0;
 }
 
-async function studyApi<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, {
-    method,
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: body === undefined
-      ? { Accept: "application/json" }
-      : { Accept: "application/json", "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const payload = response.headers.get("content-type")?.includes("application/json")
-    ? await response.json()
-    : await response.text();
-  if (!response.ok) {
-    const value = payload as { message?: string; error?: string };
-    throw new Error(value.message || "Study Mode could not complete that request.");
-  }
-  return payload as T;
-}

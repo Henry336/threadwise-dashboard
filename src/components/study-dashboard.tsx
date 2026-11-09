@@ -33,6 +33,7 @@ import { clampInteger } from "@/lib/numeric-input";
 import { browserDraftKey, clearBrowserDraft, clearThreadwiseDrafts, readBrowserDraft, writeBrowserDraft } from "@/lib/browser-drafts";
 import { buildMarkdownExport, markdownExcerpt, normalizeMarkdownWikiTarget, safeMarkdownFileName } from "@/lib/study-markdown";
 import { sessionElapsedSeconds, sessionResourceIds } from "@/lib/study-session";
+import { api } from "@/lib/client-api";
 
 type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string; initialItem?: string; initialItemKind?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
@@ -118,7 +119,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
       if (!hasSnapshot.current) setBootError(null);
     }
     try {
-      const response = await studyApi<{ study: StudySnapshot }>("study/snapshot");
+      const response = await api<{ study: StudySnapshot }>("study/snapshot");
       setStudy(response.study);
       hasSnapshot.current = true;
       setBootError(null);
@@ -141,7 +142,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
     mutationRunning.current = true;
     setBusy(true);
     try {
-      const result = await studyApi<T>(path, method, body);
+      const result = await api<T>(path, method, body);
       await refresh();
       if (success) announce(success, "success");
       return result;
@@ -156,7 +157,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
 
   const openStudyNote = useCallback(async (resourceId: string) => {
     try {
-      const detail = await studyApi<{ resource: StudyResource }>(`study/resources/${resourceId}`);
+      const detail = await api<{ resource: StudyResource }>(`study/resources/${resourceId}`);
       setOpenNote(detail.resource);
     } catch (error) {
       announce(error instanceof Error ? error.message : "That note could not be opened.", "error");
@@ -171,7 +172,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
         try {
           if (initialItemKind === "study-item") {
             const existing = study.items.find((candidate) => candidate.id === initialItem || candidate.publicId === initialItem.toUpperCase());
-            const item = existing ?? (await studyApi<{ item: StudyItem }>(`study/items/${encodeURIComponent(initialItem)}`)).item;
+            const item = existing ?? (await api<{ item: StudyItem }>(`study/items/${encodeURIComponent(initialItem)}`)).item;
             if (!existing) setStudy((current) => current ? { ...current, items: [item, ...current.items.filter((candidate) => candidate.id !== item.id)] } : current);
             setModuleFilter(item.moduleId);
             setView("study-work");
@@ -180,7 +181,7 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
           }
           if (initialItemKind === "study-resource") {
             const existing = study.resources.find((candidate) => candidate.id === initialItem || candidate.publicId === initialItem.toUpperCase());
-            const resource = existing ?? (await studyApi<{ resource: StudyResource }>(`study/resources/${encodeURIComponent(initialItem)}`)).resource;
+            const resource = existing ?? (await api<{ resource: StudyResource }>(`study/resources/${encodeURIComponent(initialItem)}`)).resource;
             if (!existing) setStudy((current) => current ? { ...current, resources: [resource, ...current.resources.filter((candidate) => candidate.id !== resource.id)] } : current);
             setModuleFilter(resource.moduleId);
             setView("study-library");
@@ -357,9 +358,9 @@ export function StudyDashboardApp({ initialData, workspaces, initialView, initia
         {view === "study-timetable" && <StudyTimetable study={study} busy={busy} onImportNusmods={(url) => mutate("study/nusmods/import", "POST", { url }, "NUSMods timetable imported.")} onConnectCalendar={async () => { const connection = await mutate<{ url: string }>("study/calendar/connect", "POST", {}); if (connection?.url) window.location.assign(connection.url); return connection; }} onSyncCalendar={() => mutate("study/calendar/sync", "POST", {}, "Study timetable synced to Google Calendar.")} onStopCalendar={() => mutate("study/calendar/stop", "POST", {}, "Calendar sync stopped. Existing Google events were left intact.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Timetable updated.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Timetable updated.")} onDeleteBlock={(id, body) => mutate(`study/schedule/${id}`, "DELETE", body, "Schedule block removed.")} onEditItem={(item) => setEditor({ kind: "item", value: item })} onFocusItem={(item) => { setFocusItemId(item.id); setModuleFilter(item.moduleId); navigate("study-focus"); }} />}
         {view === "study-modules" && <Modules study={study} onOpen={openModule} onEdit={(module) => setEditor({ kind: "module", value: module })} onAdd={() => setEditor({ kind: "module" })} onPin={(module) => void mutate(`study/modules/${module.id}`, "PATCH", { pinned: !module.pinnedAt }, module.pinnedAt ? `${module.code} unpinned.` : `${module.code} pinned.`)} onArchive={(module) => confirmAction(`Archive ${module.code}? Canvas sync will keep it archived until you restore it.`, () => { void (async () => { const saved = await mutate(`study/modules/${module.id}`, "PATCH", { active: false }); if (saved !== undefined) announce(`${module.code} archived.`, "success", { label: "Undo", run: () => void mutate(`study/modules/${module.id}`, "PATCH", { active: true }, `${module.code} restored.`) }); })(); })} onRestore={(module) => void mutate(`study/modules/${module.id}`, "PATCH", { active: true }, `${module.code} restored.`)} />}
         {view === "study-work" && <Work study={study} moduleFilter={moduleFilter} onModuleFilter={setModuleFilter} onEdit={(item) => setEditor({ kind: "item", value: item })} onAdd={() => setEditor({ kind: "item" })} onComplete={(item) => void completeItem(item)} onArchive={(item) => confirmAction(`Archive ${item.publicId}?`, () => mutate(`study/items/${item.id}`, "DELETE", undefined, "Work item archived."))} />}
-        {view === "study-library" && <LibraryView study={study} moduleFilter={moduleFilter} activeSession={activeSession} onModuleFilter={setModuleFilter} onAdd={(kind) => setEditor({ kind: "resource", resourceKind: kind })} onOpenNote={(resource) => void openStudyNote(resource.id)} onEdit={async (resource) => { const detail = await studyApi<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} onPin={(resource) => void mutate(`study/resources/${resource.id}`, "PATCH", { pinned: !resource.pinnedAt }, resource.pinnedAt ? "Unpinned." : "Pinned.")} onArchive={(resource) => confirmAction(`Archive “${resource.title}”?`, () => mutate(`study/resources/${resource.id}`, "DELETE", undefined, "Resource archived."))} onToggleSessionResource={(resource) => { if (!activeSession) return; const current = sessionResourceIds(activeSession); const resourceIds = current.includes(resource.id) ? current.filter((id) => id !== resource.id) : [...current, resource.id]; void updateSession(activeSession.id, { resourceIds }); }} />}
+        {view === "study-library" && <LibraryView study={study} moduleFilter={moduleFilter} activeSession={activeSession} onModuleFilter={setModuleFilter} onAdd={(kind) => setEditor({ kind: "resource", resourceKind: kind })} onOpenNote={(resource) => void openStudyNote(resource.id)} onEdit={async (resource) => { const detail = await api<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} onPin={(resource) => void mutate(`study/resources/${resource.id}`, "PATCH", { pinned: !resource.pinnedAt }, resource.pinnedAt ? "Unpinned." : "Pinned.")} onArchive={(resource) => confirmAction(`Archive “${resource.title}”?`, () => mutate(`study/resources/${resource.id}`, "DELETE", undefined, "Resource archived."))} onToggleSessionResource={(resource) => { if (!activeSession) return; const current = sessionResourceIds(activeSession); const resourceIds = current.includes(resource.id) ? current.filter((id) => id !== resource.id) : [...current, resource.id]; void updateSession(activeSession.id, { resourceIds }); }} />}
         {view === "study-review" && <Review ownerId={initialData.user.telegramId} study={study} busy={busy} onMastery={(module, mastery, reason) => void mutate(`study/modules/${module.id}`, "PATCH", { mastery, masteryReason: reason }, `${module.code} updated.`)} onResolveMistake={(mistake) => void mutate(`study/mistakes/${mistake.id}/resolve`, "POST", {}, "Mistake resolved.")} onAddMistake={() => setEditor({ kind: "mistake" })} onSavePlan={(body) => mutate("study/weekly-plan", "PATCH", body, "Week plan saved.")} onSaveReview={(body) => mutate("study/review", "POST", body, "Weekly review saved.")} />}
-        {view === "study-search" && <StudySearch study={study} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onEditResource={async (resource) => { if (resource.kind === "NOTE") { await openStudyNote(resource.id); return; } const detail = await studyApi<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} />}
+        {view === "study-search" && <StudySearch study={study} onNavigate={navigate} onEditItem={(item) => setEditor({ kind: "item", value: item })} onEditResource={async (resource) => { if (resource.kind === "NOTE") { await openStudyNote(resource.id); return; } const detail = await api<{ resource: StudyResource }>(`study/resources/${resource.id}`); setEditor({ kind: "resource", value: detail.resource }); }} />}
         {view === "study-focus" && <StudyDeepWork key={focusItemId || "module-session"} study={study} busy={busy} initialItemId={focusItemId} activeSession={activeSession} outcome={focusOutcome} onDismissOutcome={() => setFocusOutcome(null)} onStart={(body) => mutate("study/sessions/start", "POST", body, "Session started.")} onStop={stopSession} onUpdate={updateSession} onArchive={async (session) => { const archived = await mutate<{ session: StudySession }>(`study/sessions/${session.id}`, "DELETE", undefined, "Session removed."); if (archived && focusOutcome?.id === session.id) setFocusOutcome(null); return archived; }} onComplete={(item) => completeItem(item)} onRecordMistake={(item) => setEditor({ kind: "mistake", item })} onOpenLibrary={(id) => { setModuleFilter(id); navigate("study-library"); }} />}
         {view === "study-settings" && <StudySettings study={study} busy={busy} onSave={(body) => mutate("study/settings", "PATCH", body, "Study settings saved.")} onSync={() => mutate("study/canvas/sync", "POST", {}, "Canvas sync complete.")} onCanvasReview={(id, action) => mutate(`study/canvas/assignments/${id}`, "PATCH", { action }, action === "keep" ? "Assignment kept." : "Assignment archived.")} onAddOrigin={(body) => mutate("study/origins", "POST", body, "Origin saved.")} onOrigin={(id, body) => mutate(`study/origins/${id}`, "PATCH", body, "Origin updated.")} onDeleteOrigin={(id) => mutate(`study/origins/${id}`, "DELETE", undefined, "Origin removed.")} onAddBlock={(body) => mutate("study/schedule", "POST", body, "Schedule block saved.")} onUpdateBlock={(id, body) => mutate(`study/schedule/${id}`, "PATCH", body, "Class travel updated.")} onDeleteBlock={(id) => mutate(`study/schedule/${id}`, "DELETE", { scope: "series" }, "Schedule block removed.")} />}
       </div>
@@ -541,7 +542,7 @@ function StudySearch({ study, onNavigate, onEditItem, onEditResource }: { study:
       setLoading(true);
       setSearchError(false);
       const kinds = kind === "all" ? "" : `&kinds=${encodeURIComponent(kind)}`;
-      void studyApi<{ results: typeof results }>(`study/search?q=${encodeURIComponent(query)}${kinds}`)
+      void api<{ results: typeof results }>(`study/search?q=${encodeURIComponent(query)}${kinds}`)
         .then((body) => { if (revision === searchRevision.current) setResults(body.results); })
         .catch(() => { if (revision === searchRevision.current) { setResults([]); setSearchError(true); } })
         .finally(() => { if (revision === searchRevision.current) setLoading(false); });
@@ -852,12 +853,6 @@ function usePersistentState<T>(key: string, initialValue: T) {
   return [value, setValue] as const;
 }
 
-async function studyApi<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, { method, credentials: "same-origin", cache: "no-store", headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const payload = response.headers.get("content-type")?.includes("application/json") ? await response.json() : await response.text();
-  if (!response.ok) { const value = payload as { message?: string; error?: string }; throw new Error(value.message || "Study Mode could not complete that request."); }
-  return payload as T;
-}
 function validView(value?: string): StudyView { return NAV.some((item) => item.id === value) ? value as StudyView : "study-overview"; }
 function confirmAction(message: string, action: () => unknown) {
   window.dispatchEvent(new CustomEvent<Confirmation>(STUDY_CONFIRM_EVENT, { detail: { message, action } }));

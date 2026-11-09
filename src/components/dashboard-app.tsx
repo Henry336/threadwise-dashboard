@@ -1,6 +1,7 @@
 "use client";
 
 import { startDashboardLiveSync } from "@/lib/dashboard-live-sync";
+import { api, ClientApiError } from "@/lib/client-api";
 /* Authenticated image responses must stay on the browser's same-origin cookie path. */
 /* eslint-disable @next/next/no-img-element */
 
@@ -210,29 +211,7 @@ function useModalFocus<T extends HTMLElement, U extends HTMLElement>(
   }, [container, initial, onClose]);
 }
 
-export async function api<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, {
-    method,
-    credentials: "same-origin",
-    headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
-  const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json") ? await response.json() : await response.text();
-  if (!response.ok) {
-    const error = payload as { message?: string; error?: string };
-    throw new ClientApiError(response.status, error.error ?? "request_failed", error.message ?? error.error ?? "That action could not be completed.");
-  }
-  return payload as T;
-}
 
-class ClientApiError extends Error {
-  constructor(public status: number, public code: string, message: string) {
-    super(message);
-    this.name = "ClientApiError";
-  }
-}
 
 type DashboardAppProps = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; isDemo: boolean; initialView?: string; initialPoll?: string; initialTaskImport?: string; initialItem?: string; initialItemKind?: string; openScheduleCreate?: boolean };
 

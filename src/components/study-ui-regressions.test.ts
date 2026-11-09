@@ -202,8 +202,8 @@ describe("Study UI regressions", () => {
 
     expect(dashboard).toContain('onWriteNote={() => setEditor({ kind: "resource", resourceKind: "NOTE" })}');
     expect(dashboard).toContain("Write note");
-    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`)');
-    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft }>("study/note-drafts", "PATCH"');
+    expect(editor).toContain('api<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`)');
+    expect(editor).toContain('api<{ draft: RemoteDraft }>("study/note-drafts", "PATCH"');
     expect(editor).toContain("Saved across devices");
     expect(editor).toContain("Where should this live?");
     expect(editor).not.toContain("Tags");
@@ -240,8 +240,8 @@ describe("Study UI regressions", () => {
     expect(dashboard).toContain("<PersonalNoteEditor");
     expect(dashboard).toContain('(activeView === "today" && data.workspace.kind === "PERSONAL")');
     expect(dashboard).toContain('view === "today" ? "Write note"');
-    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft | null }>(`note-drafts${query}`)');
-    expect(editor).toContain('noteDraftRequest<{ draft: RemoteDraft }>("note-drafts", "PATCH"');
+    expect(editor).toContain('api<{ draft: RemoteDraft | null }>(`note-drafts${query}`)');
+    expect(editor).toContain('api<{ draft: RemoteDraft }>("note-drafts", "PATCH"');
     expect(editor).toContain('ariaLabel="Personal note"');
     expect(editor).toContain("full-text search, Telegram, and your other signed-in devices");
     expect(editor).not.toContain("StudyChoicePicker");

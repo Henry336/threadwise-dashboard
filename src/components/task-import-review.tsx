@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 import type { DashboardSnapshot, TaskImportAssignee, TaskImportItem, TaskImportReview } from "@/lib/types";
 import { StudyChoicePicker } from "@/components/study-choice-picker";
+import { api } from "@/lib/client-api";
 
 type Member = NonNullable<DashboardSnapshot["collaboration"]>["members"][number];
-type ApiError = { error?: string; message?: string };
 
 export function TaskImportReviewSheet({
   importId,
@@ -55,7 +55,7 @@ export function TaskImportReviewSheet({
     setError(null);
     setConfirmCancel(false);
     try {
-      const payload = await request<{ taskImport: TaskImportReview }>(`task-imports/${importId}`);
+      const payload = await api<{ taskImport: TaskImportReview }>(`task-imports/${importId}`);
       setReview(payload.taskImport);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "This TODO review could not be loaded.");
@@ -105,7 +105,7 @@ export function TaskImportReviewSheet({
     if (!review || !canControl || !editable || item.status === "IMPORTED") return;
     setBusyRow(item.id);
     try {
-      const payload = await request<{ taskImport: TaskImportReview }>(`task-imports/${review.id}/items/${item.id}`, "PATCH", changes);
+      const payload = await api<{ taskImport: TaskImportReview }>(`task-imports/${review.id}/items/${item.id}`, "PATCH", changes);
       setReview(payload.taskImport);
       setError(null);
     } catch (cause) {
@@ -137,7 +137,7 @@ export function TaskImportReviewSheet({
     setSubmitting(action);
     setError(null);
     try {
-      const payload = await request<{ taskImport: TaskImportReview; imported?: number; failed?: number; skipped?: number }>(`task-imports/${review.id}/${action}`, "POST", {});
+      const payload = await api<{ taskImport: TaskImportReview; imported?: number; failed?: number; skipped?: number }>(`task-imports/${review.id}/${action}`, "POST", {});
       setReview(payload.taskImport);
       if (action === "cancel") {
         announce("TODO import canceled.");
@@ -299,18 +299,6 @@ function ImportRow({
   </article>;
 }
 
-async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, {
-    method,
-    credentials: "same-origin",
-    headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => ({})) as ApiError & T;
-  if (!response.ok) throw new Error(payload.message || payload.error || "That change could not be completed.");
-  return payload;
-}
 
 function sameAssignee(assignee: TaskImportAssignee, member: Member): boolean {
   return assignee.telegramId === member.telegramId || Boolean(assignee.username && member.username && assignee.username.toLowerCase() === member.username.toLowerCase());

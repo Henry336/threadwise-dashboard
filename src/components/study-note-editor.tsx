@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { StudyResource, StudySnapshot } from "@/lib/study-types";
 import { parseMarkdownFile } from "@/lib/study-markdown";
-import { NoteDraftApiError, noteDraftRequest } from "@/lib/note-draft-api";
+import { api, ClientApiError } from "@/lib/client-api";
 import { StudyChoicePicker } from "./study-choice-picker";
 import { StudyRichNoteBody } from "./study-rich-note-body";
 
@@ -49,7 +49,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
     setMessage("");
     try {
       const query = resourceId ? `?resourceId=${encodeURIComponent(resourceId)}` : "";
-      const response = await noteDraftRequest<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`);
+      const response = await api<{ draft: RemoteDraft | null }>(`study/note-drafts${query}`);
       if (!activeRef.current) return;
       const next = response.draft ? {
         moduleId: response.draft.moduleId || base.current.moduleId,
@@ -98,14 +98,14 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
       setSaveState("saving");
       setMessage("");
       try {
-        const response = await noteDraftRequest<{ draft: RemoteDraft }>("study/note-drafts", "PATCH", {
+        const response = await api<{ draft: RemoteDraft }>("study/note-drafts", "PATCH", {
           ...(resourceId ? { resourceId } : {}),
           ...(resourceId && resourceVersionRef.current ? { resourceUpdatedAt: resourceVersionRef.current } : {}),
           moduleId: snapshot.moduleId || null,
           title: snapshot.title,
           body: snapshot.body,
           expectedRevision: revisionRef.current,
-        }, keepalive);
+        }, { keepalive });
         draftIdRef.current = response.draft.id;
         revisionRef.current = response.draft.revision;
         if (activeRef.current) {
@@ -119,7 +119,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
       } catch (error) {
         if (activeRef.current) {
           const text = error instanceof Error ? error.message : "Your draft could not be saved.";
-          const conflict = error instanceof NoteDraftApiError && ["revision_conflict", "study_conflict"].includes(error.code ?? "");
+          const conflict = error instanceof ClientApiError && ["revision_conflict", "study_conflict"].includes(error.code ?? "");
           setSaveState(conflict ? "conflict" : "error");
           setMessage(text);
         }
@@ -219,7 +219,7 @@ export function StudyNoteEditor({ value, study, busy, onClose, onSave }: { value
       body: snapshot.body,
     }, value ? "Note updated." : "Note saved.");
     if (!saved || !draftIdRef.current) return;
-    try { await noteDraftRequest(`study/note-drafts/${draftIdRef.current}`, "DELETE", {}); } catch { /* A stale draft is safe and expires automatically. */ }
+    try { await api(`study/note-drafts/${draftIdRef.current}`, "DELETE", {}); } catch { /* A stale draft is safe and expires automatically. */ }
   };
 
   const selectedModule = study.modules.find((module) => module.id === draft.moduleId);

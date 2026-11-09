@@ -8,6 +8,7 @@ import { AlertCircle, Check, ChevronLeft, ChevronRight, Clock3, GripVertical, Lo
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { StudyModule } from "@/lib/study-types";
 import type { TaskCaptureDraft, TaskCaptureDraftItem, TodayAgenda, TodayAgendaEntry } from "@/lib/types";
+import { api } from "@/lib/client-api";
 
 type Props = {
   variant?: "standard" | "study";
@@ -17,8 +18,6 @@ type Props = {
   /** Changes whenever the surrounding dashboard refreshes, so Today reloads with it. */
   refreshKey?: string;
 };
-
-type ApiError = Error & { status?: number };
 
 /** Today's planned, carried-over and due-soon work, plus the review-before-save task capture. */
 export function TodayPlanner({ variant = "standard", modules = [], onChanged, disabled = false, refreshKey }: Props) {
@@ -35,7 +34,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
 
   const loadAgenda = useCallback(async () => {
     try {
-      const response = await todayApi<{ agenda: TodayAgenda }>("today");
+      const response = await api<{ agenda: TodayAgenda }>("today");
       setAgenda(response.agenda);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Today could not refresh.");
@@ -53,7 +52,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     if (disabled) return;
     const draftId = new URLSearchParams(window.location.search).get("draft");
     if (!draftId) return;
-    void todayApi<{ draft: TaskCaptureDraft }>(`task-drafts/${encodeURIComponent(draftId)}`)
+    void api<{ draft: TaskCaptureDraft }>(`task-drafts/${encodeURIComponent(draftId)}`)
       .then((response) => setDraft(response.draft))
       .catch(() => undefined);
   }, [disabled]);
@@ -68,7 +67,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     try {
       const path = draft ? `task-drafts/${draft.id}/items` : "task-drafts";
       const moduleId = variant === "study" && modules.length === 1 ? modules[0]?.id : undefined;
-      const response = await todayApi<{ draft: TaskCaptureDraft }>(path, "POST", { text: text.trim(), ...(moduleId ? { moduleId, studyItemType: "REVISION" } : {}) });
+      const response = await api<{ draft: TaskCaptureDraft }>(path, "POST", { text: text.trim(), ...(moduleId ? { moduleId, studyItemType: "REVISION" } : {}) });
       setDraft(response.draft);
       setText("");
       setAdding(false);
@@ -82,7 +81,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     const previous = draft;
     setDraft({ ...draft, items: draft.items.map((candidate) => candidate.id === item.id ? { ...candidate, ...patch } as TaskCaptureDraftItem : candidate) });
     try {
-      const response = await todayApi<{ draft: TaskCaptureDraft }>(`task-drafts/${draft.id}/items/${item.id}`, "PATCH", patch);
+      const response = await api<{ draft: TaskCaptureDraft }>(`task-drafts/${draft.id}/items/${item.id}`, "PATCH", patch);
       setDraft(response.draft);
     } catch (error) {
       setDraft(previous);
@@ -94,7 +93,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     if (!draft || unresolved || !included.length) return;
     setSaving(true);
     try {
-      await todayApi(`task-drafts/${draft.id}/commit`, "POST", {});
+      await api(`task-drafts/${draft.id}/commit`, "POST", {});
       setDraft(null);
       removeDraftQuery();
       setMessage(`Saved ${included.length} task${included.length === 1 ? "" : "s"}. No reminders were created.`);
@@ -107,7 +106,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
 
   const cancelDraft = async () => {
     if (!draft) return;
-    try { await todayApi(`task-drafts/${draft.id}`, "DELETE"); } catch { /* Expired drafts are already inert. */ }
+    try { await api(`task-drafts/${draft.id}`, "DELETE"); } catch { /* Expired drafts are already inert. */ }
     setDraft(null);
     setAdding(false);
     removeDraftQuery();
@@ -119,7 +118,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     const remove = (items: TodayAgendaEntry[]) => items.filter((candidate) => candidate.id !== entry.id);
     setAgenda({ ...agenda, today: remove(agenda.today), carryover: remove(agenda.carryover) });
     try {
-      await todayApi(`today/${entry.id}/plan`, "PATCH", { plannedFor });
+      await api(`today/${entry.id}/plan`, "PATCH", { plannedFor });
       await loadAgenda();
       onChanged?.();
     } catch (error) {
@@ -136,7 +135,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     setCompletingIds((ids) => new Set(ids).add(entry.id));
     setAnnouncement(`${entry.title} marked complete.`);
     try {
-      await todayApi(`today/${entry.id}/complete`, "POST", {});
+      await api(`today/${entry.id}/complete`, "POST", {});
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const remainingMarkTime = reduceMotion ? 0 : Math.max(0, 180 - (Date.now() - markedAt));
       if (remainingMarkTime) await new Promise((resolve) => window.setTimeout(resolve, remainingMarkTime));
@@ -159,7 +158,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     setReordering(true);
     setAnnouncement(moved ? `${moved.title} moved to position ${ordered.findIndex((entry) => entry.id === movedEntryId) + 1}.` : "Today reordered.");
     try {
-      const response = await todayApi<{ agenda: TodayAgenda }>("today/order", "PATCH", {
+      const response = await api<{ agenda: TodayAgenda }>("today/order", "PATCH", {
         localDate: agenda.localDate,
         orderedEntryIds: ordered.map((entry) => entry.id),
         movedEntryId,
@@ -361,9 +360,3 @@ function formatDeadline(value: string, timezone: string): string { return new In
 function modeLabel(mode: TodayAgendaEntry["mode"]): string { return mode === "STUDY" ? "Study" : mode === "GROUP" ? "Group" : "Personal"; }
 function removeDraftQuery() { const url = new URL(window.location.href); url.searchParams.delete("draft"); window.history.replaceState(null, "", url); }
 
-async function todayApi<T = unknown>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, { method, credentials: "same-origin", cache: "no-store", headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const payload = response.headers.get("content-type")?.includes("application/json") ? await response.json() : undefined;
-  if (!response.ok) { const error = new Error(payload?.message || "Threadwise could not complete that request.") as ApiError; error.status = response.status; throw error; }
-  return payload as T;
-}
