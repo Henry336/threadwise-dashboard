@@ -263,6 +263,13 @@ updates the Working log below** (newest first: date, who, what, current state).
 
 ## Working log
 
+- **2026-11-09 (Claude, PR open, not merged):** Applied the 2026-11-01 review fixes on branch
+  `fix/review-dashboard`: high/critical advisories patched (Next 16.4.5), Escape no longer closes the
+  note editor, Today refreshes with the dashboard, Study and the rich editor are lazy-loaded (initial
+  /dashboard JS 507.6 -> 246.1 KB gzip), dead Expenses/rollback code removed and snapshot types derived
+  from zod, one `src/lib/client-api.ts`, one `src/lib/use-modal.ts`, shared `src/lib/zoned-time.ts`, and
+  source-text tests replaced by ESLint bans. 189 unit tests, lint, build and Playwright (24/8 skips) pass.
+
 - **2026-09-12 (Codex):** Added shared background sync and eight lifecycle/request-budget tests.
   Dashboard's full 210-test suite, types/lint/build/secret scans, and browser checks (20 passed,
   6 intentional platform skips) pass. Backend v0.35.4 is live and its pending queue is draining;
