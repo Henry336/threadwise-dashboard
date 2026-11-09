@@ -1,6 +1,6 @@
 "use client";
 
-/** Shared modal behaviour hook used by every Threadwise dialog and sheet. */
+/** Shared modal behaviour hook used by the Threadwise dialogs and sheets (a few Study dialogs still keep their own listeners). */
 import { useEffect, useRef, type RefObject } from "react";
 import { acquireBodyScrollLock } from "./body-scroll-lock";
 
@@ -38,7 +38,8 @@ export function useModal(ref: RefObject<HTMLElement | null>, onClose: () => void
     });
     const keydown = (event: KeyboardEvent) => {
       if (openModals.at(-1) !== token) return;
-      if (event.key === "Escape") { event.preventDefault(); latest.current.onClose(); return; }
+      // A control inside the modal (an open picker, say) that already handled Escape keeps the modal open.
+      if (event.key === "Escape") { if (event.defaultPrevented) return; event.preventDefault(); latest.current.onClose(); return; }
       const root = latest.current.options.trapRoot?.() ?? ref.current;
       if (event.key !== "Tab" || !root) return;
       const focusable = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
