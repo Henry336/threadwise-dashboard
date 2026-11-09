@@ -28,7 +28,6 @@ export function getDemoSnapshot(): DashboardSnapshot {
         dueAt: at(0, 11, 30),
         status: "OPEN",
         pinned: true,
-        reminderCount: 1,
       },
       {
         id: "task-2",
@@ -44,7 +43,6 @@ export function getDemoSnapshot(): DashboardSnapshot {
         title: "Review the project timeline",
         dueAt: at(0, 19, 0),
         status: "OPEN",
-        recurring: true,
       },
       {
         id: "task-4",
@@ -52,7 +50,6 @@ export function getDemoSnapshot(): DashboardSnapshot {
         title: "Return the library book",
         dueAt: at(-1, 17, 0),
         status: "OPEN",
-        reminderCount: 2,
       },
       {
         id: "task-5",
@@ -134,70 +131,28 @@ export function getDemoSnapshot(): DashboardSnapshot {
     ],
     images: [
       {
-        id: "image-1", publicId: "IMG-28", mediaKind: "photo", mimeType: "image/svg+xml",
+        id: "image-1", publicId: "IMG-28", mediaKind: "photo",
         fileName: "garden-light.svg", caption: "Late afternoon light in the garden", ocrText: "", createdAt: at(0, 16, 42),
       },
       {
-        id: "image-2", publicId: "IMG-27", mediaKind: "photo", mimeType: "image/svg+xml",
+        id: "image-2", publicId: "IMG-27", mediaKind: "photo",
         fileName: "launch-board.svg", caption: "Launch board after the planning session", ocrText: "Launch · polish · publish", createdAt: at(0, 10, 18),
       },
       {
-        id: "image-3", publicId: "IMG-26", mediaKind: "photo", mimeType: "image/svg+xml",
+        id: "image-3", publicId: "IMG-26", mediaKind: "photo",
         fileName: "morning-cafe.svg", caption: "A quiet table before class", ocrText: "Morning Tide", createdAt: at(-1, 8, 22),
       },
       {
-        id: "image-4", publicId: "IMG-25", mediaKind: "document", mimeType: "image/svg+xml",
+        id: "image-4", publicId: "IMG-25", mediaKind: "document",
         fileName: "receipt.svg", caption: "Notebook receipt", ocrText: "Paper & Pine · notebook · pens · $14.90", createdAt: at(-1, 16, 18),
       },
       {
-        id: "image-5", publicId: "IMG-24", mediaKind: "photo", mimeType: "image/svg+xml",
+        id: "image-5", publicId: "IMG-24", mediaKind: "photo",
         fileName: "city-rain.svg", caption: "Rain on the walk home", ocrText: "", createdAt: at(-3, 20, 4),
       },
       {
-        id: "image-6", publicId: "IMG-23", mediaKind: "photo", mimeType: "image/svg+xml",
+        id: "image-6", publicId: "IMG-23", mediaKind: "photo",
         fileName: "book-stack.svg", caption: "References for the next project", ocrText: "Design systems · Quiet interfaces", createdAt: at(-6, 13, 12),
-      },
-    ],
-    expenses: [
-      {
-        id: "expense-1",
-        publicId: "E-52",
-        merchant: "Morning Tide",
-        description: "Coffee and toast",
-        total: 8.4,
-        currency: "SGD",
-        category: "Food",
-        transactionAt: at(0, 8, 34),
-      },
-      {
-        id: "expense-2",
-        publicId: "E-51",
-        merchant: "Paper & Pine",
-        description: "Notebook and pens",
-        total: 14.9,
-        currency: "SGD",
-        category: "School",
-        transactionAt: at(-1, 16, 18),
-      },
-      {
-        id: "expense-3",
-        publicId: "E-48",
-        merchant: "SimplyGo",
-        description: "Transit top-up",
-        total: 20,
-        currency: "SGD",
-        category: "Transport",
-        transactionAt: at(-3, 12, 0),
-      },
-      {
-        id: "expense-4",
-        publicId: "E-46",
-        merchant: "FairPrice",
-        description: "Groceries",
-        total: 36.25,
-        currency: "SGD",
-        category: "Food",
-        transactionAt: at(-5, 19, 44),
       },
     ],
     activity: [
@@ -210,8 +165,7 @@ export function getDemoSnapshot(): DashboardSnapshot {
       { day: "Sun", captures: 6, completed: 4 },
     ],
     integrations: [
-      { provider: "calendar", name: "Calendar", state: "connected", detail: "2 dated tasks synced", autoSync: true, syncedCount: 2, unsyncedCount: 1 },
-      { provider: "excel", name: "Excel", state: "connected", detail: "Threadwise Expenses.xlsx", autoSync: true, syncedCount: 3, unsyncedCount: 0, workbookName: "Threadwise Expenses.xlsx" },
+      { provider: "calendar", name: "Calendar", state: "connected", detail: "2 dated tasks synced", syncedCount: 2, unsyncedCount: 1 },
     ],
     settings: {
       timezone: "Asia/Singapore",
@@ -244,17 +198,16 @@ export function getGroupDemoSnapshot(): DashboardSnapshot {
     "task-7": { title: "Schedule the final rehearsal", description: "Find a time that works for every assignee." },
   };
   const members: NonNullable<DashboardSnapshot["collaboration"]>["members"] = [
-    { telegramId: "1001", username: "maya", displayName: "Maya", initials: "M", role: "OWNER", lastSeenAt: now, openTasks: 2, blockedTasks: 0, awaitingTasks: 0 },
-    { telegramId: "1002", username: "alex", displayName: "Alex", initials: "A", role: "ADMIN", lastSeenAt: now, openTasks: 2, blockedTasks: 0, awaitingTasks: 1 },
-    { telegramId: "1003", username: "priya", displayName: "Priya", initials: "P", role: "MEMBER", lastSeenAt: now, openTasks: 1, blockedTasks: 1, awaitingTasks: 0 },
+    { telegramId: "1001", username: "maya", displayName: "Maya", initials: "M", role: "OWNER", openTasks: 2 },
+    { telegramId: "1002", username: "alex", displayName: "Alex", initials: "A", role: "ADMIN", openTasks: 2 },
+    { telegramId: "1003", username: "priya", displayName: "Priya", initials: "P", role: "MEMBER", openTasks: 1 },
   ];
-  const assignment = (id: string, member: typeof members[number], status: "PENDING" | "ACCEPTED" | "BLOCKED", statusReason?: string) => ({
+  const assignment = (id: string, member: typeof members[number], status: "PENDING" | "ACCEPTED" | "BLOCKED") => ({
     id,
     telegramId: member.telegramId,
     username: member.username,
     displayName: member.displayName,
     status,
-    ...(statusReason ? { statusReason } : {}),
     updatedAt: now,
   });
   const tasks = personal.tasks.map((task, index) => ({
@@ -264,7 +217,7 @@ export function getGroupDemoSnapshot(): DashboardSnapshot {
     updatedAt: now,
     assignees: index === 0 ? [assignment("assignment-1", members[0], "ACCEPTED")]
       : index === 1 ? [assignment("assignment-2", members[1], "PENDING")]
-        : index === 3 ? [assignment("assignment-3", members[2], "BLOCKED", "Waiting for venue confirmation")]
+        : index === 3 ? [assignment("assignment-3", members[2], "BLOCKED")]
           : [],
   }));
   const pollDay = new Date();
@@ -277,7 +230,6 @@ export function getGroupDemoSnapshot(): DashboardSnapshot {
     workspace: { id: "group-demo", kind: "GROUP", name: "Launch circle", role: "OWNER", memberCount: members.length },
     user: { ...personal.user, telegramId: "1001", firstName: "Maya" },
     tasks,
-    expenses: [],
     integrations: [],
     collaboration: {
       viewerTelegramId: "1001",
@@ -287,7 +239,7 @@ export function getGroupDemoSnapshot(): DashboardSnapshot {
         { id: "activity-2", type: "TASK_ASSIGNED", actorTelegramId: "1001", actorName: "Maya", taskPublicId: "T-191", taskTitle: "Send project notes to the team", summary: "Maya assigned T-191 to Alex.", createdAt: at(-1, 18, 20) },
         { id: "activity-3", type: "TASK_BLOCKED", actorTelegramId: "1003", actorName: "Priya", taskPublicId: "T-177", taskTitle: "Prepare the venue fallback", summary: "Priya blocked T-177 while waiting for venue confirmation.", createdAt: at(-1, 14, 5) },
       ],
-      summary: { overdue: 1, unassigned: 3, awaitingAcknowledgement: 1, blocked: 1, createdThisWeek: 6, completedThisWeek: 1, handoffsThisWeek: 1 },
+      summary: { overdue: 1, unassigned: 3, createdThisWeek: 6, completedThisWeek: 1 },
     },
     scheduling: { polls: [{
       id: "poll-demo-1", publicId: "TIME-A1B2C3", title: "Final launch rehearsal", status: "OPEN",

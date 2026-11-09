@@ -105,7 +105,7 @@ export async function getDashboardSnapshot(
     },
     images: parsed.images ?? [],
     settings: parsed.settings ?? defaultSettings(parsed.user.timezone),
-  } as DashboardSnapshot;
+  } satisfies DashboardSnapshot;
 }
 
 export async function getDashboardWorkspaces(user: SessionUser | null): Promise<DashboardWorkspace[]> {

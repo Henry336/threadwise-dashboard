@@ -5,16 +5,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent, ReactNode } from "react";
 import {
-  Archive, ArrowRight, BarChart3, BrainCircuit, Check, ChevronLeft, ChevronRight,
-  CheckSquare2, CircleDollarSign, Cloud, Download, ExternalLink, FileText, Filter, Image as ImageIcon,
+  Archive, ArrowRight, BrainCircuit, Check, ChevronLeft, ChevronRight,
+  CheckSquare2, Download, FileText, Filter, Image as ImageIcon,
   Lightbulb, LoaderCircle, MoreHorizontal, Pencil, Pin, Plus, RefreshCw, Search,
-  Sparkles, Star, Trash2, TrendingUp, X, Zap,
+  Sparkles, Star, Trash2, X, Zap,
 } from "lucide-react";
 import { ActionMenu, useActionMenu } from "./action-menu";
 import type { ActionMenuAction } from "./action-menu";
 import type {
-  DashboardExpense, DashboardIdea, DashboardImage, DashboardNote, IdeaBrief,
-  IdeaStatus, IntegrationStatus,
+  DashboardIdea, DashboardImage, DashboardNote, IdeaBrief,
+  IdeaStatus,
 } from "@/lib/types";
 import { buildMarkdownExport, markdownExcerpt, safeMarkdownFileName } from "@/lib/study-markdown";
 
@@ -22,7 +22,6 @@ type Pagination = { page: number; hasMore: boolean; loading: boolean };
 export type IdeaBriefDialogState = { idea: DashboardIdea; brief?: IdeaBrief; loading: boolean; error?: string };
 
 const DEMO_IMAGES = ["garden-light.svg", "launch-board.svg", "morning-cafe.svg", "receipt.svg", "city-rain.svg", "book-stack.svg"];
-const CATEGORY_COLORS = ["#6556d8", "#168b83", "#e68a63", "#e1b64a", "#87a36b", "#a776bb"];
 
 function calendarKey(value: string | Date, timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: timezone }).formatToParts(new Date(value));
@@ -34,9 +33,6 @@ function formatDate(value: string, timezone: string, options: Intl.DateTimeForma
   return new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", timeZone: timezone, ...options }).format(new Date(value));
 }
 
-function money(value: number, currency: string) {
-  return new Intl.NumberFormat("en-SG", { style: "currency", currency }).format(value);
-}
 
 function downloadPersonalNote(note: DashboardNote): void {
   const source = buildMarkdownExport({ title: note.title, body: note.body || note.summary, publicId: note.publicId });
@@ -254,75 +250,6 @@ function PhaseTwoImageLightbox({ image, images, isDemo, onClose, onMove, onEdit,
     <figure onPointerDown={(event) => { pointerStart.current = event.clientX; }} onPointerUp={(event) => { if (pointerStart.current === null) return; const delta = event.clientX - pointerStart.current; if (Math.abs(delta) > 55) onMove(delta > 0 ? -1 : 1); pointerStart.current = null; }}><img draggable={false} src={imageSrc(image, isDemo, images.indexOf(image))} alt={image.caption ?? image.fileName ?? "Saved image"} /><figcaption><b>{image.caption || image.fileName || "Untitled image"}</b>{image.ocrText && <p>{image.ocrText}</p>}</figcaption></figure>
     <button className="tw-phase-lightbox-arrow right" onClick={() => onMove(1)} aria-label="Next image"><ChevronRight size={30} /></button>
   </div>;
-}
-
-function categoryGradient(categories: [string, number][], total: number) {
-  if (!categories.length || total <= 0) return "conic-gradient(var(--line) 0 100%)";
-  let cursor = 0;
-  const stops = categories.slice(0, 6).map(([, value], index) => {
-    const start = cursor;
-    cursor += value / total * 100;
-    return `${CATEGORY_COLORS[index]} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
-  });
-  if (cursor < 100) stops.push(`var(--line) ${cursor.toFixed(2)}% 100%`);
-  return `conic-gradient(${stops.join(", ")})`;
-}
-
-export function PhaseTwoExpensesView({ expenses, timezone, currency, integration, shared = false, onConnect, onSync, onEdit, onAdd, pagination, onLoadMore, announce }: {
-  expenses: DashboardExpense[];
-  timezone: string;
-  currency: string;
-  integration?: IntegrationStatus;
-  shared?: boolean;
-  onConnect: () => void;
-  onSync: () => Promise<void>;
-  onEdit: (expense: DashboardExpense) => void;
-  onAdd: () => void;
-  pagination: Pagination;
-  onLoadMore: () => void;
-  announce: (message: string) => void;
-}) {
-  const [syncing, setSyncing] = useState(false);
-  const currentMonth = calendarKey(new Date(), timezone).slice(0, 7);
-  const monthly = expenses.filter((expense) => calendarKey(expense.transactionAt, timezone).startsWith(currentMonth));
-  const current = monthly.filter((expense) => expense.currency === currency);
-  const total = current.reduce((sum, expense) => sum + expense.total, 0);
-  const average = current.length ? total / current.length : 0;
-  const largest = current.reduce<DashboardExpense | undefined>((winner, expense) => !winner || expense.total > winner.total ? expense : winner, undefined);
-  const synced = current.filter((expense) => expense.excelSyncedAt).length;
-  const categories = Object.entries(current.reduce<Record<string, number>>((result, expense) => ({ ...result, [expense.category || "Other"]: (result[expense.category || "Other"] ?? 0) + expense.total }), {})).sort((a, b) => b[1] - a[1]) as [string, number][];
-  const now = new Date();
-  const months = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5 + index, 1));
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-    const value = expenses.filter((expense) => expense.currency === currency && calendarKey(expense.transactionAt, timezone).startsWith(key)).reduce((sum, expense) => sum + expense.total, 0);
-    return { key, label: new Intl.DateTimeFormat("en-SG", { month: "short" }).format(date), value };
-  });
-  const peak = Math.max(...months.map((month) => month.value), 1);
-  const exportCsv = () => {
-    const rows = [["Date", "Merchant", "Description", "Category", "Total", "Currency"], ...expenses.map((expense) => [expense.transactionAt, expense.merchant ?? "", expense.description, expense.category ?? "", String(expense.total), expense.currency])];
-    const blob = new Blob([rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n")], { type: "text/csv" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "threadwise-expenses.csv";
-    link.click();
-    URL.revokeObjectURL(link.href);
-    announce("Expense CSV downloaded.");
-  };
-  const sync = async () => { setSyncing(true); try { await onSync(); } catch (error) { announce(error instanceof Error ? error.message : "Excel sync could not be completed."); } finally { setSyncing(false); } };
-  return <section className="tw-phase-expenses">
-    <div className="tw-phase-expense-hero">
-      <div className="tw-phase-expense-total"><span>This month · {currency}</span><h2>{money(total, currency)}</h2><p>{current.length ? `${current.length} captures, averaging ${money(average, currency)}` : "Your first captured expense will appear here."}</p><div className="tw-phase-month-bars" aria-label="Six month spending trend">{months.map((month) => <span key={month.key}><i style={{ height: `${Math.max(8, month.value / peak * 100)}%` }} /><small>{month.label}</small></span>)}</div></div>
-      <div className="tw-phase-expense-ring-card"><div className="tw-phase-expense-ring" style={{ "--expense-ring": categoryGradient(categories, total) } as CSSProperties}><span><b>{categories.length}</b><small>categories</small></span></div><div><span>Where it went</span>{categories.slice(0, 5).map(([category, value], index) => <p key={category}><i style={{ background: CATEGORY_COLORS[index] }} /><b>{category}</b><small>{money(value, currency)}</small></p>)}{!categories.length && <p className="empty">Categories appear as you capture expenses.</p>}</div></div>
-    </div>
-    <div className="tw-phase-expense-metrics">
-      <article><span><TrendingUp size={18} /></span><div><small>Average capture</small><b>{money(average, currency)}</b><p>Across this month</p></div></article>
-      <article><span><BarChart3 size={18} /></span><div><small>Largest movement</small><b>{largest ? money(largest.total, currency) : money(0, currency)}</b><p>{largest?.merchant || largest?.description || "Nothing captured yet"}</p></div></article>
-      <article><span><Cloud size={18} /></span><div><small>{shared ? "Shared captures" : "Excel coverage"}</small><b>{shared ? current.length : `${current.length ? Math.round(synced / current.length * 100) : 0}%`}</b><p>{shared ? "Visible to verified group members" : `${synced} of ${current.length} synced`}</p></div></article>
-    </div>
-    {integration && <div className="tw-phase-sync-ribbon"><span><Cloud size={18} /><div><b>{integration.state === "connected" ? "Excel is connected" : "Connect your expense workbook"}</b><small>{integration.detail}</small></div></span>{integration.state === "connected" ? <button onClick={() => void sync()} disabled={syncing}>{syncing ? <LoaderCircle className="spin" size={15} /> : <RefreshCw size={15} />} Sync now</button> : <button onClick={onConnect}>{integration.state === "attention" ? "Create workbook" : "Connect Excel"} <ExternalLink size={14} /></button>}</div>}
-    <div className="tw-phase-expense-ledger"><header><div><span>Activity</span><h3>Recent movements</h3></div><div><button onClick={exportCsv}><Download size={16} /> Export</button><button className="tw-primary" onClick={onAdd}><Plus size={16} /> Add expense</button></div></header><div className="tw-phase-expense-rows">{expenses.map((expense) => <button key={expense.id} onClick={() => onEdit(expense)}><span>{(expense.merchant || expense.description || "E")[0].toUpperCase()}</span><div><b>{expense.merchant || expense.description}</b><small>{expense.description}{expense.category ? ` · ${expense.category}` : ""}</small></div><time>{formatDate(expense.transactionAt, timezone, { year: "numeric" })}</time><p><b>{money(expense.total, expense.currency)}</b><small>{expense.excelSyncedAt ? "Synced" : "Not synced"}</small></p><ArrowRight size={17} /></button>)}</div>{!expenses.length && <CollectionEmpty icon={<CircleDollarSign size={27} />} title="No expenses yet" copy="Capture one in Telegram or add it here." />}<LoadMore state={pagination} onLoadMore={onLoadMore} /></div>
-  </section>;
 }
 
 export function PhaseTwoIdeaBriefDialog({ state, onClose, onRefresh }: { state: IdeaBriefDialogState; onClose: () => void; onRefresh: () => void }) {
