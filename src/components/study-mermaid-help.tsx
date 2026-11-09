@@ -1,9 +1,17 @@
 "use client";
 
+/**
+ * Side panel in the note editor that teaches Mermaid/UML diagram syntax and inserts examples.
+ * Templates and the quick reference come from `src/lib/study-mermaid-templates.ts`.
+ */
 import { BookOpen, ExternalLink, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MERMAID_SYNTAX_SECTIONS, MERMAID_TEMPLATES } from "../lib/study-mermaid-templates";
 
+/**
+ * Searchable diagram guide. Filters templates by name, family, tips and source text,
+ * and calls `onInsert` with a template's Mermaid source when the user picks one.
+ */
 export function StudyMermaidHelp({ open, onClose, onInsert }: { open: boolean; onClose: () => void; onInsert: (source: string) => void }) {
   const [query, setQuery] = useState("");
   const templates = useMemo(() => {

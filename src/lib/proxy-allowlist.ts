@@ -1,11 +1,22 @@
+/**
+ * The exact backend paths and methods the BFF proxy may forward. Anything not listed gets a 404
+ * from the proxy, so a signed-in browser cannot reach backend routes the dashboard does not use.
+ * When a component needs a new backend call, add its path here and to `proxy-allowlist.test.ts`.
+ */
+/** Note draft ids are UUIDs; other ids only need to be URL-safe. */
 const UUID_SEGMENT = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}";
 const STUDY_PATH = new RegExp(`^study/(?:snapshot|search|places|calendar/(?:connect|sync|stop)|modules(?:/[A-Za-z0-9_-]+(?:/analysis)?)?|analysis-suggestions/[A-Za-z0-9_-]+|items(?:/[A-Za-z0-9_-]+(?:/complete)?)?|resources(?:/[A-Za-z0-9_-]+(?:/content)?)?|note-drafts(?:/${UUID_SEGMENT})?|sessions/(?:start|stop|[A-Za-z0-9_-]+)|mistakes(?:/[A-Za-z0-9_-]+/resolve)?|weekly-plan|review|settings|canvas/sync|canvas/assignments/[A-Za-z0-9_-]+|origins(?:/[A-Za-z0-9_-]+)?|schedule(?:/[A-Za-z0-9_-]+)?|nusmods/import)$`);
 const PERSONAL_NOTE_DRAFT_PATH = new RegExp(`^note-drafts(?:/${UUID_SEGMENT})?$`);
 
+/** Is this path (after `/api/threadwise/`) one the dashboard is allowed to call at all? */
 export function isAllowedThreadwiseProxyPath(path: string) {
   return STUDY_PATH.test(path) || PERSONAL_NOTE_DRAFT_PATH.test(path) || /^(?:snapshot|workspaces|events|today(?:\/order|\/[A-Za-z0-9_-]+\/(?:plan|complete))?|task-drafts(?:\/[A-Za-z0-9_-]+(?:\/items(?:\/[A-Za-z0-9_-]+)?|\/review|\/commit)?)?|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|task-imports\/[A-Za-z0-9_-]+(?:\/(?:items\/[A-Za-z0-9_-]+|import|cancel))?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|scheduling\/polls(?:\/[A-Za-z0-9_-]+(?:\/(?:availability|finalize|remind|cancel|calendar))?)?|integrations\/(?:calendar|excel)\/(?:connect|disconnect)|integrations\/calendar\/(?:sync|task)|integrations\/excel\/(?:sync|workbook)|privacy\/(?:export|account))$/.test(path);
 }
 
+/**
+ * Is this HTTP method allowed on this path? Checked after the path test, so each path accepts only
+ * the verbs its screen needs (for example the Study snapshot is read-only).
+ */
 export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (path === "study/snapshot" || path === "study/search" || path === "study/places" || /^study\/resources\/[A-Za-z0-9_-]+\/content$/.test(path)) return method === "GET";
   if (path === "study/modules") return method === "POST";

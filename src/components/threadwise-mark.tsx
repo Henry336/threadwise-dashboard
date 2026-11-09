@@ -1,3 +1,8 @@
+/**
+ * Inline SVG brand marks: the Threadwise logo and the Telegram icon, used on the landing,
+ * privacy and dashboard pages. They draw with `currentColor`, so they follow the theme.
+ */
+/** Logo plus the "threadwise" word. `compact` shows only the glyph. */
 export function ThreadwiseMark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="brand-lockup" aria-label="Threadwise">
@@ -7,6 +12,7 @@ export function ThreadwiseMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
+/** The Threadwise logo shape on its own (a shield with a looping thread). */
 export function ThreadwiseGlyph({ className }: { className?: string }) {
   return (
     <svg
@@ -34,6 +40,7 @@ export function ThreadwiseGlyph({ className }: { className?: string }) {
   );
 }
 
+/** Telegram paper-plane icon. Decorative only (`aria-hidden`). */
 export function TelegramGlyph({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">

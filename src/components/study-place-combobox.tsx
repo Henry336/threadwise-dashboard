@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Search box for NUS venues and bus stops, used by the Study timetable block form.
+ * It queries the backend place search through the BFF (`/api/threadwise/study/places`).
+ * A chosen place gives the block a place id, which the backend needs for leave-time travel reminders.
+ */
 import { useEffect, useId, useRef, useState } from "react";
 import { Building2, LoaderCircle, MapPin, Search } from "lucide-react";
 import type { StudyPlace } from "@/lib/study-types";
@@ -15,6 +20,11 @@ type Props = {
   disabled?: boolean;
 };
 
+/**
+ * Combobox input. Typing clears the chosen place id; after 2+ characters and a 200 ms debounce it
+ * fetches matches (aborting older requests) and groups them into Venues and Bus stops.
+ * Free text can still be saved as a label, but then no leave-time reminder is possible.
+ */
 export function StudyPlaceCombobox({
   value,
   placeId,
@@ -62,6 +72,7 @@ export function StudyPlaceCombobox({
     };
   }, [placeId, query]);
 
+  /** Accepts a suggestion: stores its display name and id, and closes the list. */
   const choose = (place: StudyPlace) => {
     onChange(place.displayName, place.id);
     setOpen(false);
@@ -124,6 +135,7 @@ export function StudyPlaceCombobox({
   </label>;
 }
 
+/** One titled group of options. `onMouseDown` prevents blur so the click lands before the list closes. */
 function PlaceGroup({ title, icon: Icon, entries, listboxId, activeIndex, onChoose }: {
   title: string;
   icon: typeof MapPin;
@@ -155,6 +167,7 @@ function PlaceGroup({ title, icon: Icon, entries, listboxId, activeIndex, onChoo
   </section>;
 }
 
+/** Rebuilds the combobox place id (`venue:...` or `stop:...`) from a saved timetable block. */
 export function scheduleBlockPlaceId(block: { venueId?: string | null; destinationStopId?: string | null }) {
   if (block.venueId) return /^(?:venue|stop):/.test(block.venueId) ? block.venueId : `venue:${block.venueId}`;
   return block.destinationStopId ? `stop:${block.destinationStopId}` : null;

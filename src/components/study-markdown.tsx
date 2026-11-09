@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Read-only Markdown renderer for Study and Personal notes (GFM, `++underline++`,
+ * `[[wiki links]]`, Mermaid code blocks). Raw HTML is skipped and links pass through
+ * `safeMarkdownLink`, so note content cannot inject scripts. Media lives in `study-markdown-media.tsx`.
+ */
 import { isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +15,10 @@ import { MarkdownImage, MermaidDiagram } from "./study-markdown-media";
 
 type MarkdownNode = { type?: string; value?: string; children?: MarkdownNode[]; data?: { hName?: string } };
 
+/**
+ * Small remark plugin that turns `++text++` into `<u>text</u>`. Standard Markdown has no
+ * underline, so Threadwise uses this shorthand from its editor.
+ */
 function remarkUnderline() {
   return (tree: MarkdownNode) => {
     const visit = (node: MarkdownNode) => {
@@ -36,6 +45,11 @@ function remarkUnderline() {
   };
 }
 
+/**
+ * Renders one note. `threadwise-note:` links (from `[[wiki links]]`) become buttons that call
+ * `onOpenNote`; other links open in a new tab. `mermaid` code blocks become diagrams,
+ * images go through the consent-gated `MarkdownImage`, and task checkboxes are read-only.
+ */
 export function StudyMarkdown({ source, onOpenNote }: { source: string; onOpenNote?: (target: string) => void }) {
   return <div className="study-markdown">
     <ReactMarkdown

@@ -33,9 +33,31 @@ test("command palette owns focus, dismisses by keyboard, and restores its trigge
   await trigger.click();
   await expect(page.getByRole("dialog", { name: /find anything/i })).toBeVisible();
   await expect(page.getByRole("textbox", { name: /find anything/i })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: /find anything/i })).toHaveCount(0);
   await expect(trigger).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
+});
+
+test("Escape closes only the top dialog when the palette opens over the note editor", async ({ page }) => {
+  await page.goto("/dashboard?demo=1", { waitUntil: "load" });
+  await page.getByRole("button", { name: "Write note" }).click();
+  const editor = page.locator(".study-note-fullscreen");
+  await expect(editor).toBeVisible();
+  await editor.getByRole("button", { name: "Close note editor" }).focus();
+  await page.keyboard.press("/");
+  const palette = page.getByRole("dialog", { name: /find anything/i });
+  await expect(palette).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(palette).toHaveCount(0);
+  await expect(editor).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+
+  await page.keyboard.press("Escape");
+  await expect(editor).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
 });
 
 test("demo remains scrollable without viewport-wide horizontal overflow", async ({ page }) => {
@@ -141,6 +163,13 @@ test("rich notes keep typing focus, show list markers, and isolate the filing di
   await expect(filingDialog).toBeVisible();
   await expect(page.locator(".study-note-fullscreen > main")).toHaveAttribute("inert", "");
   await expect(filingDialog.getByRole("textbox", { name: "Title" })).toBeFocused();
+
+  // Escape closes only the filing sheet; the editor and its text stay open.
+  await page.keyboard.press("Escape");
+  await expect(filingDialog).toHaveCount(0);
+  const editor = page.locator(".study-note-fullscreen");
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('[contenteditable="true"][aria-label="Personal note"]')).toContainText("Second item typed without refocusing");
 });
 
 test("Personal and Study's shared editor normalizes UML shorthand and exposes only useful layout controls", async ({ page }, testInfo) => {

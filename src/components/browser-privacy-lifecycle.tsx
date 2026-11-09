@@ -1,8 +1,16 @@
 "use client";
 
+/**
+ * Clears locally stored drafts when the user logs out, so the next person on a shared
+ * browser cannot read them. Mounted once from the root layout (`src/app/layout.tsx`).
+ */
 import { useEffect } from "react";
 import { clearThreadwiseDrafts } from "@/lib/browser-drafts";
 
+/**
+ * Renders nothing. Listens (capture phase) for any form submit to `/api/auth/logout` and
+ * wipes Threadwise drafts from localStorage first. A storage error never blocks logout.
+ */
 export function BrowserPrivacyLifecycle() {
   useEffect(() => {
     const clearDraftsOnLogout = (event: SubmitEvent) => {

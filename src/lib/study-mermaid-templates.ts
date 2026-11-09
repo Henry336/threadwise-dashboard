@@ -1,3 +1,7 @@
+/**
+ * Content for the Mermaid/UML help guide (`study-mermaid-help.tsx`): a syntax cheat sheet and
+ * starter templates. Tests check the templates are bounded and unique, and cover UML class, sequence and state.
+ */
 export type MermaidTemplate = {
   id: string;
   name: string;
@@ -13,6 +17,7 @@ export type MermaidSyntaxSection = {
   entries: Array<{ syntax: string; meaning: string }>;
 };
 
+/** Cheat-sheet rows, starting with Threadwise's easy shorthand. */
 export const MERMAID_SYNTAX_SECTIONS: MermaidSyntaxSection[] = [
   {
     title: "Threadwise easy syntax",
@@ -100,6 +105,7 @@ export const MERMAID_SYNTAX_SECTIONS: MermaidSyntaxSection[] = [
   },
 ];
 
+/** Starter diagrams a user can insert into a note. */
 export const MERMAID_TEMPLATES: MermaidTemplate[] = [
   {
     id: "flowchart",

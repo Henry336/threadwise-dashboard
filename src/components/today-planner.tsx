@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Today panel shown on the Personal, Group and Study overviews (`dashboard-app.tsx`, `study-dashboard.tsx`).
+ * "Today" is a planned-day view of ordinary tasks, not a separate item type. The panel lists
+ * Today, Carryover and Deadline watch, and offers a review-before-save capture for new tasks.
+ * Data comes from the backend `today` and `task-drafts` endpoints through the BFF via `api()`.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -8,20 +14,26 @@ import { AlertCircle, Check, ChevronLeft, ChevronRight, Clock3, GripVertical, Lo
 import { StudyChoicePicker } from "@/components/study-choice-picker";
 import type { StudyModule } from "@/lib/study-types";
 import type { TaskCaptureDraft, TaskCaptureDraftItem, TodayAgenda, TodayAgendaEntry } from "@/lib/types";
+import { api, ClientApiError } from "@/lib/client-api";
+import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
 
 type Props = {
   variant?: "standard" | "study";
   modules?: StudyModule[];
   onChanged?: () => void;
   disabled?: boolean;
+  /** Changes whenever the surrounding dashboard refreshes, so Today reloads with it. */
+  refreshKey?: string;
 };
 
-type ApiError = Error & { status?: number };
-
-export function TodayPlanner({ variant = "standard", modules = [], onChanged, disabled = false }: Props) {
+/** Today's planned, carried-over and due-soon work, plus the review-before-save task capture. */
+export function TodayPlanner({ variant = "standard", modules = [], onChanged, disabled = false, refreshKey }: Props) {
   const [agenda, setAgenda] = useState<TodayAgenda | null>(null);
   const [draft, setDraft] = useState<TaskCaptureDraft | null>(null);
+  // null until the first load; false hides the panel (the backend answers 404 when Today is not enabled for this user).
   const [supported, setSupported] = useState<boolean | null>(null);
+  // Mirrors a 404 for the refresh effect, so it can skip later loads without re-running on every state change.
+  const unsupported = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -31,13 +43,14 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
   const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set());
   const [reordering, setReordering] = useState(false);
 
+  /** Fetches the agenda. Reruns when `refreshKey` changes, so Today follows dashboard refreshes. */
   const loadAgenda = useCallback(async () => {
     try {
-      const response = await todayApi<{ agenda: TodayAgenda }>("today");
+      const response = await api<{ agenda: TodayAgenda }>("today");
       setAgenda(response.agenda);
       setSupported(true);
     } catch (error) {
-      if ((error as ApiError).status === 404) setSupported(false);
+      if (error instanceof ClientApiError && error.status === 404) { unsupported.current = true; setSupported(false); }
       else setMessage(error instanceof Error ? error.message : "Today could not refresh.");
     } finally {
       setLoading(false);
@@ -45,22 +58,34 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
   }, []);
 
   useEffect(() => {
-    if (disabled) return;
+    // Once the backend has said Today is not enabled, later dashboard refreshes need not ask again.
+    if (disabled || unsupported.current) return;
     const timer = window.setTimeout(() => void loadAgenda(), 0);
     return () => window.clearTimeout(timer);
-  }, [disabled, loadAgenda]);
+  }, [disabled, loadAgenda, refreshKey]);
   useEffect(() => {
     if (disabled) return;
     const draftId = new URLSearchParams(window.location.search).get("draft");
     if (!draftId) return;
-    void todayApi<{ draft: TaskCaptureDraft }>(`task-drafts/${encodeURIComponent(draftId)}`)
+    void api<{ draft: TaskCaptureDraft }>(`task-drafts/${encodeURIComponent(draftId)}`)
       .then((response) => { setDraft(response.draft); setSupported(true); })
       .catch(() => undefined);
   }, [disabled]);
 
+  /** After a change: the parent refresh reloads Today through `refreshKey`; without one, reload here. */
+  const afterChange = async () => {
+    if (onChanged && refreshKey !== undefined) return onChanged();
+    await loadAgenda();
+    onChanged?.();
+  };
+
   const included = useMemo(() => draft?.items.filter((item) => item.included) ?? [], [draft]);
   const unresolved = included.some((item) => item.status === "NEEDS_REVIEW" || item.warnings.length > 0);
 
+  /**
+   * Sends the typed lines to the backend, which splits them into a draft list (or appends to the
+   * open draft). In Study with exactly one module, new items default to that module as revision work.
+   */
   const beginOrAppend = async () => {
     if (!text.trim()) return;
     setSaving(true);
@@ -68,22 +93,25 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     try {
       const path = draft ? `task-drafts/${draft.id}/items` : "task-drafts";
       const moduleId = variant === "study" && modules.length === 1 ? modules[0]?.id : undefined;
-      const response = await todayApi<{ draft: TaskCaptureDraft }>(path, "POST", { text: text.trim(), ...(moduleId ? { moduleId, studyItemType: "REVISION" } : {}) });
+      const response = await api<{ draft: TaskCaptureDraft }>(path, "POST", { text: text.trim(), ...(moduleId ? { moduleId, studyItemType: "REVISION" } : {}) });
       setDraft(response.draft);
       setText("");
       setAdding(false);
-      setSupported(true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "That list could not be prepared.");
     } finally { setSaving(false); }
   };
 
+  /**
+   * Optimistic edit of one draft row: show the change, PATCH it, take the server copy,
+   * and roll back to the previous draft if the request fails.
+   */
   const updateItem = async (item: TaskCaptureDraftItem, patch: Record<string, unknown>) => {
     if (!draft) return;
     const previous = draft;
     setDraft({ ...draft, items: draft.items.map((candidate) => candidate.id === item.id ? { ...candidate, ...patch } as TaskCaptureDraftItem : candidate) });
     try {
-      const response = await todayApi<{ draft: TaskCaptureDraft }>(`task-drafts/${draft.id}/items/${item.id}`, "PATCH", patch);
+      const response = await api<{ draft: TaskCaptureDraft }>(`task-drafts/${draft.id}/items/${item.id}`, "PATCH", patch);
       setDraft(response.draft);
     } catch (error) {
       setDraft(previous);
@@ -91,44 +119,55 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     }
   };
 
+  /**
+   * Saves the whole draft as real tasks in one request. Blocked while any row still has a warning.
+   * Capture never creates reminders implicitly, and the success message says so.
+   */
   const commit = async () => {
     if (!draft || unresolved || !included.length) return;
     setSaving(true);
     try {
-      await todayApi(`task-drafts/${draft.id}/commit`, "POST", {});
+      await api(`task-drafts/${draft.id}/commit`, "POST", {});
       setDraft(null);
       removeDraftQuery();
       setMessage(`Saved ${included.length} task${included.length === 1 ? "" : "s"}. No reminders were created.`);
-      await loadAgenda();
-      onChanged?.();
+      await afterChange();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The list could not be saved.");
     } finally { setSaving(false); }
   };
 
+  /** Discards the draft. A delete error is ignored because an expired draft is already unusable. */
   const cancelDraft = async () => {
     if (!draft) return;
-    try { await todayApi(`task-drafts/${draft.id}`, "DELETE"); } catch { /* Expired drafts are already inert. */ }
+    try { await api(`task-drafts/${draft.id}`, "DELETE"); } catch { /* Expired drafts are already inert. */ }
     setDraft(null);
     setAdding(false);
     removeDraftQuery();
   };
 
+  /**
+   * Moves an entry to a planned day (used by "Do today" on carryover). Removes it optimistically,
+   * then reloads the agenda; rolls back on error.
+   */
   const planEntry = async (entry: TodayAgendaEntry, plannedFor: string | null) => {
     if (!agenda) return;
     const previous = agenda;
     const remove = (items: TodayAgendaEntry[]) => items.filter((candidate) => candidate.id !== entry.id);
     setAgenda({ ...agenda, today: remove(agenda.today), carryover: remove(agenda.carryover) });
     try {
-      await todayApi(`today/${entry.id}/plan`, "PATCH", { plannedFor });
-      await loadAgenda();
-      onChanged?.();
+      await api(`today/${entry.id}/plan`, "PATCH", { plannedFor });
+      await afterChange();
     } catch (error) {
       setAgenda(previous);
       setMessage(error instanceof Error ? error.message : "That plan could not be changed.");
     }
   };
 
+  /**
+   * Marks an entry done. The check mark shows for about 180 ms before the row leaves
+   * (skipped with reduced motion), and the row is restored if the request fails.
+   */
   const completeEntry = async (entry: TodayAgendaEntry) => {
     if (!agenda) return;
     const previous = agenda;
@@ -137,7 +176,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     setCompletingIds((ids) => new Set(ids).add(entry.id));
     setAnnouncement(`${entry.title} marked complete.`);
     try {
-      await todayApi(`today/${entry.id}/complete`, "POST", {});
+      await api(`today/${entry.id}/complete`, "POST", {});
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const remainingMarkTime = reduceMotion ? 0 : Math.max(0, 180 - (Date.now() - markedAt));
       if (remainingMarkTime) await new Promise((resolve) => window.setTimeout(resolve, remainingMarkTime));
@@ -152,6 +191,10 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     }
   };
 
+  /**
+   * Saves a new Today order. Only offered when the server says the agenda is `reorderable`.
+   * Sends `expectedRevision` so a stale order from another tab is rejected; rolls back on error.
+   */
   const reorderToday = async (ordered: TodayAgendaEntry[], movedEntryId: string) => {
     if (!agenda?.reorderable || reordering) return;
     const previous = agenda;
@@ -160,7 +203,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     setReordering(true);
     setAnnouncement(moved ? `${moved.title} moved to position ${ordered.findIndex((entry) => entry.id === movedEntryId) + 1}.` : "Today reordered.");
     try {
-      const response = await todayApi<{ agenda: TodayAgenda }>("today/order", "PATCH", {
+      const response = await api<{ agenda: TodayAgenda }>("today/order", "PATCH", {
         localDate: agenda.localDate,
         orderedEntryIds: ordered.map((entry) => entry.id),
         movedEntryId,
@@ -175,6 +218,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
     }
   };
 
+  /** Keyboard and button alternative to dragging: move an entry to the top, up one, or down one. */
   const moveToday = (entryId: string, placement: "top" | "up" | "down") => {
     if (!agenda?.reorderable) return;
     const from = agenda.today.findIndex((entry) => entry.id === entryId);
@@ -215,6 +259,10 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
   </section>;
 }
 
+/**
+ * One row in the capture draft: include checkbox, title, planned day, deadline, and (in Study)
+ * module. Warnings from the backend parser are shown with what the user must decide.
+ */
 function DraftRow({ item, timezone, modules, study, onChange }: { item: TaskCaptureDraftItem; timezone: string; modules: StudyModule[]; study: boolean; onChange: (patch: Record<string, unknown>) => void }) {
   const warning = warningText(item.warnings);
   return <article className={!item.included ? "excluded" : warning ? "needs-review" : ""}>
@@ -223,7 +271,7 @@ function DraftRow({ item, timezone, modules, study, onChange }: { item: TaskCapt
       <label><span>Task</span><input defaultValue={item.title} onBlur={(event) => { const title = event.target.value.trim(); if (title && title !== item.title) onChange({ title }); }} /></label>
       <div>
         <label><span>Plan</span><input type="date" value={dateValue(item.plannedFor)} onChange={(event) => onChange({ plannedFor: event.target.value || null })} /></label>
-        <label><span>Deadline</span><input type="datetime-local" value={localDateTimeValue(item.dueAt, timezone)} onChange={(event) => onChange({ dueAt: event.target.value ? zonedInputToIso(event.target.value, timezone) : null })} /></label>
+        <label><span>Deadline</span><input type="datetime-local" value={zonedInputDate(item.dueAt, timezone)} onChange={(event) => onChange({ dueAt: event.target.value ? zonedInputToIso(event.target.value, timezone) : null })} /></label>
         {study && <StudyChoicePicker label="Module" value={item.moduleId ?? ""} placeholder="Choose module" searchable options={modules.map((module) => ({ value: module.id, label: module.code, detail: module.name }))} onChange={(moduleId) => onChange({ moduleId: moduleId || null, studyItemType: "REVISION" })} />}
       </div>
       {warning && <p><AlertCircle size={14} /> {warning}{item.warnings.includes("REMINDER_REQUIRES_CONFIRMATION") && <button type="button" onClick={() => onChange({ resolveWarnings: true })}>Keep task without reminder</button>}</p>}
@@ -249,6 +297,11 @@ type AgendaColumnProps = {
   onMove?: (entryId: string, placement: "top" | "up" | "down") => void;
 };
 
+/**
+ * One agenda column, paged 5 entries at a time. When `reorderable`, rows are drag-sortable
+ * (dnd-kit with pointer, touch and keyboard sensors). After a keyboard move it turns to the
+ * page that holds the moved entry and returns focus to its handle.
+ */
 function AgendaColumn({ title, empty, entries, timezone, carryover, deadlines, onPlan, onComplete, completingIds, reorderable = false, reorderDisabled = false, onReorder, onMove }: AgendaColumnProps) {
   const [page, setPage] = useState(0);
   const pendingFocusId = useRef<string | null>(null);
@@ -262,6 +315,7 @@ function AgendaColumn({ title, empty, entries, timezone, carryover, deadlines, o
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  /** Turns a finished drag into the new ordered list and reports which entry moved. */
   const finishDrag = (event: DragEndEvent) => {
     if (!reorderable || !onReorder || !event.over || event.active.id === event.over.id) return;
     const from = entries.findIndex((entry) => entry.id === event.active.id);
@@ -279,6 +333,7 @@ function AgendaColumn({ title, empty, entries, timezone, carryover, deadlines, o
     }
   }, [safePage, entries]);
 
+  /** Runs a button move, switches to the target page and remembers which handle to refocus. */
   const moveWithFocus = (entryId: string, placement: "top" | "up" | "down") => {
     if (!onMove) return;
     const from = entries.findIndex((entry) => entry.id === entryId);
@@ -297,6 +352,7 @@ function AgendaColumn({ title, empty, entries, timezone, carryover, deadlines, o
     : rows}{pageCount > 1 && <footer className="today-agenda-pagination"><button type="button" onClick={() => setPage(Math.max(0, safePage - 1))} disabled={safePage === 0} aria-label={`Previous ${title} tasks`}><ChevronLeft size={16} /></button><span>{start + 1}–{start + visible.length} of {entries.length}</span><button type="button" onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))} disabled={safePage + 1 >= pageCount} aria-label={`Next ${title} tasks`}><ChevronRight size={16} /></button></footer>}</> : <p>{empty}</p>}</section>;
 }
 
+/** Plain agenda row: complete button, title and metadata, plus "Do today" on carryover rows. */
 function AgendaRow({ entry, timezone, carryover, deadlines, completing, onComplete, onPlan }: { entry: TodayAgendaEntry; timezone: string; carryover?: boolean; deadlines?: boolean; completing: boolean; onComplete: (entry: TodayAgendaEntry) => void; onPlan?: (entry: TodayAgendaEntry) => void }) {
   return <article>
     <CompletionCircle entry={entry} completing={completing} onComplete={onComplete} />
@@ -306,6 +362,7 @@ function AgendaRow({ entry, timezone, carryover, deadlines, completing, onComple
   </article>;
 }
 
+/** Draggable Today row. Clicking the grip (without dragging) opens Move to top / up / down actions. */
 function SortableAgendaRow({ entry, timezone, completing, disabled, position, total, onComplete, onMove }: { entry: TodayAgendaEntry; timezone: string; completing: boolean; disabled: boolean; position: number; total: number; onComplete: (entry: TodayAgendaEntry) => void; onMove: (entryId: string, placement: "top" | "up" | "down") => void }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: entry.id, disabled });
@@ -322,14 +379,17 @@ function SortableAgendaRow({ entry, timezone, completing, disabled, position, to
   </article>;
 }
 
+/** Empty circle that completes the task. Shows a check while the completion is in flight. */
 function CompletionCircle({ entry, completing, onComplete }: { entry: TodayAgendaEntry; completing: boolean; onComplete: (entry: TodayAgendaEntry) => void }) {
   return <button type="button" className={`today-agenda-complete${completing ? " is-completing" : ""}`} onClick={() => onComplete(entry)} disabled={completing} aria-label={`Complete ${entry.title}`} title="Mark task complete">{completing ? <Check size={17} /> : <span aria-hidden="true" />}</button>;
 }
 
+/** Title plus a metadata line: public id, module or workspace (or mode), and the deadline. */
 function AgendaIdentity({ entry, timezone }: { entry: TodayAgendaEntry; timezone: string }) {
   return <div><b>{entry.title}</b><small><code>{entry.publicId}</code> · {entry.moduleCode ?? entry.workspaceName ?? modeLabel(entry.mode)}{entry.dueAt ? ` · ${formatDeadline(entry.dueAt, timezone)}` : ""}</small></div>;
 }
 
+/** Maps backend draft warning codes to the one instruction the user needs. */
 function warningText(warnings: string[]): string | null {
   if (warnings.includes("STUDY_MODULE_REQUIRED")) return "Choose a module before saving.";
   if (warnings.includes("AMBIGUOUS_BARE_DATE")) return "Choose whether this date is the plan or the deadline.";
@@ -338,33 +398,8 @@ function warningText(warnings: string[]): string | null {
 }
 
 function dateValue(value?: string | null): string { return value?.slice(0, 10) ?? ""; }
-function localDateTimeValue(value: string | null | undefined, timezone: string): string {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value)).replace(" ", "T");
-}
-function zonedInputToIso(value: string, timezone: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-  if (!match) throw new Error("Choose a valid date and time.");
-  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
-  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  let instant = desired;
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const parts = formatter.formatToParts(new Date(instant));
-    const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-    const represented = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
-    const correction = desired - represented;
-    if (!correction) break;
-    instant += correction;
-  }
-  return new Date(instant).toISOString();
-}
 function formatDeadline(value: string, timezone: string): string { return new Intl.DateTimeFormat("en-SG", { timeZone: timezone, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(value)); }
 function modeLabel(mode: TodayAgendaEntry["mode"]): string { return mode === "STUDY" ? "Study" : mode === "GROUP" ? "Group" : "Personal"; }
+/** Removes `?draft=` from the URL without a reload, so a refresh does not reopen a finished draft. */
 function removeDraftQuery() { const url = new URL(window.location.href); url.searchParams.delete("draft"); window.history.replaceState(null, "", url); }
 
-async function todayApi<T = unknown>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, { method, credentials: "same-origin", cache: "no-store", headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const payload = response.headers.get("content-type")?.includes("application/json") ? await response.json() : undefined;
-  if (!response.ok) { const error = new Error(payload?.message || "Threadwise could not complete that request.") as ApiError; error.status = response.status; throw error; }
-  return payload as T;
-}

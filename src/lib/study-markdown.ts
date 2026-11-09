@@ -1,3 +1,5 @@
+/** Markdown helpers for notes: wiki links, excerpts, and `.md` import/export. */
+/** A note read from an imported `.md` file. */
 export type MarkdownFileDraft = {
   title: string;
   body: string;
@@ -5,10 +7,15 @@ export type MarkdownFileDraft = {
 
 const WIKI_LINK = /(?<!\\)\[\[([^\]\n]{1,240})\]\]/gu;
 
+/** Normalises a `[[link]]` target so different spacing or case still finds the same note. */
 export function normalizeMarkdownWikiTarget(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("en");
 }
 
+/**
+ * Turns `[[Note]]` and `[[Note|label]]` into `threadwise-note:` links before rendering. Code fences and
+ * inline code are left alone so code samples are not rewritten.
+ */
 export function markdownWithThreadwiseLinks(source: string): string {
   let fence: "`" | "~" | undefined;
   return source.split("\n").map((line) => {
@@ -30,6 +37,7 @@ export function markdownWithThreadwiseLinks(source: string): string {
   }).join("\n");
 }
 
+/** Applies `replace` only to the parts of a line outside backtick spans. */
 function replaceOutsideInlineCode(line: string, replace: (value: string) => string): string {
   let result = "";
   let cursor = 0;
@@ -42,6 +50,7 @@ function replaceOutsideInlineCode(line: string, replace: (value: string) => stri
   return result + replace(line.slice(cursor));
 }
 
+/** Plain-text preview of a note for cards and search results. Strips Markdown syntax and shows diagrams as "Diagram". */
 export function markdownExcerpt(source: string, limit = 260): string {
   const clean = source
     .replace(/```mermaid\s*[\s\S]*?```/giu, " Diagram. ")
@@ -58,6 +67,7 @@ export function markdownExcerpt(source: string, limit = 260): string {
   return clean.length > limit ? `${clean.slice(0, Math.max(0, limit - 1)).trimEnd()}…` : clean;
 }
 
+/** Reads an imported `.md` file. Title comes from frontmatter `title:`, then the first `#` heading, then the file name. */
 export function parseMarkdownFile(fileName: string, source: string): MarkdownFileDraft {
   const normalized = source.replace(/^\uFEFF/u, "").replace(/\r\n?/gu, "\n");
   let body = normalized;
@@ -83,6 +93,7 @@ export function parseMarkdownFile(fileName: string, source: string): MarkdownFil
   };
 }
 
+/** The `.md` text for exporting a note, with title, module and Threadwise id in YAML frontmatter. */
 export function buildMarkdownExport(input: { title: string; body: string; moduleCode?: string; publicId?: string }): string {
   const metadata = [
     "---",
@@ -95,15 +106,18 @@ export function buildMarkdownExport(input: { title: string; body: string; module
   return `${metadata.join("\n")}${input.body.trim()}\n`;
 }
 
+/** A download file name with characters Windows and macOS reject removed, capped at 120 characters. */
 export function safeMarkdownFileName(title: string): string {
   const clean = title.normalize("NFKC").replace(/[<>:"/\\|?*\u0000-\u001F]/gu, " ").replace(/\s+/gu, " ").trim();
   return `${(clean || "Threadwise note").slice(0, 120)}.md`;
 }
 
+/** Double-quotes a YAML value, escaping backslashes and quotes. */
 function quoteYaml(value: string): string {
   return `"${value.replace(/\\/gu, "\\\\").replace(/"/gu, '\\"')}"`;
 }
 
+/** Reverses quoteYaml for simple quoted values; unquoted values pass through. */
 function unquoteYaml(value: string): string {
   if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
     return value.slice(1, -1).replace(/\\"/gu, '"').replace(/\\\\/gu, "\\");

@@ -1,17 +1,30 @@
 "use client";
+/**
+ * Full-screen Personal note editor, lazy-loaded by dashboard-app.tsx for Personal notes.
+ * Autosaves an encrypted cross-device draft through the BFF (`note-drafts`) while you write,
+ * then saves it as a normal Personal `Note` with a title. Demo mode skips all network calls.
+ * The writing surface itself is StudyRichNoteBody; study-note-editor.tsx is the Study-mode twin.
+ */
 
 import { Check, Cloud, FileText, FileUp, LoaderCircle, Save, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { DashboardNote } from "@/lib/types";
 import { parseMarkdownFile } from "@/lib/study-markdown";
-import { NoteDraftApiError, noteDraftRequest } from "@/lib/note-draft-api";
+import { api, ClientApiError } from "@/lib/client-api";
+import { useModal } from "@/lib/use-modal";
 import { StudyRichNoteBody } from "./study-rich-note-body";
 
 type NoteDraft = { title: string; body: string };
 type RemoteDraft = NoteDraft & { id: string; revision: number; noteUpdatedAt?: string | null; updatedAt: string; expiresAt: string };
 type SaveState = "loading" | "idle" | "saving" | "saved" | "error" | "conflict";
 
+/**
+ * Full-screen writer for a new or existing Personal note, optionally pre-filled from `seed`.
+ * Draft saves are queued one at a time and carry `expectedRevision`, so a newer copy saved on another
+ * device shows as a conflict instead of being overwritten. Closing waits for the last draft save, and
+ * Escape closes the nested filing sheet before the editor (see useModal).
+ */
 export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave }: {
   value?: DashboardNote;
   seed?: string;
@@ -49,6 +62,10 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   const closingRef = useRef(false);
   const filingRef = useRef(false);
 
+  /**
+   * Fetches the saved cross-device draft for this note and loads it. In demo mode there is no draft to fetch.
+   * Falls back to the original note text when no draft exists. Also used by "Load newer copy" after a conflict.
+   */
   const loadDraft = useCallback(async () => {
     setSaveState("loading");
     setMessage("");
@@ -59,7 +76,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     }
     try {
       const query = noteId ? `?noteId=${encodeURIComponent(noteId)}` : "";
-      const response = await noteDraftRequest<{ draft: RemoteDraft | null }>(`note-drafts${query}`);
+      const response = await api<{ draft: RemoteDraft | null }>(`note-drafts${query}`);
       if (!activeRef.current) return;
       const next = response.draft ? { title: response.draft.title, body: response.draft.body } : base.current;
       draftIdRef.current = response.draft?.id;
@@ -86,6 +103,10 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     return () => { window.clearTimeout(timer); activeRef.current = false; };
   }, [loadDraft]);
 
+  /**
+   * Applies a change to the local draft and marks it dirty. The generation counter lets a finished save
+   * tell whether newer typing arrived while it was in flight.
+   */
   const update = useCallback((change: Partial<NoteDraft>) => {
     generationRef.current += 1;
     dirtyRef.current = true;
@@ -96,6 +117,11 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   }, []);
   const updateBody = useCallback((body: string) => update({ body }), [update]);
 
+  /**
+   * Saves the draft to the backend (or pretends to, in demo mode), chained after any save already running so requests never race.
+   * Sends the current revision for optimistic concurrency; a revision or study conflict sets the "conflict" state.
+   * `keepalive` lets the request finish while the page is being hidden or closed.
+   */
   const persistDraft = useCallback((snapshot = draftRef.current, keepalive = false) => {
     if (!loaded) return Promise.resolve(false);
     if (isDemo) {
@@ -110,13 +136,13 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
       setSaveState("saving");
       setMessage("");
       try {
-        const response = await noteDraftRequest<{ draft: RemoteDraft }>("note-drafts", "PATCH", {
+        const response = await api<{ draft: RemoteDraft }>("note-drafts", "PATCH", {
           ...(noteId ? { noteId } : {}),
           ...(noteId && noteVersionRef.current ? { noteUpdatedAt: noteVersionRef.current } : {}),
           title: snapshot.title,
           body: snapshot.body,
           expectedRevision: revisionRef.current,
-        }, keepalive);
+        }, { keepalive });
         draftIdRef.current = response.draft.id;
         revisionRef.current = response.draft.revision;
         if (activeRef.current) {
@@ -130,7 +156,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
       } catch (error) {
         if (activeRef.current) {
           const text = error instanceof Error ? error.message : "Your draft could not be saved.";
-          const conflict = error instanceof NoteDraftApiError && ["revision_conflict", "study_conflict"].includes(error.code ?? "");
+          const conflict = error instanceof ClientApiError && ["revision_conflict", "study_conflict"].includes(error.code ?? "");
           setSaveState(conflict ? "conflict" : "error");
           setMessage(text);
         }
@@ -142,6 +168,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   }, [isDemo, loaded, noteId]);
 
   useEffect(() => {
+    /** Best-effort save on pagehide, so text typed just before closing the tab or switching apps is not lost. */
     const preserveLatestDraft = () => {
       bodyFlushRef.current(false);
       if (dirtyRef.current) void persistDraft(draftRef.current, true);
@@ -156,10 +183,12 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     return () => window.clearTimeout(timer);
   }, [dirty, draft, loaded, persistDraft, saveState]);
 
+  /** StudyRichNoteBody hands us its flush function so we can pull the latest Markdown before saving or closing. */
   const registerBodyFlush = useCallback((flush: ((canonicalize?: boolean) => string) | null) => {
     bodyFlushRef.current = flush ?? (() => draftRef.current.body);
   }, []);
 
+  /** Closes only after any unsaved draft has been stored, so the owner never loses text by closing early. */
   const requestClose = useCallback(async () => {
     if (closingRef.current) return;
     bodyFlushRef.current(false);
@@ -173,39 +202,22 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
 
   useEffect(() => { filingRef.current = filing; }, [filing]);
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (filingRef.current) setFiling(false);
-        else void requestClose();
-        return;
-      }
-      if (event.key !== "Tab" || !modalRef.current) return;
-      const activeModal = filingModalRef.current ?? modalRef.current;
-      const focusable = [...activeModal.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), [contenteditable='true'], [tabindex]:not([tabindex='-1'])")];
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-      returnFocus?.focus();
-    };
-  }, [requestClose]);
+  // Escape first closes the nested filing sheet, then safely closes the editor; Tab stays in whichever is on top.
+  useModal(modalRef, () => { if (filingRef.current) setFiling(false); else void requestClose(); }, {
+    initialFocus: false,
+    trapRoot: () => filingModalRef.current ?? modalRef.current,
+  });
 
+  /**
+   * Opens the "Save note" sheet. Flushes with canonicalize=true so Mermaid easy syntax becomes portable
+   * Mermaid first, and suggests a title from the first line when none was typed.
+   */
   const openFiling = () => {
     const body = bodyFlushRef.current(true);
     if (!draftRef.current.title.trim()) update({ title: suggestedTitle(body) });
     setFiling(true);
   };
+  /** Replaces the draft with an imported `.md` file. Limited to `.md` files up to 1 MB, with friendly errors. */
   const importMarkdown = async (file: File | undefined) => {
     if (!file) return;
     if (!/\.md$/iu.test(file.name)) { setMessage("Choose a Markdown file ending in .md."); return; }
@@ -218,6 +230,10 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
       setMessage("Threadwise could not read that Markdown file. Check that it is plain UTF-8 text and try again.");
     }
   };
+  /**
+   * Saves the note: stores the draft first, then hands title and body to `onSave` (the parent creates or updates the Note).
+   * On success the now-unneeded draft is deleted; if that fails it simply expires on the server.
+   */
   const fileNote = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     bodyFlushRef.current(true);
@@ -225,7 +241,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
     if (dirtyRef.current && !await persistDraft(snapshot)) return;
     const saved = await onSave({ title: snapshot.title.trim(), body: snapshot.body }, value);
     if (!saved || isDemo || !draftIdRef.current) return;
-    try { await noteDraftRequest(`note-drafts/${draftIdRef.current}`, "DELETE", {}); } catch { /* Stale drafts expire automatically. */ }
+    try { await api(`note-drafts/${draftIdRef.current}`, "DELETE", {}); } catch { /* Stale drafts expire automatically. */ }
   };
 
   const status = saveState === "loading" ? "Loading draft…"
@@ -268,6 +284,7 @@ export function PersonalNoteEditor({ value, seed, busy, isDemo, onClose, onSave 
   </div>, document.body);
 }
 
+/** Suggests a title from the first non-empty line, with any Markdown heading marks removed. */
 function suggestedTitle(body: string): string {
   const line = body.split("\n").map((entry) => entry.replace(/^\s{0,3}#{1,6}\s+/u, "").trim()).find(Boolean);
   return (line || "Untitled note").slice(0, 120);

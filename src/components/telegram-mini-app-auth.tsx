@@ -1,7 +1,13 @@
 "use client";
 
+/**
+ * Signs the user in when the dashboard is opened inside Telegram as a Mini App.
+ * Used by the landing page (`src/app/page.tsx`). It posts Telegram's signed launch data to
+ * `/api/auth/telegram-mini-app`, which verifies it and sets the session cookie.
+ */
 import { useEffect, useRef, useState } from "react";
 
+/** The small part of Telegram's `window.Telegram.WebApp` object this component uses. */
 type TelegramWebApp = {
   initData: string;
   platform?: string;
@@ -15,6 +21,13 @@ type TelegramWindow = Window & {
   Telegram?: { WebApp?: TelegramWebApp };
 };
 
+/**
+ * Renders nothing in a normal browser. Inside Telegram it waits briefly for the WebApp
+ * script, sends `initData` to the login route once, then redirects to the returned path.
+ * Shows a "legacy" card when Telegram gives no signed data (the card asks the user to reopen
+ * from the latest bot menu),
+ * and a "failed" card when verification fails.
+ */
 export function TelegramMiniAppAuth() {
   const started = useRef(false);
   const [state, setState] = useState<"idle" | "connecting" | "legacy" | "failed">("idle");
@@ -23,6 +36,10 @@ export function TelegramMiniAppAuth() {
     let attempts = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    /**
+     * Polls up to 10 times (120 ms apart) for the Telegram script, then logs in once.
+     * Only same-site relative redirects are followed, so a bad response cannot send the user away.
+     */
     const connect = async () => {
       const webApp = (window as TelegramWindow).Telegram?.WebApp;
       if (!webApp) {

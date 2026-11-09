@@ -1,4 +1,10 @@
 "use client";
+/**
+ * Study Timetable page: a full-day week grid (vertical or horizontal), a day agenda, and the
+ * dialogs to add, inspect, edit and delete schedule blocks, import NUSMods and mirror to Google Calendar.
+ * Rendered by study-dashboard.tsx, which supplies the BFF mutation callbacks (`study/schedule`,
+ * `study/nusmods/import`, `study/calendar/*`). Date and layout maths live in lib/study-timetable.ts.
+ */
 
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
@@ -23,6 +29,7 @@ import { useBodyScrollLock } from "@/lib/body-scroll-lock";
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
 type WeekOrientation = StudyOrientation;
 
+/** Pixels per minute in each orientation. The grid always covers the full day. */
 const VERTICAL_MINUTE_SCALE = 1.05;
 const HORIZONTAL_MINUTE_SCALE = 1.35;
 const TIMETABLE_DAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((label, index) => ({ value: String(index + 1), label }));
@@ -49,6 +56,11 @@ type Props = {
   onFocusItem: (item: StudyItem) => void;
 };
 
+/**
+ * The timetable page. Clicking a block opens read-only details first, and editing is a second step,
+ * so a stray click cannot change a class. The open panel (details, edit, create) is one reducer state.
+ * Overlapping blocks are allowed but flagged, and get side-by-side lanes in the vertical view.
+ */
 export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDeleteBlock, onImportNusmods, onConnectCalendar, onSyncCalendar, onStopCalendar, onEditItem, onFocusItem }: Props) {
   const [weekStart, setWeekStart] = useState(() => initialTimetableWeek(study));
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -95,6 +107,10 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   const resumedCalendarSync = useRef(false);
 
   useLayoutEffect(() => {
+    /**
+     * Restores the per-workspace Vertical/Horizontal choice from localStorage. The save effect below
+     * waits for this read so the default value never overwrites the stored one.
+     */
     const storedOrientation = parseStudyOrientation(window.localStorage.getItem(orientationKey));
     queueMicrotask(() => {
       setOrientation(storedOrientation);
@@ -108,6 +124,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   }, [orientation, orientationKey]);
 
   useEffect(() => {
+    /** Scrolls the grid to the current time (this week) or to the first block, so the useful part of the day is in view. */
     const frame = window.requestAnimationFrame(() => {
       if (verticalScrollRef.current) verticalScrollRef.current.scrollTop = Math.max(0, preferredMinute * VERTICAL_MINUTE_SCALE - 150);
       if (horizontalScrollRef.current) horizontalScrollRef.current.scrollLeft = Math.max(0, preferredMinute * HORIZONTAL_MINUTE_SCALE - 180);
@@ -116,6 +133,10 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   }, [mode, orientation, preferredMinute, weekStart]);
 
   useEffect(() => {
+    /**
+     * Resumes Calendar setup after the Google OAuth round trip. A successful connect starts the first sync;
+     * anything else reopens the Calendar dialog. The resume query parameters are then removed from the URL.
+     */
     if (resumedCalendarSync.current) return;
     const url = new URL(window.location.href);
     if (url.searchParams.get("resume") !== "study-calendar-sync") return;
@@ -135,11 +156,13 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
     return () => window.clearTimeout(timer);
   }, [saveNotice]);
 
+  /** Moves by whole weeks and keeps the same weekday selected. */
   const moveWeek = (amount: number) => {
     const next = addDays(weekStart, amount * 7);
     setWeekStart(next);
     setSelectedDay(addDays(next, Math.max(0, Math.min(6, activeDay.weekday - 1))));
   };
+  /** Jumps back to the week and day containing today, in the workspace timezone. */
   const goToday = () => {
     const today = dateKeyInZone(study.generatedAt, study.workspace.timezone);
     const next = startOfWeek(today);
@@ -299,6 +322,7 @@ export function StudyTimetable({ study, busy, onAddBlock, onUpdateBlock, onDelet
   </section>;
 }
 
+/** Dialog that imports a NUSMods share link. The backend merges matching class blocks and leaves manual blocks alone. */
 function NusmodsImportDialog({ busy, onClose, onImport }: {
   busy: boolean;
   onClose: () => void;
@@ -325,6 +349,11 @@ function NusmodsImportDialog({ busy, onClose, onImport }: {
   </TimetableOverlay>;
 }
 
+/**
+ * Consent and status dialog for the one-way Google Calendar mirror. Before connecting it lists exactly
+ * what is shared and what stays private. Once connected it shows sync counts, Sync now and Stop syncing.
+ * Stopping leaves existing Google events in place.
+ */
 function StudyCalendarDialog({ calendar, busy, onClose, onConnect, onSync, onStop }: {
   calendar: StudySnapshot["calendar"];
   busy: boolean;
@@ -361,6 +390,10 @@ function StudyCalendarDialog({ calendar, busy, onClose, onConnect, onSync, onSto
   </TimetableOverlay>;
 }
 
+/**
+ * Horizontal week view: one row per day with a deadlines column and a timeline of blocks.
+ * Row height grows with the number of overlap lanes that day, and blocks hide detail when narrow.
+ */
 function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes, weekLabel, scrollRef, showingCurrentWeek, onOpenDay, onOpenDueOverflow, onEditItem, onOpenBlock }: {
   study: StudySnapshot;
   days: ReturnType<typeof buildTimetableDays>;
@@ -383,6 +416,10 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
     const viewport = scrollRef.current;
     if (!viewport) return;
 
+    /**
+     * Turns ordinary mouse-wheel scrolling into horizontal scrolling of the timeline. Ctrl/Cmd+wheel is left
+     * alone for browser zoom. The listener is non-passive so it can stop the page from scrolling instead.
+     */
     const handleWheel = (event: WheelEvent) => {
       if (event.ctrlKey || event.metaKey || (event.deltaX === 0 && event.deltaY === 0)) return;
 
@@ -452,11 +489,13 @@ function HorizontalWeekGrid({ study, days, hours, gridStart, gridEnd, nowMinutes
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+/** Screen-reader label for a block: name, module, day and time, venue, and any overlap. */
 function scheduleBlockAccessibleLabel(block: ScheduleBlock, conflicts: ScheduleBlock[] = []): string {
   return [block.label, block.module?.code, `${DAY_NAMES[block.dayOfWeek - 1] ?? "Scheduled"}, ${formatClock(block.startTime)} to ${formatClock(block.endTime)}`, block.venueName, conflictDescription(conflicts)]
     .filter(Boolean).join(" · ");
 }
 
+/** One-sentence description of which blocks this block overlaps with. */
 function conflictDescription(conflicts: ScheduleBlock[]): string {
   if (!conflicts.length) return "";
   const first = conflicts[0]!;
@@ -464,11 +503,16 @@ function conflictDescription(conflicts: ScheduleBlock[]): string {
   return `Overlaps with ${first.label}, ${formatClock(first.startTime)}–${formatClock(first.endTime)}${extra}.`;
 }
 
+/** Small amber warning icon shown on overlapping blocks, with the overlap text as its label and tooltip. */
 function ConflictBadge({ conflicts }: { conflicts: ScheduleBlock[] }) {
   const copy = conflictDescription(conflicts);
   return <span className="study-conflict-badge" role="img" aria-label={copy} data-tooltip={copy} title={copy}><AlertTriangle size={13} aria-hidden="true" /></span>;
 }
 
+/**
+ * Focus handling for the timetable dialogs: focus the autofocus field (or the dialog), trap Tab inside,
+ * close on Escape unless a save is in progress, and return focus to the trigger on close.
+ */
 function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean, onClose: () => void) {
   const busyRef = useRef(busy);
   const onCloseRef = useRef(onClose);
@@ -499,6 +543,10 @@ function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean,
   }, [dialogRef]);
 }
 
+/**
+ * Portal backdrop shared by the timetable dialogs. Closes on a backdrop click unless busy, and uses the
+ * shared reference-counted body scroll lock so stacked dialogs restore scrolling correctly.
+ */
 function TimetableOverlay({ children, busy, onClose, className = "" }: {
   children: ReactNode;
   busy: boolean;
@@ -513,21 +561,28 @@ function TimetableOverlay({ children, busy, onClose, className = "" }: {
   </div>, document.body);
 }
 
+/** Formats a YYYY-MM-DD date. Uses noon UTC so the weekday cannot shift with the viewer's timezone. */
 function formatCalendarDate(value: string): string {
   return new Intl.DateTimeFormat("en-SG", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
     .format(new Date(`${value.slice(0, 10)}T12:00:00.000Z`));
 }
 
+/**
+ * Turns an older week-number block (startWeek/endWeek) into a real date from the semester start,
+ * so the editor can show dates for blocks created before date-based recurrence existed.
+ */
 function legacyBlockDate(semesterStart: string | null | undefined, week: number | null | undefined, dayOfWeek: number): string | null {
   if (!semesterStart || !week) return null;
   return addDays(startOfWeek(semesterStart.slice(0, 10)), (week - 1) * 7 + dayOfWeek - 1);
 }
 
+/** Weekday for a YYYY-MM-DD date with Monday = 1 and Sunday = 7, matching `dayOfWeek` on blocks. */
 function weekdayForCalendarDate(value: string): number {
   const day = new Date(`${value}T12:00:00.000Z`).getUTCDay();
   return day === 0 ? 7 : day;
 }
 
+/** Human summary of how a block repeats. Prefers the date range and falls back to legacy week numbers. */
 function scheduleRecurrenceLabel(block: ScheduleBlock): string {
   const start = block.recurrenceStartDate?.slice(0, 10);
   const end = block.recurrenceEndDate?.slice(0, 10);
@@ -538,6 +593,10 @@ function scheduleRecurrenceLabel(block: ScheduleBlock): string {
   return `Weeks ${block.startWeek ?? 1}–${block.endWeek ?? "end"}`;
 }
 
+/**
+ * Read-only details for one block: overlaps, type, time, repeats, venue, travel reminder setup,
+ * latest journey and reminder readiness. Edit and Delete are explicit buttons from here.
+ */
 function TimetableBlockDetails({ block, conflicts, busy, onClose, onEdit, onDelete }: {
   block: ScheduleBlock;
   conflicts: ScheduleBlock[];
@@ -573,6 +632,10 @@ function TimetableBlockDetails({ block, conflicts, busy, onClose, onEdit, onDele
   </TimetableOverlay>;
 }
 
+/**
+ * Asks how much of a recurring block to remove: this date only, this and future dates, or the whole series.
+ * Defaults to the smallest scope so other weeks stay intact.
+ */
 function ScheduleDeleteDialog({ block, occurrenceDate, weekNumber, busy, onClose, onDelete }: {
   block: ScheduleBlock;
   occurrenceDate?: string;
@@ -599,6 +662,11 @@ function ScheduleDeleteDialog({ block, occurrenceDate, weekNumber, busy, onClose
   </TimetableOverlay>;
 }
 
+/**
+ * Create/edit form for a block, including the optional leave-time reminder (destination, origin, buffer).
+ * On save it counts overlaps on the chosen date so the page can say "Saved with N overlaps to resolve".
+ * `timetableBlockPayload` builds the body: empty optional fields are left out on create and sent as null on edit to clear them.
+ */
 function TimetableEditor({ study, block, defaultDay, defaultDate, busy, onClose, onSave }: {
   study: StudySnapshot;
   block?: ScheduleBlock;

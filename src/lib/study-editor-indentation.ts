@@ -1,9 +1,11 @@
+/** Line maths for Tab / Shift+Tab indentation inside code and Mermaid blocks of the rich note editor. */
 const DEFAULT_INDENT = "  ";
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
+/** Offsets where each line touched by the selection begins. A selection that ends right at a line start does not include that line. */
 export function selectedLineStarts(text: string, selectionStart: number, selectionEnd: number): number[] {
   const start = clamp(selectionStart, 0, text.length);
   const end = clamp(selectionEnd, start, text.length);
@@ -19,6 +21,7 @@ export function selectedLineStarts(text: string, selectionStart: number, selecti
   return starts;
 }
 
+/** How many characters Shift+Tab should remove at the start of a line: one tab, or up to one indent of spaces. */
 export function indentationRemovalWidth(text: string, lineStart: number, indent = DEFAULT_INDENT): number {
   if (text[lineStart] === "\t") return 1;
   let width = 0;

@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Custom dropdown used instead of native `<select>` across Personal, Group and Study forms.
+ * It follows the listbox pattern: arrow keys, Home/End, Escape, optional search, and focus return.
+ */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { formatClock } from "@/lib/study-timetable";
@@ -20,6 +24,11 @@ type StudyChoicePickerProps = {
   onChange: (value: string) => void;
 };
 
+/**
+ * Controlled picker. The trigger shows the selected label; the popover lists options with an
+ * optional empty choice (`allowEmpty`) at index 0. A hidden input carries the value when `name`
+ * is set, so it still works inside plain HTML forms. Clicking outside closes it.
+ */
 export function StudyChoicePicker({ label, value, placeholder = "Choose one", options, disabled = false, searchable = false, allowEmpty = true, name, required = false, className = "", onChange }: StudyChoicePickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -31,6 +40,7 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
   const visible = options.filter((option) => !query || `${option.label} ${option.detail ?? ""}`.toLowerCase().includes(query.toLowerCase()));
   const optionCount = visible.length + (allowEmpty ? 1 : 0);
   const selectedIndex = Math.max(0, visible.findIndex((option) => option.value === value) + (allowEmpty ? 1 : 0));
+  /** Closes the popover, clears the search, and optionally puts focus back on the trigger. */
   const close = (returnFocus = false) => {
     setOpen(false);
     setQuery("");
@@ -51,6 +61,7 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
     event.preventDefault();
     openAt(event.key === "ArrowDown" ? selectedIndex : optionCount - 1);
   };
+  /** Arrow keys wrap around the list; Home and End jump to the ends. */
   const onListboxKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -93,11 +104,16 @@ export function StudyChoicePicker({ label, value, placeholder = "Choose one", op
   </div>;
 }
 
+/** Uncontrolled version for forms read with `FormData`: it keeps its own value state. */
 export function StudyFormChoicePicker({ defaultValue = "", ...props }: Omit<StudyChoicePickerProps, "value" | "onChange"> & { defaultValue?: string }) {
   const [value, setValue] = useState(defaultValue);
   return <StudyChoicePicker {...props} value={value} onChange={setValue} />;
 }
 
+/**
+ * Time picker with 15-minute steps across the day. An existing off-grid time is kept in the list
+ * so editing an old block never silently changes its time.
+ */
 export function StudyTimePicker({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   const options = useMemo(() => {
     const values = Array.from({ length: 96 }, (_, index) => {

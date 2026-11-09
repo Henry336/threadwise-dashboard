@@ -1,3 +1,9 @@
+/**
+ * The BFF proxy: every browser call to `/api/threadwise/<path>` lands here and is forwarded to the backend
+ * dashboard API as the signed-in user. The browser never holds a backend credential. Each request must pass,
+ * in order: allowed method, live session, same-origin check for writes, the path/method allowlist, and
+ * size and JSON checks. Responses are marked no-store so one user's data is never cached for another.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { getSelectedWorkspace, getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { isAllowedThreadwiseProxyMethod, isAllowedThreadwiseProxyPath } from "@/lib/proxy-allowlist";
@@ -11,7 +17,9 @@ import { threadwiseFetch } from "@/lib/threadwise-api";
 
 export const dynamic = "force-dynamic";
 
+/** Methods that change data and therefore need the same-origin (CSRF) check. */
 const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
+/** Headers that stop browsers and CDNs from caching or MIME-sniffing a proxied reply. */
 function noStore(response: NextResponse) {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Pragma", "no-cache");
@@ -20,10 +28,12 @@ function noStore(response: NextResponse) {
   return response;
 }
 
+/** A JSON error reply in the shape `api()` in `client-api.ts` expects: `{ error, message? }`. */
 function reject(status: number, error: string, message?: string) {
   return noStore(NextResponse.json({ error, ...(message ? { message } : {}) }, { status }));
 }
 
+/** True when the request's Origin is the dashboard's own origin. */
 function hasSameOrigin(request: NextRequest) {
   return hasAllowedProxyOrigin({
     origin: request.headers.get("origin"),
@@ -33,6 +43,11 @@ function hasSameOrigin(request: NextRequest) {
   });
 }
 
+/**
+ * Handles every method. The `events` path is the server-sent-events stream used by live sync: it is piped
+ * through unbuffered and closes when the browser disconnects. A successful account deletion also clears the
+ * session cookie. Backend responses (including 4xx/5xx) pass through; a thrown or network error becomes a generic 502 so its details are not shown.
+ */
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> }) {
   const method = request.method.toUpperCase();
   if (!new Set(["GET", "POST", "PATCH", "DELETE"]).has(method)) return reject(405, "method_not_allowed");
@@ -55,6 +70,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
   }
 
   try {
+    /** The workspace list is always asked for as the personal user; every other call goes to the selected workspace. */
     const workspace = path === "workspaces" ? "personal" : await getSelectedWorkspace();
     const query = request.nextUrl.searchParams.toString();
     const upstream = await threadwiseFetch(user, `${path}${query ? `?${query}` : ""}`, {

@@ -150,8 +150,9 @@ It is local-only and skips whenever `PLAYWRIGHT_BASE_URL` points at a hosted env
 - Phase 3 reduced `src/components/study-dashboard.tsx` from 1,303 to 911 lines by moving Deep Work,
   module analysis, and the shared Study dialog into focused modules. The shell still owns several
   feature views/forms and should be split incrementally when those areas are next changed.
-- `src/components/study-maintainability-boundaries.test.ts` protects the new shell/feature/dialog seam
-  and line-count budgets. Rendered forms continue to share one branded choice primitive.
+- `eslint.config.mjs` holds the line-count budgets for that seam (`max-lines`) and bans native
+  `<select>`, `confirm`/`alert`, and direct `style.overflow` writes in every file. Rendered forms
+  continue to share one branded choice primitive.
 - Rich-note serialization is bounded and authenticated 10k/50k/99.5k browser measurements are held to
   an 8-second ceiling. Keep the gate before widening rich notes to Group.
 - CSP is enforced by default. Scripts/style elements stay nonce-bound; only bounded dynamic React style

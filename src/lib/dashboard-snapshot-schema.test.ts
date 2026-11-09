@@ -124,7 +124,7 @@ describe("dashboard snapshot contract", () => {
     expect(parsed.images?.[0]?.pinned).toBe(true);
   });
 
-  it("accepts shared assignment states and the compact group collaboration summary", () => {
+  it("accepts shared assignment states and strips retired collaboration fields", () => {
     const parsed = parseDashboardSnapshot({
       ...snapshot("03:00", "06:00"),
       tasks: [{
@@ -153,9 +153,12 @@ describe("dashboard snapshot contract", () => {
       },
     });
 
-    expect(parsed.tasks[0]?.assignees?.[0]).toMatchObject({ status: "BLOCKED", statusReason: "Waiting for figures" });
+    expect(parsed.tasks[0]?.assignees?.[0]).toMatchObject({ status: "BLOCKED" });
     expect(parsed.tasks[0]?.teamOwnerLabel).toBe("Internal communications");
-    expect(parsed.collaboration?.summary.blocked).toBe(1);
+    // Retired accept/decline fields are still sent by older backends; they are stripped, not validated.
+    expect(parsed.tasks[0]?.assignees?.[0]).not.toHaveProperty("statusReason");
+    expect(parsed.collaboration?.summary).not.toHaveProperty("blocked");
+    expect(parsed.collaboration?.members[0]).not.toHaveProperty("blockedTasks");
   });
 
   it("accepts group scheduling while keeping every member's raw availability private", () => {

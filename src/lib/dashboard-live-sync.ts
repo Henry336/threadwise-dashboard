@@ -1,3 +1,7 @@
+/**
+ * Keeps an open dashboard tab in step with changes made elsewhere (Telegram, another tab).
+ * Used by the Personal/Group shell and the Study app.
+ */
 /** Shared Personal/Group/Study background synchronization.
  * Hidden/offline pages hold no EventSource or reconciliation timer. Returning to
  * the page refreshes immediately; visible pages reconcile at most every 5 minutes

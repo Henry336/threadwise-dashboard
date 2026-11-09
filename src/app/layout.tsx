@@ -1,3 +1,7 @@
+/**
+ * Root layout for every page: metadata, PWA icons, theme colours, the Telegram Web App script, and two
+ * background components (privacy cleanup on logout and service worker registration).
+ */
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import Script from "next/script";
@@ -32,6 +36,7 @@ export const viewport: Viewport = {
   ],
 };
 
+/** Reads the CSP nonce set by `src/proxy.ts` and gives it to the Telegram script, which the enforced CSP would otherwise block. */
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (

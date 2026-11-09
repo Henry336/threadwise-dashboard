@@ -1,3 +1,8 @@
+/**
+ * Mermaid diagram helpers for Study and Personal notes: render settings, size limits, and Threadwise's
+ * easy UML shorthand. Used by the Markdown renderer and the rich editor's diagram blocks.
+ */
+/** Size limits that keep a huge or hostile diagram from freezing the page while it renders. */
 export const MERMAID_MAX_CHARACTERS = 12_000;
 export const MERMAID_MAX_LINES = 240;
 export const MERMAID_MAX_STATEMENTS = 400;
@@ -13,6 +18,7 @@ export type NormalizedMermaidSource = { source: string; changed: boolean; issues
 const IDENTIFIER = "[A-Za-z_][A-Za-z0-9_]*";
 const VISIBILITY = { public: "+", private: "-", protected: "#", package: "~" } as const;
 
+/** Settings passed to `mermaid.initialize`. Strict security level and native SVG text labels. */
 export function mermaidRenderConfiguration(theme: "dark" | "neutral") {
   return {
     startOnLoad: false,
@@ -27,10 +33,12 @@ export function mermaidRenderConfiguration(theme: "dark" | "neutral") {
   };
 }
 
+/** Index of the first line that is not blank or a `%%` comment, which is where the diagram header lives. */
 function firstDiagramLine(lines: string[]): number {
   return lines.findIndex((line) => line.trim() && !line.trimStart().startsWith("%%"));
 }
 
+/** Which kind of diagram the header declares. */
 function diagramKindFromLines(lines: string[]): MermaidDiagramKind {
   const index = firstDiagramLine(lines);
   const header = index >= 0 ? lines[index].trim().toLowerCase() : "";
@@ -41,6 +49,7 @@ function diagramKindFromLines(lines: string[]): MermaidDiagramKind {
   return "other";
 }
 
+/** A hint for a line that looks like shorthand but did not match the grammar, or null. */
 function malformedAliasMessage(line: string, kind: MermaidDiagramKind): string | null {
   const value = line.trim();
   if (!value || value.startsWith("%%")) return null;
@@ -143,6 +152,7 @@ export function normalizeMermaidSource(input: string): NormalizedMermaidSource {
   return { source, changed: source !== input, issues };
 }
 
+/** Kind, display label and current layout direction of a diagram. Layout is only reported for flow, class and state diagrams, the kinds the layout menu supports. */
 export function getMermaidDiagramInfo(input: string): { kind: MermaidDiagramKind; label: string; layout: MermaidLayout | null; layoutSupported: boolean } {
   const source = normalizeMermaidSource(input).source;
   const lines = source.split("\n");
@@ -166,6 +176,10 @@ export function getMermaidDiagramInfo(input: string): { kind: MermaidDiagramKind
   return { kind, label: labels[kind], layout: null, layoutSupported: false };
 }
 
+/**
+ * Rewrites the diagram's direction for the layout menu. Flowcharts change the header; class and state
+ * diagrams add, change or remove a `direction` line.
+ */
 export function setMermaidLayout(input: string, choice: MermaidLayoutChoice): string {
   const normalized = normalizeMermaidSource(input).source;
   const lines = normalized.split("\n");
@@ -194,6 +208,7 @@ export function setMermaidLayout(input: string, choice: MermaidLayoutChoice): st
   return lines.join("\n");
 }
 
+/** Checks the size limits and refuses `%%{...}%%` config directives, which could change Mermaid's security settings. */
 export function validateMermaidSource(source: string): MermaidBudget {
   if (source.length > MERMAID_MAX_CHARACTERS) return { valid: false, message: "This Mermaid diagram is too large to preview safely." };
   const lines = source.split(/\r?\n/u);
@@ -203,6 +218,7 @@ export function validateMermaidSource(source: string): MermaidBudget {
   if (statements > MERMAID_MAX_STATEMENTS) return { valid: false, message: "This Mermaid diagram is too complex to preview safely." };
   return { valid: true };
 }
+/** Rejects if a render takes longer than the limit, so a slow diagram cannot hang the editor. */
 export function withTimeout<T>(promise: Promise<T>, timeoutMs = MERMAID_RENDER_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Mermaid render timed out")), timeoutMs);

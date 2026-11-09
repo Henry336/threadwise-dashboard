@@ -1,3 +1,8 @@
+/**
+ * Zod schema for the dashboard snapshot the backend returns. The server parses every snapshot with it in
+ * `threadwise-api.ts`, and `types.ts` derives the TypeScript types from it so they cannot drift apart.
+ * Every string and list has a length cap so a bad or hostile reply cannot blow up the page.
+ */
 import { z } from "zod";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -35,28 +40,23 @@ const TaskAssigneeSchema = z.object({
   username: optionalText(64),
   displayName: text(240),
   status: z.enum(["PENDING", "ACCEPTED", "DECLINED", "BLOCKED"]),
-  statusReason: optionalText(500),
-  respondedAt: isoDate.optional(),
   updatedAt: isoDate,
 });
 
 const TaskSchema = z.object({
   id: text(100), publicId: text(50), title: text(500), description: optionalText(5_000),
-  dueAt: isoDate.nullish().transform((value) => value ?? undefined),
-  plannedFor: dateOnly.nullish().transform((value) => value ?? undefined),
-  firstPlannedFor: dateOnly.nullish().transform((value) => value ?? undefined),
-  nextReminderAt: isoDate.nullish().transform((value) => value ?? undefined),
-  snoozedUntil: isoDate.nullish().transform((value) => value ?? undefined),
-  reminderIntervalMinutes: z.number().int().min(1).max(525_600).nullish().transform((value) => value ?? undefined),
+  dueAt: isoDate.nullish().transform((value) => value ?? undefined).optional(),
+  plannedFor: dateOnly.nullish().transform((value) => value ?? undefined).optional(),
+  nextReminderAt: isoDate.nullish().transform((value) => value ?? undefined).optional(),
+  snoozedUntil: isoDate.nullish().transform((value) => value ?? undefined).optional(),
+  reminderIntervalMinutes: z.number().int().min(1).max(525_600).nullish().transform((value) => value ?? undefined).optional(),
   reminderTimes: z.array(isoDate).max(20).default([]),
   status: z.enum(["OPEN", "DONE", "CANCELED"]),
   audience: z.enum(["UNASSIGNED", "EVERYONE", "ASSIGNEES"]).default("UNASSIGNED"),
-  recurrenceRule: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).nullish().transform((value) => value ?? undefined),
-  recurring: z.boolean().optional(), pinned: z.boolean().optional(),
-  reminderCount: z.number().int().min(0).max(100_000).optional(), assignee: optionalText(200),
+  pinned: z.boolean().optional(), assignee: optionalText(200),
   teamOwnerLabel: optionalText(240),
   calendarEventId: optionalText(500), calendarEventUrl: z.string().url().optional(),
-  calendarSyncedAt: isoDate.nullish().transform((value) => value ?? undefined),
+  calendarSyncedAt: isoDate.nullish().transform((value) => value ?? undefined).optional(),
   assignees: z.array(TaskAssigneeSchema).max(100).optional(),
   createdAt: isoDate.optional(), updatedAt: isoDate.optional(),
 });
@@ -89,17 +89,9 @@ const IdeaSchema = z.object({
 });
 
 const ImageSchema = z.object({
-  id: text(100), publicId: text(50), mediaKind: text(50), mimeType: optionalText(200), fileName: optionalText(500),
-  caption: optionalText(4_000), ocrText: optionalText(50_000), ocrConfidence: z.number().min(0).max(100).nullish().transform((value) => value ?? undefined),
+  id: text(100), publicId: text(50), mediaKind: text(50), fileName: optionalText(500),
+  caption: optionalText(4_000), ocrText: optionalText(50_000),
   createdAt: isoDate, updatedAt: isoDate.optional(), pinned: z.boolean().optional(),
-});
-
-const ExpenseSchema = z.object({
-  id: text(100), publicId: text(50), merchant: optionalText(500),
-  description: z.string().max(5_000).nullish().transform((value) => value?.trim() || "Expense"),
-  total: z.number().finite(), currency: z.string().regex(/^[A-Z]{3}$/), category: optionalText(200), transactionAt: isoDate,
-  paymentMethod: optionalText(200), notes: optionalText(5_000), excelSyncedAt: isoDate.nullish().transform((value) => value ?? undefined),
-  createdAt: isoDate.optional(),
 });
 
 const AvailabilityPollSchema = z.object({
@@ -111,17 +103,19 @@ const AvailabilityPollSchema = z.object({
   dayEndMinutes: z.number().int().min(15).max(1_440),
   slotMinutes: z.union([z.literal(15), z.literal(30), z.literal(60)]),
   revision: z.number().int().positive(), createdByName: text(240),
-  createdAt: isoDate, updatedAt: isoDate, telegramMessageId: optionalText(100),
+  createdAt: isoDate, updatedAt: isoDate,
   slots: z.array(isoDate).max(2_000),
   bestSlots: z.array(z.object({ startAt: isoDate, endAt: isoDate, availableCount: z.number().int().min(0).max(100_000) })).max(20),
   respondentCount: z.number().int().min(0).max(100_000), memberCount: z.number().int().min(0).max(100_000),
   respondents: z.array(z.object({ telegramId: z.string().regex(/^[1-9]\d{0,19}$/), displayName: text(240) })).max(10_000),
   pendingMembers: z.array(z.object({ telegramId: z.string().regex(/^[1-9]\d{0,19}$/), displayName: text(240), username: optionalText(64) })).max(10_000),
   viewerResponse: z.object({ timezone, availableStarts: z.array(isoDate).max(2_000), wantsCalendar: z.boolean() }).optional(),
-  finalStartAt: isoDate.optional(), finalEndAt: isoDate.optional(), finalizedAt: isoDate.optional(),
+  finalStartAt: isoDate.optional(), finalEndAt: isoDate.optional(),
   viewerCalendar: z.object({ connected: z.boolean(), synced: z.boolean(), eventUrl: z.string().url().optional() }).optional(),
 });
 
+/** The contract for the server-rendered dashboard snapshot. Only fields a component reads are
+ * listed: zod strips the rest, so retired backend fields cannot fail the parse. */
 export const DashboardSnapshotSchema = z.object({
   workspace: z.object({
     id: z.union([z.literal("personal"), z.string().uuid()]),
@@ -138,12 +132,12 @@ export const DashboardSnapshotSchema = z.object({
   }),
   generatedAt: isoDate,
   tasks: z.array(TaskSchema).max(500), notes: z.array(NoteSchema).max(500), ideas: z.array(IdeaSchema).max(500),
-  images: z.array(ImageSchema).max(1_000).optional(), expenses: z.array(ExpenseSchema).max(500),
+  images: z.array(ImageSchema).max(1_000).optional(),
   activity: z.array(z.object({ day: text(12), captures: z.number().int().min(0).max(10_000), completed: z.number().int().min(0).max(10_000) })).max(31),
   integrations: z.array(z.object({
     name: z.enum(["Calendar", "Excel"]), provider: z.enum(["calendar", "excel"]),
     state: z.enum(["connected", "attention", "available"]), detail: text(500),
-    accountEmail: optionalText(320), autoSync: z.boolean(),
+    accountEmail: optionalText(320),
     syncedCount: z.number().int().min(0).max(1_000_000), unsyncedCount: z.number().int().min(0).max(1_000_000),
     workbookName: optionalText(500), workbookUrl: z.string().url().optional(),
   })).max(2),
@@ -177,10 +171,7 @@ export const DashboardSnapshotSchema = z.object({
       displayName: text(240),
       initials: text(8),
       role: z.enum(["OWNER", "ADMIN", "MEMBER"]),
-      lastSeenAt: isoDate,
       openTasks: z.number().int().min(0).max(100_000),
-      blockedTasks: z.number().int().min(0).max(100_000),
-      awaitingTasks: z.number().int().min(0).max(100_000),
     })).max(10_000),
     activity: z.array(z.object({
       id: text(100),
@@ -195,16 +186,22 @@ export const DashboardSnapshotSchema = z.object({
     summary: z.object({
       overdue: z.number().int().min(0).max(100_000),
       unassigned: z.number().int().min(0).max(100_000),
-      awaitingAcknowledgement: z.number().int().min(0).max(100_000),
-      blocked: z.number().int().min(0).max(100_000),
       createdThisWeek: z.number().int().min(0).max(100_000),
       completedThisWeek: z.number().int().min(0).max(100_000),
-      handoffsThisWeek: z.number().int().min(0).max(100_000),
     }),
   }).optional(),
   scheduling: z.object({ polls: z.array(AvailabilityPollSchema).max(100) }).optional(),
 });
 
+/** Parses and validates a raw snapshot. Throws on any contract mismatch. */
 export function parseDashboardSnapshot(input: unknown) {
   return DashboardSnapshotSchema.parse(input);
 }
+
+type ParsedSnapshot = z.output<typeof DashboardSnapshotSchema>;
+/** A parsed snapshot after threadwise-api fills the optional workspace, images and settings. */
+export type DashboardSnapshotData = Omit<ParsedSnapshot, "workspace" | "images" | "settings"> & {
+  workspace: NonNullable<ParsedSnapshot["workspace"]>;
+  images: NonNullable<ParsedSnapshot["images"]>;
+  settings: NonNullable<ParsedSnapshot["settings"]>;
+};

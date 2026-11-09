@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Review sheet for a Group "TODO import": a pasted TODO list that the bot split into draft tasks.
+ * Opened by `dashboard-app.tsx` in Group workspaces when the URL carries an import id.
+ * Members fix titles, assignees, deadlines and status per row, then import or cancel the batch.
+ * All reads and writes go through the BFF (`task-imports/...`) via `api()`.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -17,10 +23,18 @@ import {
 } from "lucide-react";
 import type { DashboardSnapshot, TaskImportAssignee, TaskImportItem, TaskImportReview } from "@/lib/types";
 import { StudyChoicePicker } from "@/components/study-choice-picker";
+import { api } from "@/lib/client-api";
+import { useModal } from "@/lib/use-modal";
+import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
 
+/** A member of the current Group workspace, as listed in the dashboard snapshot. */
 type Member = NonNullable<DashboardSnapshot["collaboration"]>["members"][number];
-type ApiError = { error?: string; message?: string };
 
+/**
+ * Modal for one import review. Only the person who sent the list or a group admin can edit
+ * (`canControl`), and only while the review is PENDING or PARTIAL. Each row edit is saved at
+ * once and the server's copy replaces local state; on a save error the review is reloaded.
+ */
 export function TaskImportReviewSheet({
   importId,
   timezone,
@@ -50,12 +64,13 @@ export function TaskImportReviewSheet({
   const canControl = Boolean(review && (review.requestedByTelegramId === viewerTelegramId || workspaceRole !== "MEMBER"));
   const editable = review?.status === "PENDING" || review?.status === "PARTIAL";
 
+  /** Fetches the review from the backend. Also used by the Refresh button and after failed saves. */
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     setConfirmCancel(false);
     try {
-      const payload = await request<{ taskImport: TaskImportReview }>(`task-imports/${importId}`);
+      const payload = await api<{ taskImport: TaskImportReview }>(`task-imports/${importId}`);
       setReview(payload.taskImport);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "This TODO review could not be loaded.");
@@ -68,44 +83,23 @@ export function TaskImportReviewSheet({
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const frame = window.requestAnimationFrame(() => panelRef.current?.focus());
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !panelRef.current) return;
-      const focusable = [...panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable.at(-1)!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previous;
-    };
-  }, [onClose]);
+  useModal(panelRef, onClose, { initialFocus: panelRef });
 
   const selected = review?.items.filter((item) => item.included && item.status !== "SKIPPED") ?? [];
   const ready = selected.filter((item) => item.status !== "IMPORTED");
   const imported = review?.items.filter((item) => item.status === "IMPORTED").length ?? 0;
 
+  /** Updates one row in local state immediately, so typing feels instant before the save lands. */
   const patchLocal = (itemId: string, changes: Partial<TaskImportItem>) => {
     setReview((current) => current ? { ...current, items: current.items.map((item) => item.id === itemId ? { ...item, ...changes } : item) } : current);
   };
 
+  /** Saves one row's changes (PATCH) and takes the server's returned review as the new truth. */
   const saveRow = async (item: TaskImportItem, changes: Record<string, unknown>) => {
     if (!review || !canControl || !editable || item.status === "IMPORTED") return;
     setBusyRow(item.id);
     try {
-      const payload = await request<{ taskImport: TaskImportReview }>(`task-imports/${review.id}/items/${item.id}`, "PATCH", changes);
+      const payload = await api<{ taskImport: TaskImportReview }>(`task-imports/${review.id}/items/${item.id}`, "PATCH", changes);
       setReview(payload.taskImport);
       setError(null);
     } catch (cause) {
@@ -122,6 +116,7 @@ export function TaskImportReviewSheet({
     void saveRow(item, { assignees });
   };
 
+  /** Adds or removes a workspace member as an assignee of a row, then saves. */
   const toggleMember = (item: TaskImportItem, member: Member) => {
     const current = item.assignees ?? [];
     const selected = current.some((assignee) => sameAssignee(assignee, member));
@@ -132,12 +127,16 @@ export function TaskImportReviewSheet({
     void saveRow(item, { assignees });
   };
 
+  /**
+   * Runs the whole-batch action. "import" creates the tasks; if some rows fail, the sheet stays
+   * open (status PARTIAL) so they can be retried. "cancel" discards the review and closes.
+   */
   const submit = async (action: "import" | "cancel") => {
     if (!review || !canControl || !editable) return;
     setSubmitting(action);
     setError(null);
     try {
-      const payload = await request<{ taskImport: TaskImportReview; imported?: number; failed?: number; skipped?: number }>(`task-imports/${review.id}/${action}`, "POST", {});
+      const payload = await api<{ taskImport: TaskImportReview; imported?: number; failed?: number; skipped?: number }>(`task-imports/${review.id}/${action}`, "POST", {});
       setReview(payload.taskImport);
       if (action === "cancel") {
         announce("TODO import canceled.");
@@ -212,6 +211,11 @@ export function TaskImportReviewSheet({
   </div>;
 }
 
+/**
+ * One row of the review. Rows with warnings or a failed import start expanded.
+ * The deadline is only saved when the user presses Done, so a half-typed date-time is never sent.
+ * Assignees the bot could not match to a member are listed separately so they can be removed.
+ */
 function ImportRow({
   item,
   timezone,
@@ -242,6 +246,7 @@ function ImportRow({
   const dueDraft = dueEdit.base === localDue ? dueEdit.draft : localDue;
   const unmatched = item.assignees.filter((assignee) => !members.some((member) => sameAssignee(assignee, member)));
 
+  /** Converts the local date-time (in the workspace timezone) to ISO and saves it, or clears it. */
   const saveDeadline = () => {
     const dueAt = dueDraft ? zonedInputToIso(dueDraft, timezone) : null;
     setDueEdit({ base: dueDraft, draft: dueDraft });
@@ -299,19 +304,8 @@ function ImportRow({
   </article>;
 }
 
-async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/threadwise/${path}`, {
-    method,
-    credentials: "same-origin",
-    headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => ({})) as ApiError & T;
-  if (!response.ok) throw new Error(payload.message || payload.error || "That change could not be completed.");
-  return payload;
-}
 
+/** True when an assignee is this member, by Telegram id or by case-insensitive username. */
 function sameAssignee(assignee: TaskImportAssignee, member: Member): boolean {
   return assignee.telegramId === member.telegramId || Boolean(assignee.username && member.username && assignee.username.toLowerCase() === member.username.toLowerCase());
 }
@@ -320,6 +314,7 @@ function assigneeLabel(assignee: TaskImportAssignee): string {
   return assignee.username ? `@${assignee.username}` : assignee.displayName || "Unknown assignee";
 }
 
+/** Notice text for reviews that can no longer be edited. */
 function reviewStatusMessage(status: TaskImportReview["status"]): string {
   if (status === "IMPORTING") return "Import in progress…";
   if (status === "IMPORTED") return "Tasks imported.";
@@ -334,30 +329,10 @@ function ReviewStatusIcon({ status }: { status: TaskImportReview["status"] }) {
   return <AlertTriangle size={17} />;
 }
 
+/** Short "who owns this" label: assignee names plus the optional team owner label. */
 function ownerSummary(item: TaskImportItem): string {
   const people = item.assignees.map((assignee) => assignee.displayName || (assignee.username ? `@${assignee.username}` : "")).filter(Boolean);
   return [...people, ...(item.teamOwnerLabel ? [item.teamOwnerLabel] : [])].join(" + ");
 }
 
-function zonedInputDate(value: string, timezone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
 
-function zonedInputToIso(value: string, timezone: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-  if (!match) throw new Error("Choose a valid date and time.");
-  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
-  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  let instant = desired;
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const parts = formatter.formatToParts(new Date(instant));
-    const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-    const represented = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
-    const correction = desired - represented;
-    if (!correction) break;
-    instant += correction;
-  }
-  return new Date(instant).toISOString();
-}

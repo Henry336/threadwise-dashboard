@@ -1,3 +1,4 @@
+/** Fallback page the service worker (`public/sw.js`) shows when there is no connection. */
 import Link from "next/link";
 import { Ari } from "@/components/ari";
 

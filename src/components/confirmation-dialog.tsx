@@ -1,9 +1,14 @@
 "use client";
 
+/**
+ * Branded replacement for `window.confirm()`. `ConfirmationProvider` wraps the app and
+ * `useConfirmation()` returns an async `confirm(request)` that resolves true or false.
+ * Native confirm dialogs are banned in this project for look and consistency.
+ */
 import { AlertTriangle } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useBodyScrollLock } from "@/lib/body-scroll-lock";
+import { useModal } from "@/lib/use-modal";
 
 export type ConfirmationRequest = {
   title?: string;
@@ -16,6 +21,10 @@ export type ConfirmationRequest = {
 type PendingConfirmation = ConfirmationRequest & { resolve: (confirmed: boolean) => void };
 const ConfirmationContext = createContext<((request: ConfirmationRequest) => Promise<boolean>) | null>(null);
 
+/**
+ * Holds at most one pending confirmation. A new request cancels (resolves false) the one before,
+ * so callers never wait forever.
+ */
 export function ConfirmationProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<PendingConfirmation | null>(null);
   const confirm = useCallback((request: ConfirmationRequest) => new Promise<boolean>((resolve) => {
@@ -36,47 +45,42 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
   </ConfirmationContext.Provider>;
 }
 
+/** Returns the `confirm` function. Throws if used outside `ConfirmationProvider`. */
 export function useConfirmation() {
   const context = useContext(ConfirmationContext);
   if (!context) throw new Error("useConfirmation must be used inside ConfirmationProvider.");
   return context;
 }
 
+/**
+ * The dialog itself. While open it makes every other top-level element `inert` so the page behind
+ * cannot be clicked or focused. `useModal` locks scroll, traps Tab, maps Escape to Cancel and returns
+ * focus on close; being on its modal stack means Escape cancels only this dialog, not the editor under it.
+ * Focus starts on Cancel (the safe choice).
+ */
 function ThreadwiseConfirmationDialog({ request, onSettle }: { request: PendingConfirmation; onSettle: (confirmed: boolean) => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const returnFocus = useRef<HTMLElement | null>(null);
-  useBodyScrollLock();
+  useModal(dialogRef, () => onSettle(false), { initialFocus: cancelRef });
 
   useEffect(() => {
-    returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    cancelRef.current?.focus();
+    // Captured here and restored after `inert` is removed: useModal's own focus restore runs first,
+    // while the background is still inert, so on its own it would leave focus on the page body.
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const overlay = overlayRef.current;
     const background = overlay
       ? [...document.body.children].filter((element): element is HTMLElement => element instanceof HTMLElement && element !== overlay)
       : [];
     const alreadyInert = new Map(background.map((element) => [element, element.hasAttribute("inert")]));
     for (const element of background) element.setAttribute("inert", "");
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onSettle(false);
-      if (event.key !== "Tab") return;
-      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])") ?? [])];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", keydown);
     return () => {
-      document.removeEventListener("keydown", keydown);
       for (const element of background) {
         if (!alreadyInert.get(element)) element.removeAttribute("inert");
       }
-      returnFocus.current?.focus();
+      returnFocus?.focus();
     };
-  }, [onSettle]);
+  }, []);
 
   return createPortal(<div ref={overlayRef} className="threadwise-confirm-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onSettle(false); }}>
     <section ref={dialogRef} className="threadwise-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="threadwise-confirm-title" aria-describedby="threadwise-confirm-message">

@@ -1,3 +1,7 @@
+/**
+ * TypeScript shapes of the Study API: the Study snapshot, modules, items, resources, sessions and analysis.
+ * These are written by hand to match the backend's Study DTOs; the Study snapshot is not parsed with zod.
+ */
 export type StudyTrafficLight = "GREEN" | "AMBER" | "RED" | "UNASSESSED";
 export type StudyItemStatus = "OPEN" | "IN_PROGRESS" | "PROCESSED" | "DONE" | "SKIPPED";
 export type StudyItemType = "LECTURE" | "TUTORIAL" | "LAB" | "ASSIGNMENT" | "PROJECT" | "REVISION" | "TIMED_PRACTICE" | "READING" | "ADMINISTRATIVE";
@@ -239,6 +243,7 @@ export type StudyModuleAnalysisResponse = {
   analysis: StudyModuleAnalysis | null;
 };
 
+/** Everything the Study app renders, loaded from `study/snapshot` through the BFF. */
 export type StudySnapshot = {
   generatedAt: string;
   calendar: {
@@ -432,4 +437,5 @@ export type StudySnapshot = {
   }>;
 };
 
+/** The Study pages, used as `?view=` values. All start with `study-`, which `study-access.ts` relies on. */
 export type StudyView = "study-overview" | "study-timetable" | "study-modules" | "study-work" | "study-library" | "study-review" | "study-search" | "study-focus" | "study-settings";

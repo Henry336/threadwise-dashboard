@@ -1,3 +1,4 @@
+/** The `/privacy` page: a plain-language explanation of what Threadwise stores and how it is protected. Static content. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Bot, Database, KeyRound, ShieldCheck, Sparkles } from "lucide-react";

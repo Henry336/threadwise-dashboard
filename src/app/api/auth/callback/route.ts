@@ -1,10 +1,17 @@
+/**
+ * Finishes Telegram login. Checks the returned state against the cookie, swaps the code for an ID token,
+ * verifies the token with Telegram's published keys, registers a revocable browser session with the backend,
+ * and sets the session cookie. Any failure redirects home with `?authError=` and clears the login cookies.
+ */
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { registerBrowserSession } from "@/lib/browser-session-registry";
 
+/** Telegram's signing keys. `jose` fetches and caches them. */
 const JWKS = createRemoteJWKSet(new URL("https://oauth.telegram.org/.well-known/jwks.json"));
 
+/** Redirect home with a reason code and drop the one-time login cookies. */
 function fail(request: NextRequest, reason: string) {
   const response = NextResponse.redirect(new URL(`/?authError=${encodeURIComponent(reason)}`, request.url));
   response.cookies.delete("threadwise_oauth_state");
@@ -13,6 +20,7 @@ function fail(request: NextRequest, reason: string) {
   return response;
 }
 
+/** The OAuth redirect target. The session cookie lasts exactly as long as the backend session. */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");

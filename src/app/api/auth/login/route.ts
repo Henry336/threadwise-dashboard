@@ -1,9 +1,14 @@
+/**
+ * Starts Telegram login (OpenID Connect with PKCE). Redirects to oauth.telegram.org and stores the state, nonce
+ * and PKCE verifier in short-lived httpOnly cookies that `/api/auth/callback` checks on the way back.
+ */
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 const TEN_MINUTES = 60 * 10;
 const random = () => randomBytes(32).toString("base64url");
 
+/** Builds the authorization URL. The three random values guard against forged callbacks, replayed ID tokens and stolen codes. */
 export async function GET(request: NextRequest) {
   const clientId = process.env.TELEGRAM_OIDC_CLIENT_ID;
   const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
