@@ -141,6 +141,13 @@ test("rich notes keep typing focus, show list markers, and isolate the filing di
   await expect(filingDialog).toBeVisible();
   await expect(page.locator(".study-note-fullscreen > main")).toHaveAttribute("inert", "");
   await expect(filingDialog.getByRole("textbox", { name: "Title" })).toBeFocused();
+
+  // Escape closes only the filing sheet; the editor and its text stay open.
+  await page.keyboard.press("Escape");
+  await expect(filingDialog).toHaveCount(0);
+  const editor = page.locator(".study-note-fullscreen");
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('[contenteditable="true"][aria-label="Personal note"]')).toContainText("Second item typed without refocusing");
 });
 
 test("Personal and Study's shared editor normalizes UML shorthand and exposes only useful layout controls", async ({ page }, testInfo) => {

@@ -413,7 +413,7 @@ function StandardDashboardApp({ initialData, workspaces, isDemo, initialView: re
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setPaletteOpen(true); }
       else if (!typing && event.key === "/") { event.preventDefault(); setPaletteOpen(true); }
       else if (!typing && event.key.toLowerCase() === "n") { event.preventDefault(); setCaptureOpen(true); }
-      else if (event.key === "Escape") { setPaletteOpen(false); setEditor(null); setMoreOpen(false); setCaptureOpen(false); }
+      // Escape is left to each open dialog: closing everything here unmounted the note editor before its safe close ran.
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
