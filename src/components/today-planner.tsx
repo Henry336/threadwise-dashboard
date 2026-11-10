@@ -33,6 +33,7 @@ export function TodayPlanner({ variant = "standard", modules = [], onChanged, di
   // null until the first load; false hides the panel (the backend answers 404 when Today is not enabled for this user).
   const [supported, setSupported] = useState<boolean | null>(null);
   // Mirrors a 404 for the refresh effect, so it can skip later loads without re-running on every state change.
+  // Today is enabled per person, so a 404 stays true for this mount; the panel remounts when the view changes.
   const unsupported = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

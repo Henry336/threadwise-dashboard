@@ -2,7 +2,7 @@
 
 Updated: 2026-09-12
 
-Current dashboard target: v0.10.2; paired backend target: v0.35.4 (release evidence in backend PROJECT_CONTEXT.md)
+Current dashboard target: v0.11.0; paired backend target: v0.37.0 (release notes in each repo's CHANGELOG.md)
 
 ## Background refresh lifecycle
 

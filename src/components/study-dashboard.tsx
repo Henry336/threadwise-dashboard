@@ -40,6 +40,8 @@ import { browserDraftKey, clearBrowserDraft, clearThreadwiseDrafts, readBrowserD
 import { buildMarkdownExport, markdownExcerpt, normalizeMarkdownWikiTarget, safeMarkdownFileName } from "@/lib/study-markdown";
 import { sessionElapsedSeconds, sessionResourceIds } from "@/lib/study-session";
 import { api } from "@/lib/client-api";
+import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
+import { useModal } from "@/lib/use-modal";
 
 type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string; initialItem?: string; initialItemKind?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
@@ -517,7 +519,10 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<{ status: "loading" | "ready" | "error"; src?: string; message?: string; retryable?: boolean }>({ status: "loading" });
   const closeRef = useRef<HTMLButtonElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
   const caption = imageCaption(resource);
+  // On the shared modal stack, so Escape (leave full size first, then close) only reaches the top layer.
+  useModal(viewerRef, () => { if (expanded) setExpanded(false); else onClose(); }, { initialFocus: closeRef });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -541,19 +546,7 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
     };
   }, [resource.id, revision]);
 
-  useEffect(() => {
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      if (expanded) setExpanded(false);
-      else onClose();
-    };
-    window.addEventListener("keydown", keydown);
-    return () => window.removeEventListener("keydown", keydown);
-  }, [expanded, onClose]);
-
-  useEffect(() => { closeRef.current?.focus(); }, []);
-
-  return <div className={`study-image-lightbox${expanded ? " is-expanded" : ""}`} role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return <div ref={viewerRef} className={`study-image-lightbox${expanded ? " is-expanded" : ""}`} role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <article>
       <header><div><span>{resource.module.code} · {resource.publicId}</span><h2 id="study-image-title">{caption || "Saved image"}</h2></div><div className="study-image-header-actions"><button type="button" className="study-image-size-toggle" aria-pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span>{expanded ? "Fit" : "Full size"}</span></button><button onClick={onEdit}>Edit</button><button className="study-danger-quiet" onClick={onArchive}>Archive</button><button ref={closeRef} onClick={onClose} aria-label="Close image"><X size={20} /></button></div></header>
       <div className="study-image-stage" aria-live="polite">
@@ -635,14 +628,11 @@ function StudySearch({ study, onNavigate, onEditItem, onEditResource }: { study:
  */
 function StudyConfirmationDialog({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    cancelRef.current?.focus();
-    const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
-    document.addEventListener("keydown", keydown);
-    return () => document.removeEventListener("keydown", keydown);
-  }, [onCancel]);
+  const dialogRef = useRef<HTMLElement>(null);
+  // On the shared modal stack: Escape cancels only this confirm, not the dialog under it.
+  useModal(dialogRef, onCancel, { initialFocus: cancelRef });
   return <div className="study-confirm-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
-    <section className="study-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="study-confirm-title" aria-describedby="study-confirm-message">
+    <section ref={dialogRef} className="study-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="study-confirm-title" aria-describedby="study-confirm-message">
       <span><AlertTriangle size={18} /></span><div><h2 id="study-confirm-title">Confirm this change</h2><p id="study-confirm-message">{message}</p></div>
       <footer><button ref={cancelRef} type="button" className="study-secondary" onClick={onCancel}>Keep it</button><button type="button" className="study-danger-button" onClick={onConfirm}>Confirm</button></footer>
     </section>
@@ -797,8 +787,8 @@ function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<E
       const dueAt = formText(form, "dueAt");
       const plannedMinutes = formText(form, "plannedMinutes");
       const optionalCreateFields = value
-        ? { notes: notes || null, dueAt: dueAt ? new Date(dueAt).toISOString() : null, plannedMinutes: plannedMinutes ? Number(plannedMinutes) : null, status: formText(form, "status") }
-        : { ...(notes ? { notes } : {}), ...(dueAt ? { dueAt: new Date(dueAt).toISOString() } : {}), ...(plannedMinutes ? { plannedMinutes: Number(plannedMinutes) } : {}) };
+        ? { notes: notes || null, dueAt: dueAt ? zonedInputToIso(dueAt, study.workspace.timezone) : null, plannedMinutes: plannedMinutes ? Number(plannedMinutes) : null, status: formText(form, "status") }
+        : { ...(notes ? { notes } : {}), ...(dueAt ? { dueAt: zonedInputToIso(dueAt, study.workspace.timezone) } : {}), ...(plannedMinutes ? { plannedMinutes: Number(plannedMinutes) } : {}) };
       void onSave(value ? `study/items/${value.id}` : "study/items", value ? "PATCH" : "POST", { moduleId: formText(form, "moduleId"), type: formText(form, "type"), title: formText(form, "title"), priority: formText(form, "priority"), ...optionalCreateFields }, value ? "Work updated." : "Work added.");
     }
     if (state.kind === "resource") {
@@ -807,7 +797,7 @@ function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<E
       void onSave(value ? `study/resources/${value.id}` : "study/resources", value ? "PATCH" : "POST", { moduleId: formText(form, "moduleId"), ...(value ? {} : { kind }), title: formText(form, "title"), body: formText(form, "body") || undefined, url: formText(form, "url") || undefined, caption: formText(form, "caption") || undefined }, value ? "Resource updated." : "Resource saved.");
     }
     if (state.kind === "mistake") {
-      void onSave("study/mistakes", "POST", { moduleId: formText(form, "moduleId"), ...(formText(form, "itemId") ? { itemId: formText(form, "itemId") } : {}), source: formText(form, "source"), category: formText(form, "category"), cause: formText(form, "cause"), prevention: formText(form, "prevention"), revisitAt: formText(form, "revisitAt") ? new Date(formText(form, "revisitAt")).toISOString() : undefined }, "Mistake recorded.");
+      void onSave("study/mistakes", "POST", { moduleId: formText(form, "moduleId"), ...(formText(form, "itemId") ? { itemId: formText(form, "itemId") } : {}), source: formText(form, "source"), category: formText(form, "category"), cause: formText(form, "cause"), prevention: formText(form, "prevention"), revisitAt: formText(form, "revisitAt") ? zonedInputToIso(formText(form, "revisitAt"), study.workspace.timezone) : undefined }, "Mistake recorded.");
     }
   };
   const heading = state.kind === "module" ? `${state.value ? "Edit" : "Add"} module` : state.kind === "item" ? `${state.value ? "Edit" : "Add"} work` : state.kind === "mistake" ? "Record mistake" : `${state.value ? "Edit" : "Add"} ${(state.value?.kind ?? state.resourceKind ?? "resource").toLowerCase()}`;
@@ -816,7 +806,7 @@ function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<E
   return <StudyDialog kicker="Study Mode" title={heading} dirty={dirty} onClose={onClose}>{(requestClose) =>
     <form onSubmit={submit} onChange={() => setDirty(true)}>
       {state.kind === "module" && <><label>Module code<input name="code" required defaultValue={state.value?.code ?? ""} /></label><label>Module name<input name="name" required defaultValue={state.value?.name ?? ""} /></label><label>Module color<input name="color" type="color" defaultValue={state.value?.color ?? "#168b83"} /></label></>}
-      {state.kind === "item" && <><div className="study-form-row"><ModuleField modules={study.modules} name="moduleId" value={state.value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id} /><StudyFormChoicePicker label="Type" name="type" defaultValue={state.value?.type ?? "ASSIGNMENT"} options={ITEM_TYPES.map((type) => ({ value: type, label: humanize(type) }))} allowEmpty={false} /></div><label>Title<input name="title" required maxLength={500} defaultValue={state.value?.title ?? ""} /></label><label>Details<textarea name="notes" rows={5} defaultValue={state.value?.notes ?? ""} /></label><div className="study-form-row"><label>Due date<input name="dueAt" type="datetime-local" defaultValue={localInput(state.value?.dueAt)} /></label><label>Planned minutes<input name="plannedMinutes" type="number" min="1" max="1440" defaultValue={state.value?.plannedMinutes ?? ""} /></label></div><div className="study-form-row"><StudyFormChoicePicker label="Priority" name="priority" defaultValue={state.value?.priority ?? "NORMAL"} options={["LOW", "NORMAL", "HIGH", "CRITICAL"].map((value) => ({ value, label: humanize(value) }))} allowEmpty={false} />{state.value && <StudyFormChoicePicker label="Status" name="status" defaultValue={state.value.status} options={["OPEN", "IN_PROGRESS", "PROCESSED", "DONE"].map((value) => ({ value, label: humanize(value) }))} allowEmpty={false} />}</div></>}
+      {state.kind === "item" && <><div className="study-form-row"><ModuleField modules={study.modules} name="moduleId" value={state.value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id} /><StudyFormChoicePicker label="Type" name="type" defaultValue={state.value?.type ?? "ASSIGNMENT"} options={ITEM_TYPES.map((type) => ({ value: type, label: humanize(type) }))} allowEmpty={false} /></div><label>Title<input name="title" required maxLength={500} defaultValue={state.value?.title ?? ""} /></label><label>Details<textarea name="notes" rows={5} defaultValue={state.value?.notes ?? ""} /></label><div className="study-form-row"><label>Due date<input name="dueAt" type="datetime-local" defaultValue={zonedInputDate(state.value?.dueAt, study.workspace.timezone)} /></label><label>Planned minutes<input name="plannedMinutes" type="number" min="1" max="1440" defaultValue={state.value?.plannedMinutes ?? ""} /></label></div><div className="study-form-row"><StudyFormChoicePicker label="Priority" name="priority" defaultValue={state.value?.priority ?? "NORMAL"} options={["LOW", "NORMAL", "HIGH", "CRITICAL"].map((value) => ({ value, label: humanize(value) }))} allowEmpty={false} />{state.value && <StudyFormChoicePicker label="Status" name="status" defaultValue={state.value.status} options={["OPEN", "IN_PROGRESS", "PROCESSED", "DONE"].map((value) => ({ value, label: humanize(value) }))} allowEmpty={false} />}</div></>}
       {state.kind === "resource" && <><label>Module<ModuleField modules={study.modules} name="moduleId" value={state.value?.moduleId ?? study.workspace.activeModuleId ?? study.modules[0]?.id} /></label><label>Title<input name="title" required defaultValue={state.value?.title ?? ""} /></label>{(state.value?.kind ?? state.resourceKind) === "LINK" ? <label>Link<input name="url" type="url" required defaultValue={state.value?.url ?? ""} /></label> : (state.value?.kind ?? state.resourceKind) === "IMAGE" || (state.value?.kind ?? state.resourceKind) === "FILE" ? <><label>Caption<textarea name="caption" rows={4} defaultValue={state.value?.caption ?? ""} /></label>{state.value?.ocrText && <div className="study-ocr"><span>Searchable text</span><p>{state.value.ocrText}</p></div>}</> : <label>{(state.value?.kind ?? state.resourceKind) === "QUESTION" ? "Question" : "Note"}<textarea name="body" required rows={10} defaultValue={state.value?.body ?? ""} /></label>}</>}
       {state.kind === "mistake" && <><input type="hidden" name="itemId" value={state.item?.id ?? ""} /><ModuleField modules={study.modules} name="moduleId" value={mistakeModuleId} />{state.item && <div className="study-linked-context"><Target size={17} /><div><small>Linked work</small><b>{state.item.title}</b></div></div>}<label>Question or source<textarea name="source" required rows={3} defaultValue={state.item?.title ?? ""} /></label><StudyFormChoicePicker label="Category" name="category" defaultValue="CONCEPTUAL_MISUNDERSTANDING" options={[{ value: "CONCEPTUAL_MISUNDERSTANDING", label: "Conceptual misunderstanding" }, { value: "WRONG_APPROACH", label: "Wrong approach" }, { value: "EXECUTION_CARELESS", label: "Execution / careless" }, { value: "TIME_MANAGEMENT", label: "Time management" }]} allowEmpty={false} /><label>Cause<textarea name="cause" required rows={3} /></label><label>Preventive check<textarea name="prevention" required rows={3} /></label><label>Revisit<input name="revisitAt" type="datetime-local" /></label></>}
       <footer><button type="button" className="study-secondary" onClick={requestClose}>Cancel</button><button className="study-primary" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />} Save</button></footer>
@@ -978,8 +968,6 @@ function studySettingsPayload(settings: StudySnapshot["workspace"]) {
 function masteryLabel(value: StudyTrafficLight) { return value === "GREEN" ? "Strong" : value === "AMBER" ? "Developing" : value === "RED" ? "Needs work" : "Not assessed"; }
 function humanize(value: string) { return value.toLowerCase().replace(/_/g, " ").replace(/(^|\s)\w/g, (letter) => letter.toUpperCase()); }
 function greeting() { const hour = new Date().getHours(); return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"; }
-/** ISO time to a `datetime-local` input value. It uses the browser's timezone, not the workspace timezone. */
-function localInput(value?: string | null) { if (!value) return ""; const date = new Date(value); const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000); return local.toISOString().slice(0, 16); }
 function formatDate(value: string, timezone: string) { return new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", weekday: "short", timeZone: timezone }).format(new Date(value)); }
 function formatTime(value: string, timezone: string) { return new Intl.DateTimeFormat("en-SG", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(value)); }
 function formatDateTime(value: string, timezone: string) { return `${formatDate(value, timezone)}, ${formatTime(value, timezone)}`; }
