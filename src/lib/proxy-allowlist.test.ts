@@ -52,6 +52,9 @@ describe("dashboard BFF allowlist", () => {
     ["DELETE", "note-drafts/not-a-uuid"],
     ["GET", "study/calendar/sync"],
     ["DELETE", "study/calendar/stop"],
+    ["GET", "expenses"],
+    ["POST", "integrations/excel/connect"],
+    ["POST", "integrations/excel/sync"],
   ])("rejects the forged %s %s surface", (method, path) => {
     expect(isAllowedThreadwiseProxyPath(path) && isAllowedThreadwiseProxyMethod(method, path)).toBe(false);
   });

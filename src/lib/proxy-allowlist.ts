@@ -10,7 +10,7 @@ const PERSONAL_NOTE_DRAFT_PATH = new RegExp(`^note-drafts(?:/${UUID_SEGMENT})?$`
 
 /** Is this path (after `/api/threadwise/`) one the dashboard is allowed to call at all? */
 export function isAllowedThreadwiseProxyPath(path: string) {
-  return STUDY_PATH.test(path) || PERSONAL_NOTE_DRAFT_PATH.test(path) || /^(?:snapshot|workspaces|events|today(?:\/order|\/[A-Za-z0-9_-]+\/(?:plan|complete))?|task-drafts(?:\/[A-Za-z0-9_-]+(?:\/items(?:\/[A-Za-z0-9_-]+)?|\/review|\/commit)?)?|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|task-imports\/[A-Za-z0-9_-]+(?:\/(?:items\/[A-Za-z0-9_-]+|import|cancel))?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|expenses(?:\/[A-Za-z0-9_-]+)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|scheduling\/polls(?:\/[A-Za-z0-9_-]+(?:\/(?:availability|finalize|remind|cancel|calendar))?)?|integrations\/(?:calendar|excel)\/(?:connect|disconnect)|integrations\/calendar\/(?:sync|task)|integrations\/excel\/(?:sync|workbook)|privacy\/(?:export|account))$/.test(path);
+  return STUDY_PATH.test(path) || PERSONAL_NOTE_DRAFT_PATH.test(path) || /^(?:snapshot|workspaces|events|today(?:\/order|\/[A-Za-z0-9_-]+\/(?:plan|complete))?|task-drafts(?:\/[A-Za-z0-9_-]+(?:\/items(?:\/[A-Za-z0-9_-]+)?|\/review|\/commit)?)?|capture\/preview|tasks(?:\/[A-Za-z0-9_-]+(?:\/collaboration)?)?|task-imports\/[A-Za-z0-9_-]+(?:\/(?:items\/[A-Za-z0-9_-]+|import|cancel))?|notes(?:\/[A-Za-z0-9_-]+)?|ideas(?:\/[A-Za-z0-9_-]+(?:\/(?:convert-to-task|analyze))?)?|search|settings|images(?:\/[A-Za-z0-9_-]+(?:\/content)?)?|scheduling\/polls(?:\/[A-Za-z0-9_-]+(?:\/(?:availability|finalize|remind|cancel|calendar))?)?|integrations\/calendar\/(?:connect|disconnect|sync|task)|privacy\/(?:export|account))$/.test(path);
 }
 
 /**
@@ -60,13 +60,13 @@ export function isAllowedThreadwiseProxyMethod(method: string, path: string) {
   if (/^task-imports\/[A-Za-z0-9_-]+\/items\/[A-Za-z0-9_-]+$/.test(path)) return method === "PATCH";
   if (/^task-imports\/[A-Za-z0-9_-]+\/(?:import|cancel)$/.test(path)) return method === "POST";
   if (path === "settings") return method === "GET" || method === "PATCH";
-  if (/^(tasks|notes|ideas|expenses|images)$/.test(path)) return method === "GET" || method === "POST" && path !== "images";
+  if (/^(tasks|notes|ideas|images)$/.test(path)) return method === "GET" || method === "POST" && path !== "images";
   if (path === "scheduling/polls") return method === "GET" || method === "POST";
   if (/^scheduling\/polls\/[A-Za-z0-9_-]+$/.test(path)) return method === "GET";
   if (/\/availability$/.test(path)) return method === "PATCH";
   if (/^scheduling\/polls\/.+\/(?:finalize|remind|cancel|calendar)$/.test(path)) return method === "POST";
   if (/^integrations\//.test(path) || /\/(?:convert-to-task|analyze|collaboration)$/.test(path)) return method === "POST";
   if (path === "privacy/account") return method === "DELETE";
-  if (/^(tasks|notes|ideas|expenses|images)\//.test(path)) return method === "PATCH" || method === "DELETE";
+  if (/^(tasks|notes|ideas|images)\//.test(path)) return method === "PATCH" || method === "DELETE";
   return false;
 }
