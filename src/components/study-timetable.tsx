@@ -513,7 +513,8 @@ function ConflictBadge({ conflicts }: { conflicts: ScheduleBlock[] }) {
 /**
  * Focus handling for the timetable dialogs, from the shared `useModal` stack: focus the autofocus
  * field, trap Tab inside, close on Escape unless a save is in progress (only the top dialog reacts),
- * and return focus to the trigger on close.
+ * and return focus to the trigger on close. Dialogs whose field uses React `autoFocus` take focus
+ * before useModal records the opener, so those leave focus on the page when they close.
  */
 function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean, onClose: () => void) {
   useModal(dialogRef, () => { if (!busy) onClose(); });

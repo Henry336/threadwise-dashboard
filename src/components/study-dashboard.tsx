@@ -797,7 +797,7 @@ function StudyEditor({ state, study, busy, onClose, onSave }: { state: Exclude<E
       void onSave(value ? `study/resources/${value.id}` : "study/resources", value ? "PATCH" : "POST", { moduleId: formText(form, "moduleId"), ...(value ? {} : { kind }), title: formText(form, "title"), body: formText(form, "body") || undefined, url: formText(form, "url") || undefined, caption: formText(form, "caption") || undefined }, value ? "Resource updated." : "Resource saved.");
     }
     if (state.kind === "mistake") {
-      void onSave("study/mistakes", "POST", { moduleId: formText(form, "moduleId"), ...(formText(form, "itemId") ? { itemId: formText(form, "itemId") } : {}), source: formText(form, "source"), category: formText(form, "category"), cause: formText(form, "cause"), prevention: formText(form, "prevention"), revisitAt: formText(form, "revisitAt") ? new Date(formText(form, "revisitAt")).toISOString() : undefined }, "Mistake recorded.");
+      void onSave("study/mistakes", "POST", { moduleId: formText(form, "moduleId"), ...(formText(form, "itemId") ? { itemId: formText(form, "itemId") } : {}), source: formText(form, "source"), category: formText(form, "category"), cause: formText(form, "cause"), prevention: formText(form, "prevention"), revisitAt: formText(form, "revisitAt") ? zonedInputToIso(formText(form, "revisitAt"), study.workspace.timezone) : undefined }, "Mistake recorded.");
     }
   };
   const heading = state.kind === "module" ? `${state.value ? "Edit" : "Add"} module` : state.kind === "item" ? `${state.value ? "Edit" : "Add"} work` : state.kind === "mistake" ? "Record mistake" : `${state.value ? "Edit" : "Add"} ${(state.value?.kind ?? state.resourceKind ?? "resource").toLowerCase()}`;

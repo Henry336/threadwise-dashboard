@@ -119,7 +119,7 @@ export function StudyPlaceCombobox({
           } else if (event.key === "Enter" && open && activeIndex >= 0 && places[activeIndex]) {
             event.preventDefault();
             choose(places[activeIndex]!);
-          } else if (event.key === "Escape" && open) {
+          } else if (event.key === "Escape" && open && query.length >= 2 && !loading) {
             event.preventDefault(); // closes only the suggestions; useModal then leaves the dialog open
             setOpen(false);
           }
