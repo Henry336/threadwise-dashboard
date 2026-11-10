@@ -41,6 +41,7 @@ import { buildMarkdownExport, markdownExcerpt, normalizeMarkdownWikiTarget, safe
 import { sessionElapsedSeconds, sessionResourceIds } from "@/lib/study-session";
 import { api } from "@/lib/client-api";
 import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
+import { useModal } from "@/lib/use-modal";
 
 type Props = { initialData: DashboardSnapshot; workspaces: DashboardWorkspace[]; initialView?: string; initialItem?: string; initialItemKind?: string };
 type SyncState = "connecting" | "live" | "reconnecting" | "offline";
@@ -518,7 +519,10 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<{ status: "loading" | "ready" | "error"; src?: string; message?: string; retryable?: boolean }>({ status: "loading" });
   const closeRef = useRef<HTMLButtonElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
   const caption = imageCaption(resource);
+  // On the shared modal stack, so Escape (leave full size first, then close) only reaches the top layer.
+  useModal(viewerRef, () => { if (expanded) setExpanded(false); else onClose(); }, { initialFocus: closeRef });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -542,19 +546,7 @@ function StudyImageViewer({ resource, timezone, onEdit, onArchive, onClose }: { 
     };
   }, [resource.id, revision]);
 
-  useEffect(() => {
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      if (expanded) setExpanded(false);
-      else onClose();
-    };
-    window.addEventListener("keydown", keydown);
-    return () => window.removeEventListener("keydown", keydown);
-  }, [expanded, onClose]);
-
-  useEffect(() => { closeRef.current?.focus(); }, []);
-
-  return <div className={`study-image-lightbox${expanded ? " is-expanded" : ""}`} role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return <div ref={viewerRef} className={`study-image-lightbox${expanded ? " is-expanded" : ""}`} role="dialog" aria-modal="true" aria-labelledby="study-image-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <article>
       <header><div><span>{resource.module.code} · {resource.publicId}</span><h2 id="study-image-title">{caption || "Saved image"}</h2></div><div className="study-image-header-actions"><button type="button" className="study-image-size-toggle" aria-pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span>{expanded ? "Fit" : "Full size"}</span></button><button onClick={onEdit}>Edit</button><button className="study-danger-quiet" onClick={onArchive}>Archive</button><button ref={closeRef} onClick={onClose} aria-label="Close image"><X size={20} /></button></div></header>
       <div className="study-image-stage" aria-live="polite">
@@ -636,14 +628,11 @@ function StudySearch({ study, onNavigate, onEditItem, onEditResource }: { study:
  */
 function StudyConfirmationDialog({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    cancelRef.current?.focus();
-    const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
-    document.addEventListener("keydown", keydown);
-    return () => document.removeEventListener("keydown", keydown);
-  }, [onCancel]);
+  const dialogRef = useRef<HTMLElement>(null);
+  // On the shared modal stack: Escape cancels only this confirm, not the dialog under it.
+  useModal(dialogRef, onCancel, { initialFocus: cancelRef });
   return <div className="study-confirm-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
-    <section className="study-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="study-confirm-title" aria-describedby="study-confirm-message">
+    <section ref={dialogRef} className="study-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="study-confirm-title" aria-describedby="study-confirm-message">
       <span><AlertTriangle size={18} /></span><div><h2 id="study-confirm-title">Confirm this change</h2><p id="study-confirm-message">{message}</p></div>
       <footer><button ref={cancelRef} type="button" className="study-secondary" onClick={onCancel}>Keep it</button><button type="button" className="study-danger-button" onClick={onConfirm}>Confirm</button></footer>
     </section>

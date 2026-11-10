@@ -25,6 +25,7 @@ import { StudyChoicePicker, StudyTimePicker } from "./study-choice-picker";
 import { IntegerInput } from "./integer-input";
 import { clampInteger } from "@/lib/numeric-input";
 import { useBodyScrollLock } from "@/lib/body-scroll-lock";
+import { useModal } from "@/lib/use-modal";
 
 type ScheduleBlock = StudySnapshot["scheduleBlocks"][number];
 type WeekOrientation = StudyOrientation;
@@ -510,37 +511,12 @@ function ConflictBadge({ conflicts }: { conflicts: ScheduleBlock[] }) {
 }
 
 /**
- * Focus handling for the timetable dialogs: focus the autofocus field (or the dialog), trap Tab inside,
- * close on Escape unless a save is in progress, and return focus to the trigger on close.
+ * Focus handling for the timetable dialogs, from the shared `useModal` stack: focus the autofocus
+ * field, trap Tab inside, close on Escape unless a save is in progress (only the top dialog reacts),
+ * and return focus to the trigger on close.
  */
 function useDialogFocus(dialogRef: RefObject<HTMLElement | null>, busy: boolean, onClose: () => void) {
-  const busyRef = useRef(busy);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    busyRef.current = busy;
-    onCloseRef.current = onClose;
-  }, [busy, onClose]);
-
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const initialFocus = dialog.querySelector<HTMLElement>("[autofocus]") ?? dialog;
-    initialFocus.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busyRef.current) { event.preventDefault(); onCloseRef.current(); return; }
-      if (event.key !== "Tab") return;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => { window.removeEventListener("keydown", handleKeyDown); previous?.focus(); };
-  }, [dialogRef]);
+  useModal(dialogRef, () => { if (!busy) onClose(); });
 }
 
 /**
