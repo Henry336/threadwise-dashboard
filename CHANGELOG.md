@@ -4,6 +4,17 @@ This file is updated as each agreed Threadwise revamp phase is implemented and v
 
 ## Unreleased
 
+### Review follow-through (v0.11.0)
+- From the 2026-11-01 review (backend `docs/REVIEW_2026-11-01.md`): one API client, one modal hook,
+  dead code removed, Today refreshes with the dashboard, the note editor no longer closes on a stray
+  Escape, and page JavaScript is about half its old size.
+- Escape closes only the top layer everywhere, including the Study confirm, image viewer, timetable
+  dialogs and place search; the confirm dialog returns focus to what opened it.
+- Today stays hidden (and stops polling) for people it is not enabled for.
+- Study due dates and session times are read and shown in the Study workspace timezone, not the
+  browser's.
+- The BFF no longer forwards the retired expense and Excel routes; unused CSS removed.
+
 ### Background synchronization egress repair (v0.10.2)
 - Personal, Group, and Study now share one visibility/network-aware background sync lifecycle.
   Hidden/offline pages close their event stream and stop reconciliation timers. Return, network
