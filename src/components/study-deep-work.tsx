@@ -29,6 +29,7 @@ import {
   sessionElapsedSeconds, sessionMethodSummary, sessionResourceIds,
 } from "@/lib/study-session";
 import { api } from "@/lib/client-api";
+import { zonedInputDate, zonedInputToIso } from "@/lib/zoned-time";
 
 /** Window event that asks the Study shell (study-dashboard.tsx) to show its branded confirmation dialog. */
 const STUDY_CONFIRM_EVENT = "threadwise:study-confirm";
@@ -349,8 +350,10 @@ function StudySessionEditor({ session, study, busy, onClose, onSave }: { session
   const [customMethod, setCustomMethod] = useState(sessionCustomMethod(session));
   const [topic, setTopic] = useState(session.topic ?? "");
   const [result, setResult] = useState(session.result ?? "");
-  const [startedAt, setStartedAt] = useState(localInput(session.startedAt));
-  const [endedAt, setEndedAt] = useState(session.endedAt ? localInput(session.endedAt) : "");
+  // Times are shown and read in the Study workspace timezone, like the rest of Study, not the browser's.
+  const timezone = study.workspace.timezone;
+  const [startedAt, setStartedAt] = useState(zonedInputDate(session.startedAt, timezone));
+  const [endedAt, setEndedAt] = useState(zonedInputDate(session.endedAt, timezone));
   const [resourceIds, setResourceIds] = useState(sessionResourceIds(session));
   const resources = study.resources.filter((resource) => resource.moduleId === session.moduleId);
   const submit = (event: React.FormEvent) => {
@@ -361,8 +364,8 @@ function StudySessionEditor({ session, study, busy, onClose, onSave }: { session
       techniques,
       method: sessionMethodSummary(focusStructure, techniques, customMethod),
       result: result.trim(),
-      startedAt: new Date(startedAt).toISOString(),
-      ...(endedAt ? { endedAt: new Date(endedAt).toISOString() } : {}),
+      startedAt: zonedInputToIso(startedAt, timezone),
+      ...(endedAt ? { endedAt: zonedInputToIso(endedAt, timezone) } : {}),
       resourceIds,
     });
   };
@@ -406,14 +409,6 @@ function confirmAction(message: string, action: () => unknown) {
 
 function humanize(value: string) {
   return value.toLowerCase().replace(/_/g, " ").replace(/(^|\s)\w/g, (letter) => letter.toUpperCase());
-}
-
-/** Converts an ISO time into the browser-local "YYYY-MM-DDTHH:mm" format a datetime-local input expects. */
-function localInput(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
 }
 
 function formatDate(value: string, timezone: string) {
